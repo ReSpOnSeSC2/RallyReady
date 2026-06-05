@@ -115,7 +115,7 @@
   <!--
     Modules load in dependency order; each attaches to the single global
     namespace `RR` (state.js creates it first).
-    state -> drills (+ drills-2..4) -> coaching -> periodization -> generator -> ui -> team -> season -> app
+    state -> drills (+ drills-2..9) -> coaching -> periodization -> generator -> ui -> install -> team -> season -> today -> app
     The drill library is split across several files for the <800-lines-per-file rule;
     each drills-N.js concatenates its drills onto RR.drills, so they load in order after drills.js.
   -->
@@ -133,6 +133,8 @@
   <script src="js/periodization.js"></script>
   <script src="js/generator.js"></script>
   <script src="js/ui.js"></script>
+  <!-- Install ("Add to Home Screen") helper; loads before today.js, which mounts it. -->
+  <script src="js/install.js"></script>
   <script src="js/team.js"></script>
   <script src="js/season.js"></script>
   <script src="js/today.js"></script>
