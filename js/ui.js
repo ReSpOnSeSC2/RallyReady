@@ -161,9 +161,11 @@ RR.ui = (function () {
 
   // A small "Camp-friendly" marker (icon + word) so the flag never rests on colour.
   function campTag() {
+    // A tent with a centre entrance (the inner "V") so it reads as a camp tent,
+    // not a warning triangle.
     return h("span", { class: "drill-tag drill-tag--camp" }, [
       h("span", { "aria-hidden": "true", class: "drill-tag__icon",
-        html: icon('<path d="M3 21h18"/><path d="M12 3 4 21h16z"/><path d="M12 3v18"/>', 14) }),
+        html: icon('<path d="M2 20h20"/><path d="M12 4 4 20"/><path d="M12 4l8 16"/><path d="M12 12l-3 8"/><path d="M12 12l3 8"/>', 14) }),
       "Camp-friendly"
     ]);
   }

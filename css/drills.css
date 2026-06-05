@@ -24,7 +24,7 @@
   pointer-events: none;
   display: inline-flex;
 }
-.drills-search__input { padding-left: calc(var(--sp-4) + 26px); }
+.drills-search__input { padding-left: calc(var(--sp-4) + 34px); }
 /* Hide the native search "clear" control so our own Clear affordance is the
    single, consistent way to reset. */
 .drills-search__input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
