@@ -1,6 +1,6 @@
 // app.js — application boot: hash router, bottom tab-bar wiring, theme control,
-// and service worker registration. Each screen renders a titled placeholder
-// card for now; the real screens are built on top of this shell later.
+// and service worker registration. Each route renders its own screen module
+// (Today, Season/Camp, Drills, Tips, Team, History) into #screen.
 window.RR = window.RR || {};
 
 RR.app = (function () {
@@ -78,16 +78,17 @@ RR.app = (function () {
     return SCREENS[id] ? id : DEFAULT_ROUTE;
   }
 
-  // Placeholder card for screens not yet built (Drills, Tips, and Today/Season
-  // once a team exists). Replaced by real screens in later prompts.
-  function placeholderCard(data) {
+  // Safety fallback, shown only if a screen module failed to load (e.g. a script
+  // was blocked). Every real route below has its own handler; this just keeps the
+  // app from ever showing a blank screen, with an honest recovery message.
+  function fallbackCard(data) {
     var card = document.createElement("section");
     card.className = "card empty";
     var h2 = document.createElement("h2");
-    h2.textContent = data.title + " is coming together";
+    h2.textContent = "Couldn’t load " + data.title;
     var p = document.createElement("p");
     p.className = "muted";
-    p.textContent = data.blurb;
+    p.textContent = "Something stopped this screen from loading. Close and reopen RallyReady — your saved team and history are safe.";
     card.appendChild(h2);
     card.appendChild(p);
     return card;
@@ -131,7 +132,7 @@ RR.app = (function () {
       // The Drills browser: a searchable, filterable, age/program-aware library.
       RR.drillsScreen.renderDrills(host);
     } else {
-      host.appendChild(placeholderCard(data));
+      host.appendChild(fallbackCard(data));
     }
 
     h1.focus();   // move focus to the new title so screen readers announce it

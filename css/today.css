@@ -224,7 +224,6 @@
   text-decoration: none;
 }
 .watch__icon { display: inline-flex; }
-.watch:hover { text-decoration: underline; }
 
 /* Tools row: cues toggle + optional Swap. */
 .block__tools { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
@@ -412,6 +411,7 @@
   .today-help-btn:hover > span { background: var(--surface-2); color: var(--text); }
   .history-del:hover { color: var(--focus); background: var(--surface-2); }
   .install-card__dismiss:hover { color: var(--text); background: var(--surface-2); }
+  .watch:hover { text-decoration: underline; }   /* underline links on pointer hover only */
 }
 
 @media (prefers-reduced-motion: reduce) {
