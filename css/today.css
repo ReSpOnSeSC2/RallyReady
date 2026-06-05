@@ -380,6 +380,16 @@
   to   { opacity: 1; transform: none; }
 }
 
+/* ------------------------------------------------------------- Rest day ---- */
+/* Shown on a season date that isn't one of the team's chosen practice days, so
+   the app stops inventing a practice for every day. Calm, centered, with a
+   one-tap jump to the next real practice. */
+.restday { text-align: center; }
+.restday__icon { display: inline-flex; color: var(--text-muted); margin-bottom: var(--sp-2); }
+.restday__title { margin: 0 0 var(--sp-2); }
+.restday__sub { margin: 0 0 var(--sp-2); color: var(--text); }
+.restday__days { margin: 0 0 var(--sp-4); font-size: var(--fs-sm); }
+
 /* ----------------------------------------------------------------- Toast --- */
 /* Bottom-centered confirmation, clear of the fixed tab bar. High-contrast bg/fg
    pair so it reads in both themes. */

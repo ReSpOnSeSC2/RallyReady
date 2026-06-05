@@ -144,7 +144,7 @@ RR.today = (function () {
       nav.slot = 0;
       nav.date = isCamp
         ? dateForCampDay(plan, P.campDayFor(plan, P.toISO(new Date())))
-        : P.toISO(new Date());
+        : P.practiceDayOnOrAfter(plan, P.toISO(new Date()));   // land on a real practice
     }
     if (isCamp) nav.date = clampCamp(plan, nav.date);
     if (nav.slot >= sessionsPerDay) nav.slot = 0;
@@ -225,13 +225,15 @@ RR.today = (function () {
       input.addEventListener("change", function () {
         if (input.value) { nav.date = input.value; paint(); }
       });
+      // Prev/Next hop between practice days (so the coach never steps onto an off
+      // day by accident); the picker can still jump anywhere, including a rest day.
       return h("div", { class: "daynav" }, [
-        navBtn("‹", "Previous day", false, function () { nav.date = P.addDays(nav.date, -1); paint(); }),
+        navBtn("‹", "Previous practice", false, function () { nav.date = P.adjacentPracticeDate(plan, nav.date, -1); paint(); }),
         h("div", { class: "daynav__center" }, [
           h("span", { class: "daynav__main", text: ui.fmtFull(iso) }),
           input
         ]),
-        navBtn("›", "Next day", false, function () { nav.date = P.addDays(nav.date, 1); paint(); })
+        navBtn("›", "Next practice", false, function () { nav.date = P.adjacentPracticeDate(plan, nav.date, 1); paint(); })
       ]);
     }
 
@@ -278,6 +280,16 @@ RR.today = (function () {
       var iso = nav.date, slot = nav.slot;
       var completion = findCompletion(team.name, iso, slot);
       currentCompleted = !!completion;
+
+      // Season rest day: if this date isn't one of the team's practice days (and
+      // nothing was logged here), show a calm "no practice" card instead of
+      // inventing a session for every single day.
+      if (!isCamp && !currentCompleted && !P.isPracticeDay(plan, iso)) {
+        currentSession = null;
+        bodyHost.appendChild(buildRestDay(iso));
+        return;
+      }
+
       // Show the logged snapshot when completed; otherwise the live plan.
       currentSession = currentCompleted
         ? completion.session
@@ -343,6 +355,34 @@ RR.today = (function () {
       ]));
 
       return h("section", { class: "card hero" }, kids);
+    }
+
+    // Rest day card (season only): no practice scheduled for this weekday. Offers a
+    // one-tap jump to the next practice day and a reminder of the chosen schedule.
+    function buildRestDay(iso) {
+      var nextISO = P.adjacentPracticeDate(plan, iso, 1);
+      var jump = h("button", { type: "button", class: "btn btn-primary btn-block" },
+        ["Go to next practice · " + ui.fmtFull(nextISO)]);
+      jump.addEventListener("click", function () { nav.date = nextISO; paint(); });
+
+      return h("section", { class: "card restday" }, [
+        h("span", { class: "restday__icon", "aria-hidden": "true",
+          html: '<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0"/><path d="M2 12h20"/><path d="M12 2a14 14 0 0 1 0 20"/><path d="M12 2a14 14 0 0 0 0 20"/></svg>' }),
+        h("h2", { class: "restday__title", text: "Rest day" }),
+        h("p", { class: "restday__sub", text:
+          "No practice scheduled for " + ui.fmtFull(iso) + ". Recovery is part of the plan." }),
+        h("p", { class: "restday__days muted", text: "Practice days: " + practiceDaysSentence() }),
+        jump
+      ]);
+    }
+
+    // "Mon, Wed & Fri" — the team's chosen practice weekdays, read for humans.
+    function practiceDaysSentence() {
+      var days = (plan.practiceDays || []).slice().sort(function (a, b) { return a - b; });
+      var names = days.map(function (d) { return (RR.team.WEEKDAYS[d] || {}).label || ""; });
+      if (!names.length) return "every day";
+      if (names.length === 1) return names[0];
+      return names.slice(0, -1).join(", ") + " & " + names[names.length - 1];
     }
 
     // The coach note in a friendly highlighted callout, with the focus reminder.
