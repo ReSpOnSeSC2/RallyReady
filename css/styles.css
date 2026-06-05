@@ -16,7 +16,7 @@
   --navy:  #1B2A4A;   /* main text */
   --cloud: #FFF9F4;   /* app background */
   --white: #FFFFFF;   /* cards */
-  --slate: #6B7689;   /* muted text */
+  --slate: #646E7E;   /* muted text — navy-tinted; clears 4.5:1 on bg + both surfaces */
   --i-easy:  #00C2A8;
   --i-mid:   #FFD23F;
   --i-hard:  #FF6B35;
@@ -51,7 +51,7 @@
   --surface: var(--white);
   --surface-2: #FFF3EA;            /* warm-tinted raised fill */
   --text: var(--navy);
-  --text-muted: var(--slate);      /* 4.6:1 on white — passes AA */
+  --text-muted: var(--slate);      /* ≥4.7:1 on bg, white, and surface-2 — passes AA */
   --border: #EFE7DF;               /* warm hairline, not pure gray */
   --field-border: #DFD6CC;
   --primary: var(--coral);
