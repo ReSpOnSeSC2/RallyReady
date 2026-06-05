@@ -227,13 +227,9 @@ RR.season = (function () {
   // ======================================================================= //
   //  Phase cards                                                            //
   // ======================================================================= //
-  function intensityDots(n, color) {
-    var wrap = h("div", { class: "dots", "aria-hidden": "true" });
-    for (var i = 1; i <= 10; i++) {
-      wrap.appendChild(h("span", { class: "dot " + (i <= n ? "dot--on dot--" + color : "dot--off") }));
-    }
-    return wrap;
-  }
+  // Intensity dots come from the shared RR.ui helper (the "N / 10" text beside
+  // them carries the meaning; the dots themselves are aria-hidden).
+  var intensityDots = RR.ui.intensityDots;
 
   function phaseRangeText(plan, ph) {
     if (plan.type === "camp") {

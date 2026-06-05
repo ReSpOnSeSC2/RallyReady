@@ -93,26 +93,10 @@ RR.today = (function () {
     return "Session " + (slot + 1);
   }
 
-  // Map a block's role kind to a fixed intensity colour + short category word, so
-  // every block gets a colored role label that always carries navy text (AA-safe).
-  var KIND = {
-    warmup:   { color: "easy",  label: "Warm-up" },
-    skill:    { color: "hard",  label: "Skill" },
-    game:     { color: "mid",   label: "Game" },
-    cooldown: { color: "taper", label: "Cool-down" }
-  };
-  function kindOf(block) {
-    var k = (block._req && block._req.kind) || "skill";
-    return KIND[k] || KIND.skill;
-  }
+  // Block role colours/labels and equipment labels live in RR.ui (shared with the
+  // Drills browser); alias the one we use directly here.
+  var equipLabel = ui.equipLabel;
 
-  // Friendly equipment label. Tokens are already human phrases, so we mostly just
-  // present them nicely (with a couple of volleyball-specific niceties).
-  var EQUIP = { balls: "Volleyballs", net: "Net", wall: "A wall", cones: "Cones", bands: "Resistance bands" };
-  function equipLabel(token) {
-    if (EQUIP[token]) return EQUIP[token];
-    return token.charAt(0).toUpperCase() + token.slice(1);
-  }
   // Deduped, ordered equipment across all of a session's blocks.
   function equipmentFor(session) {
     var seen = {}, out = [];
@@ -165,16 +149,34 @@ RR.today = (function () {
     if (isCamp) nav.date = clampCamp(plan, nav.date);
     if (nav.slot >= sessionsPerDay) nav.slot = 0;
 
-    // Header: a context sub-line + a link to the History log.
+    // Header: a context sub-line + a tiny "?" help toggle + a link to History.
+    // The help note explains the flow in one sentence and reads for season OR camp.
+    var helpId = "today-help";
+    var helpBtn = h("button", {
+      type: "button", class: "today-help-btn", "aria-expanded": "false",
+      "aria-controls": helpId, "aria-label": "How Today works"
+    }, [h("span", { "aria-hidden": "true", text: "?" })]);
+    var helpNote = h("p", { class: "today-help", id: helpId, hidden: true, text: isCamp
+      ? "Each card is one ready-to-run block for this camp day — tap a drill's cues, swap one you don't like, then mark the session complete."
+      : "Each card is one ready-to-run block for this practice — tap a drill's cues, swap one you don't like, then mark the practice complete." });
+    helpBtn.addEventListener("click", function () {
+      var open = helpBtn.getAttribute("aria-expanded") === "true";
+      helpBtn.setAttribute("aria-expanded", open ? "false" : "true");
+      helpNote.hidden = open;
+    });
+
     host.appendChild(h("div", { class: "today-head" }, [
-      h("p", { class: "screen-sub today-head__sub", text:
-        isCamp ? (plan.label + " · " + team.ageGroup) : (plan.label + " · " + team.ageGroup) }),
+      h("div", { class: "today-head__lead" }, [
+        h("p", { class: "screen-sub today-head__sub", text: plan.label + " · " + team.ageGroup }),
+        helpBtn
+      ]),
       h("a", { class: "btn btn-ghost today-head__history", href: "#history" }, [
         h("span", { "aria-hidden": "true", class: "today-head__history-icon",
           html: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v6h6"/><path d="M3.5 9a9 9 0 1 0 2.1-3.4L3 9"/><path d="M12 7v5l3.5 2"/></svg>' }),
         "History"
       ])
     ]));
+    host.appendChild(helpNote);
 
     var controlsHost = h("div", { class: "today-controls" });
     var bodyHost = h("div", { class: "today-body" });
@@ -285,7 +287,7 @@ RR.today = (function () {
 
       var blocksWrap = h("div", { class: "blocks" });
       currentSession.blocks.forEach(function (_b, i) {
-        blocksWrap.appendChild(buildBlock(i));
+        blocksWrap.appendChild(renderBlock(i));
       });
       bodyHost.appendChild(blocksWrap);
 
@@ -347,96 +349,29 @@ RR.today = (function () {
       ]);
     }
 
-    // One block card. Collapsed by default to Setup + steps (+ Watch how); a real
-    // toggle button reveals the "Say this" cues and equipment. A Swap button
-    // appears on blocks that have an alternate drill to rotate to.
-    function buildBlock(i) {
+    // One block card, built by the shared RR.ui.blockCard helper (Setup + steps +
+    // "Watch how", with a self-contained cues toggle). Today owns only the
+    // app-level "Swap" orchestration: when the deterministic rotation has another
+    // candidate, swapping regenerates the block in place and refreshes the gear.
+    function renderBlock(i) {
       var block = currentSession.blocks[i];
-      var drill = block.drill;
-      var kd = kindOf(block);
-      var moreId = "block-more-" + i;
-
-      // Header: colored category chip + minutes; then the specific role + title.
-      var head = h("header", { class: "block__head" }, [
-        ui.badge(kd.label, kd.color),
-        h("span", { class: "block__min", text: block.minutes + " min" })
-      ]);
-
-      var sections = [
-        h("div", { class: "block__section" }, [
-          h("span", { class: "eyebrow", text: "Setup" }),
-          h("p", { text: drill.setup })
-        ]),
-        h("div", { class: "block__section" }, [
-          h("span", { class: "eyebrow", text: "Run it" }),
-          h("ol", { class: "block__steps" }, (drill.steps || []).map(function (s) {
-            return h("li", { text: s });
-          }))
-        ])
-      ];
-
-      // Collapsible region: cues ("Say this") + equipment.
-      var more = h("div", { class: "block__more", id: moreId, hidden: true }, [
-        h("div", { class: "block__section" }, [
-          h("span", { class: "eyebrow", text: "Say this" }),
-          h("ul", { class: "block__cues" }, (drill.cues || []).map(function (c) {
-            return h("li", { text: c });
-          }))
-        ]),
-        (drill.equipment && drill.equipment.length)
-          ? h("div", { class: "block__section" }, [
-              h("span", { class: "eyebrow", text: "Equipment" }),
-              h("p", { text: drill.equipment.map(equipLabel).join(", ") })
-            ])
-          : null
-      ]);
-
-      var toggle = h("button", {
-        type: "button", class: "block__toggle", "aria-expanded": "false", "aria-controls": moreId
-      }, [h("span", { class: "block__toggle-label", text: "Coaching cues" })]);
-      toggle.addEventListener("click", function () {
-        var open = toggle.getAttribute("aria-expanded") === "true";
-        toggle.setAttribute("aria-expanded", open ? "false" : "true");
-        more.hidden = open;
-        toggle.querySelector(".block__toggle-label").textContent = open ? "Coaching cues" : "Hide cues";
-      });
-
-      var tools = [toggle];
-      // Swap is offered when the deterministic rotation has another candidate.
-      if (block._pool && block._pool.length > 1 && !currentCompleted) {
-        var card = null;   // assigned below; closure used by the swap handler
-        var swap = h("button", { type: "button", class: "block__swap js-swap" }, [
-          h("span", { "aria-hidden": "true", class: "block__swap-icon",
-            html: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h13l-3-3"/><path d="M21 17H8l3 3"/></svg>' }),
-          "Swap"
-        ]);
-        swap.addEventListener("click", function () {
+      var swappable = !!(block._pool && block._pool.length > 1 && !currentCompleted);
+      var holder = {};
+      holder.card = ui.blockCard(block, {
+        index: i,
+        swappable: swappable,
+        onSwap: function () {
           currentSession = RR.generator.swapBlock(currentSession, i, team);
-          var fresh = buildBlock(i);
-          card.replaceWith(fresh);
+          var fresh = renderBlock(i);
+          holder.card.replaceWith(fresh);
           // Equipment-for-today may change after a swap; keep it in sync.
           var newGear = buildGear(currentSession);
           gearNode.replaceWith(newGear);
           gearNode = newGear;
           var b = fresh.querySelector(".js-swap"); if (b) b.focus();
-        });
-        tools.push(swap);
-      }
-
-      var cardEl = h("article", { class: "card block" }, [
-        head,
-        h("p", { class: "block__role", text: block.role }),
-        h("h3", { class: "block__title", text: block.title }),
-        h("p", { class: "block__why", text: block.why }),
-        sections[0],
-        sections[1],
-        ui.watchLink(drill.videoSearchUrl, "Watch how"),
-        h("div", { class: "block__tools" }, tools),
-        more
-      ]);
-      // Back-reference for the swap handler (declared via the closure above).
-      if (tools.length > 1) { card = cardEl; }
-      return cardEl;
+        }
+      });
+      return holder.card;
     }
 
     // "Equipment for today" (deduped) + the correct net height & ball for the age.
