@@ -333,6 +333,54 @@
   cursor: pointer;
 }
 
+/* ------------------------------------------------- Install (A2HS) banner --- */
+/* Shown only when js/install.js has a real install prompt to offer; the empty
+   wrapper collapses so it never leaves a gap. All colours are semantic tokens,
+   so it reads in both themes. */
+.install-host { margin-bottom: var(--sp-4); }
+.install-host:empty { display: none; }
+
+.install-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+}
+.install-card__icon { flex: none; display: inline-flex; color: var(--primary); }
+.install-card__body { flex: 1 1 auto; min-width: 0; }
+.install-card__title { margin: 0; font-size: var(--fs-body); font-weight: 700; color: var(--text); }
+.install-card__sub { margin: 2px 0 0; font-size: var(--fs-sm); color: var(--text-muted); }
+.install-card__cta { flex: none; padding: 0 var(--sp-4); }
+
+/* Dismiss "×": a small visible mark inside a full 48x48 tap target. */
+.install-card__dismiss {
+  flex: none;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+/* Gentle entrance, suppressed when the user prefers reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .install-card { animation: install-in 0.25s var(--ease) both; }
+}
+@keyframes install-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* ----------------------------------------------------------------- Toast --- */
 /* Bottom-centered confirmation, clear of the fixed tab bar. High-contrast bg/fg
    pair so it reads in both themes. */
@@ -363,6 +411,7 @@
   .today-head__history:hover { background: var(--surface-2); }
   .today-help-btn:hover > span { background: var(--surface-2); color: var(--text); }
   .history-del:hover { color: var(--focus); background: var(--surface-2); }
+  .install-card__dismiss:hover { color: var(--text); background: var(--surface-2); }
 }
 
 @media (prefers-reduced-motion: reduce) {

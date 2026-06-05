@@ -24,6 +24,8 @@ RR.state = (function () {
                             // generator's recent-repeat avoidance
     regen: {},              // per-(team|date|slot) "Regenerate" counters, so a
                             // regenerated practice stays put across reloads
+    installDismissed: false,// user dismissed the "Install RallyReady" banner
+                            // (see js/install.js) — kept hidden once dismissed
     settings: {
       practiceMinutes: 75   // sensible default practice length
     }

@@ -178,6 +178,14 @@ RR.today = (function () {
     ]));
     host.appendChild(helpNote);
 
+    // "Add to Home Screen" banner — only appears when the browser offers an
+    // install and the user hasn't installed or dismissed it (see js/install.js).
+    if (RR.install) {
+      var installHost = h("div", { class: "install-host" });
+      host.appendChild(installHost);
+      RR.install.mount(installHost);
+    }
+
     var controlsHost = h("div", { class: "today-controls" });
     var bodyHost = h("div", { class: "today-body" });
     host.appendChild(controlsHost);

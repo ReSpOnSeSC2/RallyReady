@@ -1,14 +1,18 @@
 // RallyReady service worker.
 // Caches the app shell so the app loads and runs fully OFFLINE after first visit.
 // Bump CACHE_VERSION whenever any cached file changes to force clients to update.
-const CACHE_VERSION = "rallyready-v14";
+const CACHE_VERSION = "rallyready-v15";
 
-// Core files that make up the offline app shell.
-// (Icons are intentionally omitted here until they exist, so install never fails.)
+// Core files that make up the offline app shell. Everything here is fetched and
+// cached up front on install, so the app loads with NO network after first visit.
+// Keep this list in step with the files that actually exist.
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./icons/icon-512-maskable.png",
   "./css/styles.css",
   "./css/tips.css",
   "./css/today.css",
@@ -27,6 +31,7 @@ const APP_SHELL = [
   "./js/periodization.js",
   "./js/generator.js",
   "./js/ui.js",
+  "./js/install.js",
   "./js/team.js",
   "./js/season.js",
   "./js/today.js",
