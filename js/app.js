@@ -127,6 +127,9 @@ RR.app = (function () {
     } else if (routeId === "tips" && RR.coaching && RR.coaching.renderTips) {
       // The Tips screen renders the coaching guidance, age reference, and glossary.
       RR.coaching.renderTips(host);
+    } else if (routeId === "drills" && RR.drillsScreen) {
+      // The Drills browser: a searchable, filterable, age/program-aware library.
+      RR.drillsScreen.renderDrills(host);
     } else {
       host.appendChild(placeholderCard(data));
     }

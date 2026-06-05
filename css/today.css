@@ -14,7 +14,52 @@
   gap: var(--sp-3);
   margin-bottom: var(--sp-4);
 }
+.today-head__lead { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
 .today-head__sub { margin: 0; color: var(--text); font-weight: 600; }
+
+/* "?" help toggle — a small 28px visual circle inside a full 48x48 tap target
+   (the transparent button carries the hit area; the inner span is the visible
+   mark), so it reads as "tiny" yet still meets the 48px minimum. */
+.today-help-btn {
+  flex: none;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.today-help-btn > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--field-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  line-height: 1;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.today-help-btn[aria-expanded="true"] > span { background: var(--primary-tint); color: var(--text); border-color: var(--focus); }
+
+/* The help note: a flat tinted callout (not a card), full-contrast text both themes. */
+.today-help {
+  margin: 0 0 var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+.today-help[hidden] { display: none; }
 .today-head__history {
   flex: none;
   min-height: var(--tap-min);
@@ -173,7 +218,7 @@
   gap: 6px;
   min-height: var(--tap-min);
   margin-bottom: var(--sp-1);
-  color: var(--focus);            /* deepened coral clears 4.5:1 on the card */
+  color: var(--link);             /* deep coral text link: clears 4.5:1 on the card in both themes */
   font-size: var(--fs-sm);
   font-weight: 800;
   text-decoration: none;
@@ -316,6 +361,7 @@
   .navbtn:hover:not(:disabled) { background: var(--surface-2); }
   .block__toggle:hover, .block__swap:hover { background: var(--surface-2); }
   .today-head__history:hover { background: var(--surface-2); }
+  .today-help-btn:hover > span { background: var(--surface-2); color: var(--text); }
   .history-del:hover { color: var(--focus); background: var(--surface-2); }
 }
 

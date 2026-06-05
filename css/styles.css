@@ -58,7 +58,8 @@
   --on-primary: var(--navy);       /* navy on coral ≈ 5:1 */
   --primary-tint: #FFE9DF;         /* solid light coral (avoids alpha) */
   --accent: var(--teal);
-  --focus: #E2571C;                /* deepened coral, ≥ 3:1 on light bg */
+  --focus: #E2571C;                /* deepened coral, ≥ 3:1 on light bg (rings/UI) */
+  --link: #B8420C;                 /* deeper coral for TEXT links: ≥ 4.5:1 on every light surface */
   --shadow: 0 6px 20px rgba(27, 42, 74, 0.08);
   --shadow-bar: 0 -4px 16px rgba(27, 42, 74, 0.08);
 
@@ -97,6 +98,7 @@
   --primary-tint: oklch(31% 0.060 42);
   --accent: oklch(78% 0.120 182);
   --focus: oklch(80% 0.150 45);         /* light coral, ≥ 3:1 on dark */
+  --link: oklch(80% 0.150 45);          /* same light coral: high-contrast text links on dark surfaces */
   --shadow: none;
   --shadow-bar: none;
 
@@ -392,6 +394,7 @@ textarea.input {
   color: var(--tab-inactive);
   font-size: var(--fs-xs);
   font-weight: 600;
+  transition: color 0.18s var(--ease);   /* smooth fade between active/inactive */
 }
 .tabbar a svg { width: 24px; height: 24px; }
 .tab-label { line-height: 1; }

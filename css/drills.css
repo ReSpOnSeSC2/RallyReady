@@ -1,0 +1,181 @@
+/* drills.css — the Drills browser screen (renderDrills) + the shared drill
+   SUMMARY card / DETAIL view that live in js/ui.js (drillCard, drillDetail).
+   Split out of styles.css to keep every file under 800 lines. Uses ONLY the
+   semantic tokens from styles.css plus the fixed intensity hues carried by the
+   shared .badge--*/.dot--* classes (navy text), so it reads correctly in BOTH
+   light and dark themes. Selected chips reuse the app's ✓-glyph cue, so the
+   selected state never rests on colour alone. No nested cards. */
+
+/* Intro line — full --text (not muted) since it sits on --bg. */
+.drills-intro { margin: calc(-1 * var(--sp-2)) 0 var(--sp-4); color: var(--text); }
+
+/* ---- Filter controls ------------------------------------------------------ */
+.drills-controls { display: flex; flex-direction: column; gap: var(--sp-4); margin-bottom: var(--sp-5); }
+.drills-controls[hidden] { display: none; }
+
+/* Search field with a leading icon inside the input frame. */
+.drills-search { position: relative; }
+.drills-search__icon {
+  position: absolute;
+  top: 50%;
+  left: var(--sp-4);
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  display: inline-flex;
+}
+.drills-search__input { padding-left: calc(var(--sp-4) + 34px); }
+/* Hide the native search "clear" control so our own Clear affordance is the
+   single, consistent way to reset. */
+.drills-search__input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+
+.drills-fgroup { display: flex; flex-direction: column; gap: var(--sp-2); }
+.drills-chips { gap: var(--sp-2); }
+
+/* Small category colour dot inside a chip (decorative; the label carries
+   meaning). Sits before the chip text. */
+.chip__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  margin-right: 6px;
+  border: 1.5px solid var(--text);
+}
+/* When a chip is selected its ✓ glyph leads, so drop the colour dot's extra gap. */
+.chip.is-on .chip__dot { margin-right: 4px; }
+
+/* ---- Results count + clear ------------------------------------------------ */
+.drills-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.drills-count__num { font-weight: 800; color: var(--text); }
+.drills-clear {
+  min-height: var(--tap-min);
+  padding: 0 var(--sp-3);
+  border: none;
+  background: transparent;
+  color: var(--link);           /* deep coral text link: clears 4.5:1 on --bg in both themes */
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+}
+.drills-clear:hover { text-decoration: underline; }
+.drills-empty__cta { margin-top: var(--sp-4); }
+
+/* ---- Results list (drill summary cards) ----------------------------------- */
+.drills-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+/* Each summary card is a full-width <button>; reset button chrome and lay it out
+   as a left-aligned stack. */
+.drill-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  padding: var(--sp-4);
+  transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.06s var(--ease);
+}
+.drill-card:active { transform: translateY(1px); }
+
+.drill-card__top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.drill-card__age { font-size: var(--fs-sm); font-weight: 700; color: var(--text-muted); }
+.drill-card__name { margin: 0; font-size: var(--fs-h3); }
+
+.drill-card__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: 2px;
+}
+.drill-card__diff { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.drill-card__diff .eyebrow { margin: 0; }
+.drill-card__time { font-size: var(--fs-sm); font-weight: 700; color: var(--text-muted); }
+.drill-card__chev { margin-left: auto; color: var(--text-muted); flex: none; display: inline-flex; }
+
+/* "Camp-friendly" marker (icon + word) — a tinted pill; the word carries the
+   meaning so it never rests on colour. */
+.drill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+}
+.drill-tag__icon { display: inline-flex; color: var(--accent); }
+
+/* ---- Detail view ---------------------------------------------------------- */
+.drills-detail-wrap { display: flex; flex-direction: column; gap: var(--sp-3); }
+.drills-back {
+  align-self: flex-start;
+  min-height: var(--tap-min);
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-sm);
+}
+.drills-back__icon { display: inline-flex; }
+
+.drill-detail__head { margin-bottom: var(--sp-4); }
+.drill-detail__badges { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.drill-detail__name { margin: 0; font-size: var(--fs-title); letter-spacing: -0.02em; }
+.drill-detail__name:focus { outline: none; }   /* programmatic focus target */
+
+/* Stat strip (difficulty / age / time). */
+.drill-detail__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--sp-3);
+  padding: var(--sp-4) 0;
+  margin-bottom: var(--sp-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.drill-detail__stat { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.drill-detail__stat strong { font-size: var(--fs-body); color: var(--text); }
+.drill-detail__diff { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); }
+.drill-detail__diff-word { font-weight: 800; color: var(--text); font-size: var(--fs-sm); }
+
+.drill-detail__body { display: flex; flex-direction: column; gap: var(--sp-4); margin: var(--sp-4) 0; }
+.drill-detail__section p { margin: var(--sp-1) 0 0; color: var(--text); }
+.drill-detail__steps,
+.drill-detail__cues { margin: var(--sp-1) 0 0; padding-left: 1.25em; color: var(--text); }
+.drill-detail__steps li, .drill-detail__cues li { margin-bottom: var(--sp-2); }
+.drill-detail__steps li::marker { font-weight: 800; color: var(--text-muted); }
+
+/* Easier / harder, side by side on wider phones, stacked on the narrowest. */
+.drill-detail__adjust {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+.drill-detail__adjust-col {
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  background: var(--surface-2);
+}
+.drill-detail__adjust-col p { margin: var(--sp-1) 0 0; color: var(--text); font-size: var(--fs-sm); }
+/* On the tinted col, the eyebrow must be full --text (muted would miss AA there). */
+.drill-detail__adjust-col .eyebrow { color: var(--text); }
+
+@media (max-width: 360px) {
+  .drill-detail__stats { grid-template-columns: 1fr; gap: var(--sp-2); }
+  .drill-detail__adjust { grid-template-columns: 1fr; }
+}
+
+/* ---- Hover (pointer devices only, so touch never sticks) ------------------ */
+@media (hover: hover) {
+  .drill-card:hover { background: var(--surface-2); border-color: var(--field-border); }
+}
