@@ -562,7 +562,7 @@ window.RR = window.RR || {};
     },
     {
       id: "camp-skills-circuit",
-      name: "Camp Skills Stations Circuit",
+      name: "Skills Stations Circuit",
       skill: "Team Play",
       ageMin: 8, ageMax: 16,
       difficulty: 2,
@@ -572,10 +572,10 @@ window.RR = window.RR || {};
       isGame: true,
       campFriendly: true,
       equipment: ["balls", "net", "cones"],
-      setup: "A rotating circuit of short skill stations — passing, setting, serving, a fun game — that keeps a big, mixed-age camp group busy, learning, and moving. It's the backbone of an organized, high-energy camp session.",
+      setup: "A rotating circuit of short skill stations — passing, setting, serving, a fun game — that keeps a big group busy, learning, and moving. It's the backbone of an organized, high-energy session, and it's great for a large team or a mixed-age camp group.",
       steps: [
         "Set up four to six stations, each with one focus and a coach or instructions.",
-        "Split campers into small groups, one per station.",
+        "Split players into small groups, one per station.",
         "Groups work each station for a few minutes, then rotate on a whistle.",
         "Finish with everyone at a fun game station to end on energy."
       ],
@@ -584,9 +584,9 @@ window.RR = window.RR || {};
         "Quick rotations on the whistle. No standing around.",
         "Coaches give one simple cue per station so it's clear and fast."
       ],
-      easier: "Use simpler stations and more time at each for younger or newer campers.",
+      easier: "Use simpler stations and more time at each for younger or newer players.",
       harder: "Add a challenge or a score at each station and a competition across the whole circuit.",
-      videoSearchUrl: v("Camp Skills Stations Circuit")
+      videoSearchUrl: v("Skills Stations Circuit")
     },
     {
       id: "four-v-four-continuous",
