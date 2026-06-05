@@ -7,11 +7,14 @@ RR.app = (function () {
   "use strict";
 
   var SCREENS = {
-    today:  { title: "Today",  blurb: "Your next practice plan will appear here, ready to run." },
-    season: { title: "Season", blurb: "Map out your season and see the intensity curve week by week." },
-    drills: { title: "Drills", blurb: "Browse the drill library and find the right activity for any skill." },
-    tips:   { title: "Tips",   blurb: "Quick coaching tips and what to expect at each age group." },
-    team:   { title: "Team",   blurb: "Set up your team's name and age group to tailor every practice." }
+    today:   { title: "Today",   blurb: "Your next practice plan will appear here, ready to run." },
+    season:  { title: "Season",  blurb: "Map out your season and see the intensity curve week by week." },
+    drills:  { title: "Drills",  blurb: "Browse the drill library and find the right activity for any skill." },
+    tips:    { title: "Tips",    blurb: "Quick coaching tips and what to expect at each age group." },
+    team:    { title: "Team",    blurb: "Set up your team's name and age group to tailor every practice." },
+    // History isn't a tab — it's reached from the Today header — but it's a real
+    // route so it gets a title, a focus target, and back/forward support.
+    history: { title: "History", blurb: "Your completed practices." }
   };
 
   var DEFAULT_ROUTE = "today";
@@ -25,6 +28,10 @@ RR.app = (function () {
     season: {
       title: "Set up your team first",
       blurb: "Add your season dates and RallyReady maps out the whole season for you, week by week."
+    },
+    history: {
+      title: "Set up your team first",
+      blurb: "Mark a practice complete and it appears here — a log of everything you've run."
     }
   };
 
@@ -105,9 +112,15 @@ RR.app = (function () {
     if (routeId === "team" && team) {
       // The Team screen owns its body: the auto-saving setup form + summary.
       team.renderTeam(host);
-    } else if ((routeId === "today" || routeId === "season") && team && !team.hasTeam()) {
+    } else if ((routeId === "today" || routeId === "season" || routeId === "history") && team && !team.hasTeam()) {
       // These screens are driven by the team; nudge setup until one exists.
       host.appendChild(team.emptyStateCard(EMPTY_COPY[routeId]));
+    } else if (routeId === "today" && RR.today) {
+      // The Today screen owns its body: practice plan + program-aware controls.
+      RR.today.renderToday(host);
+    } else if (routeId === "history" && RR.today) {
+      // The History log lives alongside Today (RR.today).
+      RR.today.renderHistory(host);
     } else if (routeId === "season" && RR.season) {
       // The Season/Camp screen owns its body and sets its own program-aware title.
       RR.season.renderSeason(host);
@@ -122,11 +135,13 @@ RR.app = (function () {
   }
 
   function updateTabs(routeId) {
+    // History has no tab of its own; show it as living under the Today tab.
+    var activeTab = routeId === "history" ? "today" : routeId;
     var tabs = document.querySelectorAll(".tabbar a");
     for (var i = 0; i < tabs.length; i++) {
       var a = tabs[i];
       var id = (a.getAttribute("href") || "").replace(/^#/, "");
-      var active = id === routeId;
+      var active = id === activeTab;
       a.classList.toggle("is-active", active);
       if (active) { a.setAttribute("aria-current", "page"); }
       else { a.removeAttribute("aria-current"); }
