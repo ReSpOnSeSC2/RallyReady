@@ -227,7 +227,10 @@ RR.periodization = (function () {
     var plan = {
       type: "season", programType: "season", label: win.label,
       startDate: start, endDate: opener, seasonStart: opener,
-      lengthDays: L, prepWeeks: prepWeeks, phases: phases
+      lengthDays: L, prepWeeks: prepWeeks, phases: phases,
+      // The weekdays (0=Sun…6=Sat) practices land on, so the Today screen only
+      // surfaces a plan on real practice days instead of inventing one daily.
+      practiceDays: (win.practiceDays && win.practiceDays.length) ? win.practiceDays.slice() : null
     };
     plan.seasonSkillByWeek = buildSeasonSkillByWeek(plan);   // weeks 1..prepWeeks
     return plan;
@@ -348,6 +351,51 @@ RR.periodization = (function () {
     return clampInt(daysBetween(plan.startDate, toISO(date)) + 1, 1, plan.lengthDays);
   }
 
+  // ---- Practice-day scheduling (season only) --------------------------------
+  // The weekday (0=Sun…6=Sat) of an ISO date.
+  function weekdayOf(iso) {
+    var d = parseISO(iso);
+    return d ? d.getDay() : 0;
+  }
+  // Does this date fall on one of the team's chosen practice weekdays? Camps run
+  // every day, and a season with no chosen days (older saved teams) treats every
+  // day as a practice day — so the app keeps working in both cases.
+  function isPracticeDay(plan, date) {
+    if (!plan || plan.type === "camp") return true;
+    var days = plan.practiceDays;
+    if (!days || !days.length) return true;
+    return days.indexOf(weekdayOf(toISO(date || new Date()))) !== -1;
+  }
+  // The next practice date strictly after `iso` in direction dir (+1 fwd / -1 back).
+  // Scans up to two weeks; falls back to a single step if nothing qualifies.
+  function adjacentPracticeDate(plan, iso, dir) {
+    iso = toISO(iso);
+    dir = dir < 0 ? -1 : 1;
+    if (!plan || plan.type === "camp") return addDays(iso, dir);
+    var days = plan.practiceDays;
+    if (!days || !days.length) return addDays(iso, dir);
+    var cur = iso;
+    for (var i = 0; i < 14; i++) {
+      cur = addDays(cur, dir);
+      if (isPracticeDay(plan, cur)) return cur;
+    }
+    return addDays(iso, dir);
+  }
+  // The first practice date on or after `iso` (used to land the cursor on a real
+  // practice when the coach opens Today on an off day). Scans up to two weeks.
+  function practiceDayOnOrAfter(plan, iso) {
+    iso = toISO(iso);
+    if (!plan || plan.type === "camp") return iso;
+    var days = plan.practiceDays;
+    if (!days || !days.length) return iso;
+    var cur = iso;
+    for (var i = 0; i < 14; i++) {
+      if (isPracticeDay(plan, cur)) return cur;
+      cur = addDays(cur, 1);
+    }
+    return iso;
+  }
+
   // phaseForDate(plan, date) -> the phase that contains the date.
   function phaseForDate(plan, date) {
     if (!plan) return null;
@@ -428,6 +476,9 @@ RR.periodization = (function () {
     focusToSkill: focusToSkill,
     phaseColor: phaseColor,
     campDayFor: campDayFor,
+    isPracticeDay: isPracticeDay,
+    adjacentPracticeDate: adjacentPracticeDate,
+    practiceDayOnOrAfter: practiceDayOnOrAfter,
     // small date utilities reused by the screen (kept pure)
     toISO: toISO, addDays: addDays, daysBetween: daysBetween,
     // exposed for inspection / testing

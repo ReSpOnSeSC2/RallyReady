@@ -364,6 +364,21 @@ textarea.input {
 .input:focus { outline: none; border-color: var(--primary); }
 .input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
+/* Empty native date fields render as a blank box (no placeholder), which reads as
+   "nothing to do here". When empty we prompt with the field's data-placeholder and
+   tint the border so it clearly invites a choice; once a date is set it's normal. */
+.datefield.is-empty {
+  border-color: var(--focus);
+  color: var(--text-muted);
+}
+.datefield.is-empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.datefield.is-empty::-webkit-datetime-edit { color: transparent; }   /* hide "mm/dd/yyyy" */
+.datefield:not(.is-empty)::before { content: none; }
+
 /* ---------------------------------------------------- Bottom tab bar (nav) */
 .tabbar {
   position: fixed;
@@ -560,6 +575,17 @@ textarea.input {
 }
 /* Non-color cue for the selected state (a check), so it isn't conveyed by color alone. */
 .chip.is-on::before { content: "✓"; margin-right: 6px; font-weight: 900; }
+
+/* Season "which days?" picker — seven compact weekday chips that wrap to fit. The
+   check still marks selection, but tighter padding keeps the row readable on phones. */
+.weekdays { gap: var(--sp-2); }
+.chip--day {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 3.5rem;
+  padding: 0 var(--sp-3);
+}
+.chip--day.is-on::before { margin-right: 4px; }
 
 /* At-a-glance summary card. */
 .summary-host { margin-top: var(--sp-4); }

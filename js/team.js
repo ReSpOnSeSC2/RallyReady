@@ -26,6 +26,24 @@ RR.team = (function () {
   var SESSION_LENGTHS = [30, 45, 60, 75, 90, 120];   // minutes
   var PRACTICES = [1, 2, 3, 4, 5];                    // season: practices per week
   var SESSIONS_PER_DAY = [1, 2, 3, 4];               // camp: sessions in a day
+
+  // Weekdays for the season "which days?" picker. The index matches JS
+  // Date.getDay() (0 = Sunday … 6 = Saturday) so downstream date math is trivial.
+  var WEEKDAYS = [
+    { i: 0, short: "Sun", label: "Sunday" },
+    { i: 1, short: "Mon", label: "Monday" },
+    { i: 2, short: "Tue", label: "Tuesday" },
+    { i: 3, short: "Wed", label: "Wednesday" },
+    { i: 4, short: "Thu", label: "Thursday" },
+    { i: 5, short: "Fri", label: "Friday" },
+    { i: 6, short: "Sat", label: "Saturday" }
+  ];
+  // Sensible default day spreads per "practices per week" count — they avoid
+  // back-to-back days where possible and mirror common youth-club schedules.
+  var DEFAULT_PRACTICE_DAYS = {
+    1: [2], 2: [2, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 4, 5]
+  };
+  var MAX_PRACTICE_DAYS = 5;                          // matches the 1–5 PRACTICES range
   var CAMP_MAX_DAYS = 30;                             // camps run 1–30 days
   var SKILLS = ["Passing", "Setting", "Serving", "Hitting", "Blocking", "Defense", "Teamwork"];
 
@@ -56,6 +74,7 @@ RR.team = (function () {
     practiceStart: "",       // "YYYY-MM-DD" — when practices begin
     seasonStart: "",         // "YYYY-MM-DD" — first game / season opener
     practicesPerWeek: 2,
+    practiceDays: [2, 4],    // which weekdays (0=Sun…6=Sat) practices land on
     // Camp schedule (summer-camp-style 1–30 day program):
     campStart: "",           // "YYYY-MM-DD" — day one of camp
     campDays: 5,             // length in days (1–30)
@@ -117,7 +136,14 @@ RR.team = (function () {
   // ---- Derived data the rest of the app can use -----------------------------
   function getTeam() {
     var t = RR.state.getState().team;
-    return t ? Object.assign({}, DEFAULT_FORM, t) : null;
+    if (!t) return null;
+    var merged = Object.assign({}, DEFAULT_FORM, t);
+    // Teams saved before the day picker existed have no practiceDays — derive a
+    // matching set from their chosen count so their plan doesn't silently change.
+    if (!Array.isArray(t.practiceDays) || !t.practiceDays.length) {
+      merged.practiceDays = practiceDaysFor({ practicesPerWeek: merged.practicesPerWeek });
+    }
+    return merged;
   }
 
   // Season: both dates present and the opener strictly after practices begin.
@@ -147,6 +173,23 @@ RR.team = (function () {
     if (!datesValid(t)) return null;
     var days = (parseDate(t.seasonStart) - parseDate(t.practiceStart)) / 86400000;
     return Math.max(1, Math.round(days / 7));
+  }
+
+  // The chosen practice weekdays (0–6), de-duped and sorted. Falls back to a
+  // sensible spread for the team's "practices per week" when none were picked yet
+  // (e.g. teams saved before the day picker existed), so the schedule still works.
+  function practiceDaysFor(t) {
+    t = t || getTeam();
+    var raw = (t && Array.isArray(t.practiceDays)) ? t.practiceDays : [];
+    var days = raw
+      .filter(function (d) { return typeof d === "number" && d >= 0 && d <= 6; })
+      .filter(function (d, i, a) { return a.indexOf(d) === i; })
+      .sort(function (a, b) { return a - b; });
+    if (!days.length) {
+      var n = (t && t.practicesPerWeek) || 2;
+      days = (DEFAULT_PRACTICE_DAYS[n] || DEFAULT_PRACTICE_DAYS[2]).slice();
+    }
+    return days;
   }
 
   // Age band -> numeric {min,max}, parsed from labels like "11-12 (Foundations)".
@@ -182,6 +225,7 @@ RR.team = (function () {
       lengthDays: Math.round((parseDate(t.seasonStart) - parseDate(t.practiceStart)) / 86400000),
       sessionsPerDay: null,
       sessionsPerWeek: t.practicesPerWeek,
+      practiceDays: practiceDaysFor(t),
       prepWeeks: weeks,
       label: weeks + "-week season"
     };
@@ -350,8 +394,16 @@ RR.team = (function () {
     }
 
     function dateInput(key) {
-      var input = h("input", { class: "input", type: "date", value: form[key] || "" });
-      input.addEventListener("change", function () { form[key] = input.value; commit(); });
+      var input = h("input", {
+        class: "input datefield", type: "date", value: form[key] || "",
+        "data-placeholder": "Choose a date"
+      });
+      // A native empty date field reads as a blank box, so flag the empty state:
+      // CSS shows a "Choose a date" prompt until a real date is picked.
+      function syncEmpty() { input.classList.toggle("is-empty", !input.value); }
+      syncEmpty();
+      input.addEventListener("input", syncEmpty);
+      input.addEventListener("change", function () { form[key] = input.value; syncEmpty(); commit(); });
       return input;
     }
 
@@ -397,11 +449,57 @@ RR.team = (function () {
           seasonField(),
           field("Practices per week", segmented({
             options: PRACTICES.map(function (n) { return { value: n, label: String(n) }; }),
-            value: form.practicesPerWeek,
-            onSelect: function (v) { form.practicesPerWeek = v; commit(); }
-          }), null, true)
+            value: form.practiceDays.length,
+            onSelect: function (v) {
+              // Picking a count lays down a sensible default set of days; the day
+              // picker below lets the coach fine-tune exactly which ones.
+              form.practicesPerWeek = v;
+              form.practiceDays = (DEFAULT_PRACTICE_DAYS[v] || DEFAULT_PRACTICE_DAYS[2]).slice();
+              commit();
+              renderSchedule();
+            }
+          }), null, true),
+          field("Which days?", weekdayPicker(),
+            "Tap the days you practice — your plan only fills these.", true)
         ]);
       }
+    }
+
+    // Season weekday picker. Toggling a day keeps practicesPerWeek in step (the
+    // count == the days chosen), then re-renders so the segmented control agrees.
+    function weekdayPicker() {
+      var current = practiceDaysFor(form);
+      var row = h("div", { class: "chips weekdays", role: "group" });
+      WEEKDAYS.forEach(function (d) {
+        var on = current.indexOf(d.i) !== -1;
+        var btn = h("button", {
+          type: "button", class: "chip chip--day" + (on ? " is-on" : ""),
+          "aria-pressed": on ? "true" : "false",
+          "aria-label": d.label, "data-weekday": String(d.i), text: d.short
+        });
+        btn.addEventListener("click", function () { toggleDay(d.i); });
+        row.appendChild(btn);
+      });
+      return row;
+    }
+
+    function toggleDay(i) {
+      var days = practiceDaysFor(form);
+      var at = days.indexOf(i);
+      if (at !== -1) {
+        if (days.length <= 1) return;                       // keep at least one day
+        days.splice(at, 1);
+      } else {
+        if (days.length >= MAX_PRACTICE_DAYS) days.shift();  // cap at 5; drop the earliest
+        days.push(i);
+      }
+      days.sort(function (a, b) { return a - b; });
+      form.practiceDays = days;
+      form.practicesPerWeek = days.length;                  // count follows the chosen days
+      commit();
+      renderSchedule();
+      var el = scheduleHost.querySelector('[data-weekday="' + i + '"]');
+      if (el) el.focus();
     }
 
     // 1–30 days as a native select — clearer than a 30-wide segmented control.
@@ -468,8 +566,10 @@ RR.team = (function () {
           h("span", { class: "summary-hero__unit", text: weeks === 1 ? "week to first game" : "weeks to first game" }),
           h("span", { class: "summary-hero__date", text: "Opener · " + prettyDate(form.seasonStart) })
         ];
+        var dayNames = practiceDaysFor(form).map(function (d) { return WEEKDAYS[d].short; }).join(" · ");
         cadenceCells = [
           summaryItem("Practices / week", form.practicesPerWeek + "×"),
+          summaryItem("Practice days", dayNames),
           summaryItem("Session", form.sessionMinutes + " min")
         ];
       }
@@ -561,10 +661,12 @@ RR.team = (function () {
     isSetUp: isSetUp,
     prepWeeks: prepWeeks,          // season-only; null for camps
     programWindow: programWindow,  // normalized season|camp window for downstream modules
+    practiceDaysFor: practiceDaysFor,  // chosen weekdays (0–6), with a safe fallback
     ageRange: ageRange,            // {min,max} parsed from the age band
     referenceFor: referenceFor,
     AGE_GROUPS: AGE_GROUPS,
     PROGRAM_TYPES: PROGRAM_TYPES,
+    WEEKDAYS: WEEKDAYS,
     SKILLS: SKILLS
   };
 })();
