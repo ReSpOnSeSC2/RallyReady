@@ -20,7 +20,10 @@ RR.state = (function () {
                             //   camp:   campStart, campDays(1-30), sessionsPerDay,
                             //   shared: sessionMinutes, emphasis[] }
     season: null,           // season plan (length, phases) created later
-    savedSessions: [],      // practices the coach has generated and kept
+    savedSessions: [],      // completed practices (History) — also feeds the
+                            // generator's recent-repeat avoidance
+    regen: {},              // per-(team|date|slot) "Regenerate" counters, so a
+                            // regenerated practice stays put across reloads
     settings: {
       practiceMinutes: 75   // sensible default practice length
     }
