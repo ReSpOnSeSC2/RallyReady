@@ -1,0 +1,151 @@
+/* tips.css — styles for the Tips / coaching screen (renderTips).
+   Split out of styles.css to keep every file under 800 lines. Uses ONLY the
+   semantic tokens defined in styles.css, so the screen renders correctly in
+   BOTH light and dark themes; the disclosures reuse the app's :focus-visible
+   ring and respect prefers-reduced-motion. No nested cards. */
+
+/* Intro line under the screen title — full --text (not muted) since it sits on
+   --bg, where muted text would miss AA. */
+.tips-intro {
+  margin: calc(-1 * var(--sp-2)) 0 var(--sp-4);
+  color: var(--text);
+}
+
+/* ---- Top age card: guidance + reference ---------------------------------- */
+.age-guide__text {
+  margin: 0 0 var(--sp-4);
+  color: var(--text);
+}
+/* The league caveat under the reference grid. .muted carries the colour; this
+   only handles spacing/size. */
+.ref-note {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--fs-sm);
+}
+
+/* All-bands fallback table (shown until a team is set up). */
+.ref-rows { margin-top: var(--sp-2); }
+.ref-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+.ref-row:last-child { border-bottom: none; }
+.ref-row__band { font-weight: 700; color: var(--text); }
+.ref-row__spec { color: var(--text-muted); text-align: right; }
+.tips-setup-link { margin-top: var(--sp-4); }
+
+/* ---- Disclosure (accordion) tip cards ------------------------------------ */
+/* The card itself carries no padding; the toggle and panel own their spacing,
+   so the clickable header fills the whole card width. */
+.tip { padding: 0; overflow: hidden; }
+
+.tip__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--sp-4) var(--sp-5);
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--fs-h3);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Icon chip — tinted brand fill with full-contrast --text glyph (navy on light
+   coral / near-white on dark coral both clear the 3:1 icon bar). */
+.tip__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--primary-tint);
+  color: var(--text);
+}
+.tip__title { flex: 1 1 auto; min-width: 0; }
+.tip__chev {
+  flex: none;
+  display: inline-flex;
+  color: var(--text-muted);
+  transition: transform 0.2s var(--ease);
+}
+.tip__chev.is-open { transform: rotate(180deg); }
+
+.tip__panel { padding: 0 var(--sp-5) var(--sp-5); }
+.tip__panel[hidden] { display: none; }
+
+/* Bullet points — custom coral marker so meaning never rests on the dot alone
+   (the text is the content); --text on --surface passes AA in both themes. */
+.tip__points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.tip__points li {
+  position: relative;
+  padding-left: var(--sp-5);
+  color: var(--text);
+}
+.tip__points li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 9px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--focus);   /* deepened coral: clears 3:1 on the card in both themes */
+}
+
+/* ---- Terms glossary (definition list) ------------------------------------ */
+.terms { margin: 0; }
+.terms dt {
+  font-weight: 800;
+  color: var(--text);
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+.terms dt:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.terms dd {
+  margin: 2px 0 0;
+  color: var(--text-muted);   /* AA on --surface in both themes */
+}
+
+/* ---- Equipment list ------------------------------------------------------- */
+.equip-group { margin-top: var(--sp-5); }
+.equip-group:first-child { margin-top: 0; }
+.equip-list {
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.equip-list li { color: var(--text-muted); }
+.equip-list li strong { color: var(--text); font-weight: 700; }
+
+/* ---- Motion: gentle expand, disabled under reduced-motion ---------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .tip__panel:not([hidden]) { animation: tip-open 0.22s var(--ease) both; }
+  @keyframes tip-open {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+  }
+}

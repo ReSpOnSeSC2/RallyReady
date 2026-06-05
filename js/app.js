@@ -1,0 +1,185 @@
+// app.js — application boot: hash router, bottom tab-bar wiring, theme control,
+// and service worker registration. Each screen renders a titled placeholder
+// card for now; the real screens are built on top of this shell later.
+window.RR = window.RR || {};
+
+RR.app = (function () {
+  "use strict";
+
+  var SCREENS = {
+    today:  { title: "Today",  blurb: "Your next practice plan will appear here, ready to run." },
+    season: { title: "Season", blurb: "Map out your season and see the intensity curve week by week." },
+    drills: { title: "Drills", blurb: "Browse the drill library and find the right activity for any skill." },
+    tips:   { title: "Tips",   blurb: "Quick coaching tips and what to expect at each age group." },
+    team:   { title: "Team",   blurb: "Set up your team's name and age group to tailor every practice." }
+  };
+
+  var DEFAULT_ROUTE = "today";
+
+  // Copy for the "set up your team first" empty state on the data-driven screens.
+  var EMPTY_COPY = {
+    today: {
+      title: "Set up your team first",
+      blurb: "Once your team is set up, your next practice plan appears here — tailored to their age group and where they are in the season."
+    },
+    season: {
+      title: "Set up your team first",
+      blurb: "Add your season dates and RallyReady maps out the whole season for you, week by week."
+    }
+  };
+
+  // ---- Theme ----------------------------------------------------------------
+  // Preference (stored in state) is 'system' | 'light' | 'dark'. The effective
+  // theme is reflected on <html data-theme> so CSS can swap tokens, and the
+  // browser chrome color (meta theme-color) is kept in sync.
+  var THEME_COLOR = { light: "#FF6B35", dark: "#141E33" };
+
+  function prefersDark() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }
+
+  function effectiveDark(pref) {
+    if (pref === "dark") return true;
+    if (pref === "light") return false;
+    return prefersDark();   // 'system' follows the OS
+  }
+
+  function applyTheme() {
+    var pref = RR.state.getState().theme || "system";
+    var dark = effectiveDark(pref);
+    var mode = dark ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", mode);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", THEME_COLOR[mode]);
+    var btn = document.getElementById("themeToggle");
+    if (btn) {
+      btn.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+      btn.setAttribute("aria-pressed", String(dark));
+    }
+  }
+
+  // The toggle flips to an explicit light/dark choice and persists it.
+  function toggleTheme() {
+    var dark = document.documentElement.getAttribute("data-theme") === "dark";
+    RR.state.update({ theme: dark ? "light" : "dark" });
+    applyTheme();
+  }
+
+  // ---- Router ---------------------------------------------------------------
+  function currentRoute() {
+    var id = (location.hash || "").replace(/^#/, "");
+    return SCREENS[id] ? id : DEFAULT_ROUTE;
+  }
+
+  // Placeholder card for screens not yet built (Drills, Tips, and Today/Season
+  // once a team exists). Replaced by real screens in later prompts.
+  function placeholderCard(data) {
+    var card = document.createElement("section");
+    card.className = "card empty";
+    var h2 = document.createElement("h2");
+    h2.textContent = data.title + " is coming together";
+    var p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = data.blurb;
+    card.appendChild(h2);
+    card.appendChild(p);
+    return card;
+  }
+
+  function renderScreen(routeId) {
+    var host = document.getElementById("screen");
+    if (!host) return;
+    var data = SCREENS[routeId];
+    host.innerHTML = "";
+
+    var head = document.createElement("div");
+    head.className = "screen-head";
+    var h1 = document.createElement("h1");
+    h1.className = "screen-title";
+    h1.setAttribute("tabindex", "-1");   // focus target for SPA navigation (a11y)
+    h1.textContent = data.title;
+    head.appendChild(h1);
+    host.appendChild(head);
+
+    var team = RR.team;
+    if (routeId === "team" && team) {
+      // The Team screen owns its body: the auto-saving setup form + summary.
+      team.renderTeam(host);
+    } else if ((routeId === "today" || routeId === "season") && team && !team.hasTeam()) {
+      // These screens are driven by the team; nudge setup until one exists.
+      host.appendChild(team.emptyStateCard(EMPTY_COPY[routeId]));
+    } else if (routeId === "season" && RR.season) {
+      // The Season/Camp screen owns its body and sets its own program-aware title.
+      RR.season.renderSeason(host);
+    } else if (routeId === "tips" && RR.coaching && RR.coaching.renderTips) {
+      // The Tips screen renders the coaching guidance, age reference, and glossary.
+      RR.coaching.renderTips(host);
+    } else {
+      host.appendChild(placeholderCard(data));
+    }
+
+    h1.focus();   // move focus to the new title so screen readers announce it
+  }
+
+  function updateTabs(routeId) {
+    var tabs = document.querySelectorAll(".tabbar a");
+    for (var i = 0; i < tabs.length; i++) {
+      var a = tabs[i];
+      var id = (a.getAttribute("href") || "").replace(/^#/, "");
+      var active = id === routeId;
+      a.classList.toggle("is-active", active);
+      if (active) { a.setAttribute("aria-current", "page"); }
+      else { a.removeAttribute("aria-current"); }
+    }
+  }
+
+  function route() {
+    var id = currentRoute();
+    renderScreen(id);
+    updateTabs(id);
+    document.title = "RallyReady · " + SCREENS[id].title;
+  }
+
+  function registerServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function (err) {
+        console.error("RallyReady: service worker registration failed", err);
+      });
+    });
+  }
+
+  function init() {
+    applyTheme();
+    var toggle = document.getElementById("themeToggle");
+    if (toggle) toggle.addEventListener("click", toggleTheme);
+
+    // Re-apply when the OS theme changes, but only while following 'system'.
+    if (window.matchMedia) {
+      var mq = window.matchMedia("(prefers-color-scheme: dark)");
+      var onChange = function () {
+        if ((RR.state.getState().theme || "system") === "system") applyTheme();
+      };
+      if (mq.addEventListener) { mq.addEventListener("change", onChange); }
+      else if (mq.addListener) { mq.addListener(onChange); }
+    }
+
+    // Normalize empty/unknown hashes to the default route (no extra history entry).
+    var raw = (location.hash || "").replace(/^#/, "");
+    if (!SCREENS[raw]) { location.replace("#" + DEFAULT_ROUTE); }
+    route();
+    window.addEventListener("hashchange", route);
+    registerServiceWorker();
+  }
+
+  // Scripts are at the end of <body>, so the DOM is ready to query now.
+  init();
+
+  return {
+    route: route,
+    currentRoute: currentRoute,
+    SCREENS: SCREENS,
+    applyTheme: applyTheme,
+    toggleTheme: toggleTheme
+  };
+})();
