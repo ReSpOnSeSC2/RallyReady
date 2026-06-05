@@ -114,13 +114,13 @@ window.RR = window.RR || {};
       isGame: true,
       campFriendly: true,
       equipment: ["balls", "net"],
-      setup: "Split a big, mixed-age camp group into small teams that rotate through short games on several mini-courts. Everyone gets a lot of touches and stays playing, and it builds toward a fun camp tournament.",
+      setup: "Split a big group into small teams that rotate through short games on several mini-courts. Everyone gets a lot of touches and stays playing, and it builds toward a fun in-house tournament. Works great for a large team or a mixed-age camp group.",
       steps: [
         "Split the gym into several small courts. Lowered nets or ropes work fine.",
         "Make even teams of 2 to 4 and put two teams on each court.",
         "Play short rally-scoring games to a low number, like 11.",
         "Move winners up a court and others down, so teams play others at their level.",
-        "Add up the results across rounds for a camp-wide tournament standing."
+        "Add up the results across rounds for a group-wide tournament standing."
       ],
       cues: [
         "Use all three contacts when you can — pass, set, hit.",
