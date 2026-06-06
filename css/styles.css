@@ -245,6 +245,24 @@ h3 { font-size: var(--fs-h3); }
 .empty h2 { margin-bottom: var(--sp-2); }
 .empty p { margin: 0 auto; max-width: 32ch; }
 
+/* ---- Collapsible disclosure card (shared; RR.ui.disclosure) --------------- */
+.disclosure { padding: 0; overflow: hidden; }
+.disclosure__toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+  width: 100%; min-height: var(--tap-min); padding: var(--sp-4) var(--sp-5);
+  background: transparent; border: none; cursor: pointer; text-align: left; color: var(--text);
+}
+.disclosure__title { font-size: var(--fs-h3); font-weight: 800; letter-spacing: -0.015em; }
+.disclosure__chev { flex: none; color: var(--text-muted); transition: transform 0.18s var(--ease); }
+.disclosure__chev.is-open { transform: rotate(180deg); }
+.disclosure__panel { padding: 0 var(--sp-5) var(--sp-5); }
+@media (hover: hover) { .disclosure__toggle:hover { background: var(--surface-2); } }
+/* Bare variant: a plain divider + toggle, for use inside another card. */
+.disclosure--bare { border-top: 1px solid var(--border); margin-top: var(--sp-2); }
+.disclosure--bare .disclosure__toggle { padding: var(--sp-3) 0; }
+.disclosure--bare .disclosure__title { font-size: var(--fs-body); color: var(--text-muted); text-transform: none; }
+.disclosure--bare .disclosure__panel { padding: 0 0 var(--sp-2); }
+
 /* -------------------------------------------------------------- Buttons --- */
 .btn {
   display: inline-flex;
