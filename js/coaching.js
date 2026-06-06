@@ -35,6 +35,19 @@ RR.coaching = (function () {
       ]
     },
     {
+      title: "Teach the six core skills",
+      icon: "skills",
+      points: [
+        "Serving: build a calm, repeatable toss and a full arm swing; let the youngest players step in or serve underhand until the ball clears the net, then move them back as they get stronger.",
+        "Passing (forearm): flat platform, angle the arms toward the target, and move the feet to get behind the ball — pass with the legs, not by swinging the arms.",
+        "Setting: receive the ball high on the forehead with a relaxed triangle of the hands, then push through the legs and extend to the target; teach hand-setting early so it feels natural by the older ages.",
+        "Hitting: drill the approach footwork first (left-right-left for a righty), then add the arm — high contact, snap the wrist, and swing aggressively even when it misses.",
+        "Blocking: press the hands over the net, watch the hitter rather than the ball, and land balanced on two feet without touching the net.",
+        "Digging & defense: stay low in a ready stance, get the platform to the ball, and angle it back toward the middle of the court instead of swinging at it.",
+        "Teach skills in the order of a rally — serve, pass, set, hit — and connect them so players feel how each contact sets up the next."
+      ]
+    },
+    {
       title: "How to talk to players",
       icon: "talk",
       points: [
@@ -56,6 +69,18 @@ RR.coaching = (function () {
         "Give every player a role they can succeed at, then stretch it — success is what builds real confidence.",
         "Celebrate small wins loudly: a first overhand serve in, a first clean set, so progress feels visible.",
         "Teach teammates to encourage each other; a team that high-fives after errors plays looser and better."
+      ]
+    },
+    {
+      title: "Develop the mental game",
+      icon: "mental",
+      points: [
+        "Teach a short reset routine — a breath, a bounce of the ball, a cue word — so players recover fast after a mistake instead of carrying it to the next rally.",
+        "Build pre-serve and pre-play routines so focus has an on-switch when the pressure rises.",
+        "Praise effort and process over the result so players stay brave and keep swinging when the game is on the line.",
+        "Normalise nerves: tell players the butterflies just mean they care, and channel that energy into a confident first play.",
+        "Set process goals players actually control — a solid platform, a loud call, a hard swing — rather than only watching the scoreboard.",
+        "Grow leaders by handing players ownership: let them lead a warm-up, call a play, or be the one who picks teammates up."
       ]
     },
     {
@@ -83,6 +108,66 @@ RR.coaching = (function () {
       ]
     },
     {
+      title: "Coach on game & match day",
+      icon: "gameday",
+      points: [
+        "Set the lineup and walk players through the rotation before the first whistle so everyone knows where they start and where they go.",
+        "Keep the bench engaged — rotate substitutes in, give them something to watch on the other team, and keep the cheering loud and positive.",
+        "Use timeouts to settle nerves or stop the other team's run: one calm, clear message, then send them back out.",
+        "Coach between rallies, not during them — once the ball is live, let players play and trust their training.",
+        "Track a few simple things (missed serves, who's scoring, their best hitter) and adjust calmly at the next break.",
+        "Win or lose, finish with one sincere, specific highlight from the match so players leave proud of something real."
+      ]
+    },
+    {
+      title: "Plan your season",
+      icon: "season",
+      points: [
+        "Start with 2–3 clear season goals (everyone serves overhand, the team runs a real three-contact offense) and point every practice at them.",
+        "Build skills before systems — spend the early weeks on individual technique, then layer in rotations, plays, and strategy.",
+        "Map the season in phases: teach and build early, sharpen and compete through the middle, then lighten the load to peak for the matches that matter most.",
+        "Reassess every few weeks; if a skill isn't sticking, give it more time rather than rushing ahead to the next thing.",
+        "Keep the days before a big match or tournament light, fun, and confidence-building — never introduce brand-new material then.",
+        "Keep brief notes on what worked so next season starts from experience instead of a blank page."
+      ]
+    },
+    {
+      title: "Run tryouts & build your team",
+      icon: "tryouts",
+      points: [
+        "Decide what you're looking for before tryouts — athleticism, coachability, attitude — and put every player through the same simple stations.",
+        "Watch movement and effort, not just polished skill; raw athletes and great attitudes often outgrow the already-developed-but-stagnant.",
+        "Keep it organised and humane: name tags, clear stations, and a friendly tone so nervous kids can show their best.",
+        "Deliver results kindly and privately, and give every cut player one concrete thing to work on and a path back.",
+        "At the youngest ages, lean toward inclusion over selection — development matters far more than a perfect roster.",
+        "Once the team is set, define roles early so every player knows exactly how they help the team win."
+      ]
+    },
+    {
+      title: "Include every player",
+      icon: "include",
+      points: [
+        "Differentiate inside a drill: offer an easier and a harder version of the same task so beginners and standouts are both challenged.",
+        "Be intentional and fair about playing time, especially in the development years — kids improve by playing, not by watching.",
+        "Pair stronger and developing players so they lift each other instead of splitting the gym into tiers.",
+        "Find a meaningful role for everyone; a confident server or a steady passer wins matches just as surely as a big hitter.",
+        "Watch the quiet kids — make sure they get reps, touches, and your attention, not just the loud or the talented.",
+        "Celebrate each player's progress against their own starting point, not against the best athlete in the gym."
+      ]
+    },
+    {
+      title: "Build athletes & prevent injury",
+      icon: "athlete",
+      points: [
+        "Keep conditioning age-appropriate: for younger kids, athleticism comes from games, tag, and movement — not laps or heavy lifting.",
+        "Add real strength and jump training only as players mature, and always with good technique and recovery built in.",
+        "Protect the volleyball overuse spots — shoulders and knees — by varying reps, building load gradually, and resting sore arms.",
+        "Teach landing mechanics (soft knees, land on two feet) early; it's the simplest way to cut ankle and knee injuries.",
+        "Fuel and rest matter: encourage water, real food, and sleep, and remind players that recovery is when they actually get stronger.",
+        "Bookend every session the same way — warm up to raise the heart rate, cool down to bring it back — so it becomes automatic."
+      ]
+    },
+    {
       title: "Safety",
       icon: "safety",
       points: [
@@ -92,6 +177,18 @@ RR.coaching = (function () {
         "Hydrate often with scheduled water breaks — more in heat — and watch for overuse, especially shoulders and knees.",
         "Know your emergency plan: a charged phone, a stocked first-aid kit, and where to get help. Keep a brief injury note.",
         "Match net height and ball to the age band so kids aren't straining to play (see your age card above)."
+      ]
+    },
+    {
+      title: "Know the rules & work with officials",
+      icon: "rules",
+      points: [
+        "Know the basics cold: three contacts per side, rotate clockwise on a side-out, and no carries, double-hits, or touching the net.",
+        "Teach players the rotation and overlap rules so they don't give away free points by lining up illegally at serve.",
+        "Learn the faults that bite at your level — foot faults on the serve, back-row attack and antenna rules — and drill them until they're automatic.",
+        "Model respect for officials: questions go through the captain or coach, calmly, and never argue a judgment call mid-rally.",
+        "Confirm your league's specific rules — net height, substitution limits, let serves, libero rules — because they vary by age and association.",
+        "Scrimmage with real calls in practice so players absorb the rules by playing rather than from a lecture."
       ]
     },
     {
@@ -185,36 +282,69 @@ RR.coaching = (function () {
   //  DATA — glossary of common volleyball terminology                       //
   //  { term, def }. Plain-English, one sentence each.                       //
   // ======================================================================= //
+  // Two blocks: general play/skill/rule terms (alphabetical), then the player
+  // positions grouped together at the end. Plain-English, one sentence each.
   var terms = [
     { term: "Ace", def: "A serve that scores directly — it lands in untouched, or the receiver can't keep it in play." },
     { term: "Antenna", def: "The vertical rod on each side of the net marking the legal width of play; the ball must cross between the antennas." },
     { term: "Approach", def: "The footwork an attacker uses to jump and hit — most often a three-step \"left-right-left\" (for a right-hander)." },
     { term: "Assist", def: "The pass or set to the teammate who then scores the kill; usually credited to the setter." },
     { term: "Attack (spike / hit)", def: "Sending the ball forcefully into the opponent's court to try to score." },
+    { term: "Attack line (10-foot / 3 m line)", def: "The line three metres from the net; a back-row player must take off from behind it to attack a ball that's above net height." },
+    { term: "Back-row attack", def: "A spike launched by a back-row player who jumps from behind the attack line." },
     { term: "Block", def: "Jumping at the net with hands pressed over it to stop or slow an opponent's attack." },
+    { term: "Campfire", def: "When the ball drops to the floor between several players who all stop and watch it, as if gathered around a fire." },
+    { term: "Carry (lift)", def: "An illegal contact where the ball comes to rest in or is thrown by the hands rather than cleanly hit." },
+    { term: "Cross-court attack", def: "A spike hit diagonally across the court — the longest, most common attacking angle." },
+    { term: "Cut shot", def: "A sharp cross-court attack hit at an extreme angle, close to the net." },
     { term: "Dig", def: "A defensive forearm save of a hard-driven attack that keeps the ball off the floor." },
     { term: "Dink (tip)", def: "A soft one-handed attack placed into open space instead of a hard swing." },
+    { term: "Double hit", def: "An illegal contact where the ball touches a player twice in a row (except off a hard first ball or a block)." },
+    { term: "Down ball", def: "An attack a hitter swings from the ground without jumping — easier for the defense to read and dig." },
+    { term: "Dump", def: "A surprise attack by the setter, who tips the ball over on the second contact instead of setting it." },
     { term: "Float serve", def: "A serve hit flat with no spin so the ball wavers unpredictably in the air." },
+    { term: "Foot fault", def: "Stepping on or over the end line (or into the court) while serving — it loses the point." },
     { term: "Free ball", def: "An easy, non-attacking return from the opponent that lets your team set up its offense." },
+    { term: "Husband-and-wife play", def: "When the ball lands between two players who each assumed the other would take it — a communication breakdown." },
     { term: "Joust", def: "When two opposing players contact the ball at the same time above the net." },
+    { term: "Jump serve", def: "A serve hit with a full hitting approach and jump for extra power and a steeper angle." },
     { term: "Kill", def: "An attack that directly ends the rally for a point." },
-    { term: "Libero", def: "A back-row defensive specialist in a contrasting jersey who subs freely but can't attack above net height or block." },
+    { term: "Kong", def: "A one-handed block, named after King Kong swatting at the ball." },
+    { term: "Line shot", def: "An attack hit straight down the sideline, parallel to it." },
+    { term: "Net violation", def: "Touching the net while making a play on the ball, which loses the point." },
+    { term: "Off-speed shot", def: "A softer, controlled attack placed into open court to catch a defense leaning for a hard swing." },
+    { term: "Offensive systems (5-1, 6-2, 4-2)", def: "Shorthand for how many hitters and setters are on court — a 5-1 runs one setter all the way around, a 6-2 uses two setters who switch out to attack." },
+    { term: "Overpass", def: "A pass that accidentally carries over the net, handing the other team an easy attack." },
     { term: "Pancake", def: "A last-ditch save where a player slides a flat hand under the ball so it bounces off the back of the hand." },
     { term: "Pass (bump / forearm pass)", def: "The first contact, played off the forearm platform to control a serve or attack." },
     { term: "Pepper", def: "A two-player warm-up of pass, set, and hit back and forth to groove ball control." },
+    { term: "Pipe", def: "A back-row attack hit from the middle of the court (zone 6)." },
     { term: "Platform", def: "The flat surface made by joining the forearms together for passing." },
+    { term: "Quick set (quick attack)", def: "A low, fast set to a middle hitter who is already in the air, designed to beat the block." },
     { term: "Rally scoring", def: "The scoring system where a point is won on every rally, no matter which team served." },
+    { term: "Ready position", def: "The low, balanced athletic stance — knees bent, weight forward — players hold before every contact." },
+    { term: "Roll shot", def: "A soft attack lofted with topspin up and over the block and down into the court." },
+    { term: "Roof (stuff)", def: "A dominant block that sends the attack straight back down to the floor." },
     { term: "Rotation", def: "The clockwise shift of players through the six court positions each time the team wins back the serve." },
+    { term: "Seam", def: "The gap between two defenders or two blockers that attackers aim to exploit." },
     { term: "Serve receive", def: "The system and skill of passing the opponent's serve accurately to the setter." },
     { term: "Set", def: "An overhead contact (usually the second) that places the ball for a hitter to attack." },
-    { term: "Setter", def: "The \"quarterback\" who runs the offense and delivers sets to the attackers." },
+    { term: "Shank", def: "A badly misjudged pass that shoots off at a wild angle, out of the setter's reach." },
     { term: "Side-out", def: "Winning the rally — and the serve — when the other team was serving." },
-    { term: "Six-pack", def: "Slang for getting hit in the face or head by an attacked ball." },
+    { term: "Six-pack (facial)", def: "Slang for getting hit in the face or head by an attacked ball." },
+    { term: "Slide", def: "A quick attack where a middle hitter takes off from one foot while running along the net, like a layup." },
+    { term: "Tandem (combination play)", def: "A designed play where two hitters attack close together to confuse and split the block." },
+    { term: "Tempo", def: "How fast a set reaches the hitter — a 1st-tempo set is quick and flat, a 3rd-tempo set is high and slow." },
     { term: "Tool (wipe)", def: "Deliberately hitting the ball off the blockers' hands so it deflects out of bounds for a point." },
+    { term: "Touch", def: "A slight contact a blocker gets on the ball; it still counts as one of that team's three hits." },
+    { term: "Transition", def: "Switching from defense to offense (or back) within a rally — for example, blocking, then pulling off the net to hit." },
+    { term: "Setter", def: "The \"quarterback\" who runs the offense and delivers sets to the attackers." },
     { term: "Outside hitter (OH / pin)", def: "The left-front attacker who usually takes the most swings on the team." },
     { term: "Opposite (right-side)", def: "The attacker and blocker on the right front, positioned opposite the setter in the rotation." },
     { term: "Middle blocker (MB)", def: "The front-row center player who blocks across the net and hits quick attacks." },
-    { term: "Defensive specialist (DS)", def: "A back-row substitute brought in to pass and play defense." }
+    { term: "Libero", def: "A back-row defensive specialist in a contrasting jersey who subs freely but can't attack above net height or block." },
+    { term: "Defensive specialist (DS)", def: "A back-row substitute brought in to pass and play defense." },
+    { term: "Serving specialist", def: "A substitute sent in just to serve a strong or strategic serve, then rotated back out." }
   ];
 
   // ======================================================================= //
@@ -266,6 +396,14 @@ RR.coaching = (function () {
     safety:     "<path d='M12 3l7 3v5c0 4.6-3.1 7.6-7 9-3.9-1.4-7-4.4-7-9V6z'/><path d='M9 12l2 2 4-4'/>",
     parents:    "<circle cx='9' cy='8' r='3'/><path d='M4 19c0-3 2.2-5 5-5s5 2 5 5'/><path d='M16 6a3 3 0 0 1 0 6'/><path d='M17.5 14.2c2 .5 3.5 2.3 3.5 4.8'/>",
     camp:       "<circle cx='12' cy='12' r='4.5'/><path d='M12 2v2.5M12 19.5V22M4 12H2M22 12h-2M5 5l1.6 1.6M17.4 17.4 19 19M19 5l-1.6 1.6M6.6 17.4 5 19'/>",
+    skills:     "<circle cx='12' cy='12' r='9'/><path d='M3 12h18'/><path d='M12 3c2.8 2.6 2.8 15.4 0 18'/><path d='M12 3c-2.8 2.6-2.8 15.4 0 18'/>",
+    mental:     "<path d='M9 18h6M10 21h4'/><path d='M12 3a6 6 0 0 0-4 10.5c.6.6 1 1.3 1 2.5h6c0-1.2.4-1.9 1-2.5A6 6 0 0 0 12 3z'/>",
+    gameday:    "<rect x='3' y='4' width='18' height='16' rx='2'/><path d='M12 4v16M3 12h18'/><circle cx='12' cy='12' r='2'/>",
+    season:     "<rect x='3' y='5' width='18' height='16' rx='2'/><path d='M3 9h18M8 3v4M16 3v4'/><path d='M8 13h2M14 13h2M8 17h2'/>",
+    tryouts:    "<rect x='5' y='4' width='14' height='17' rx='2'/><path d='M9 4h6v3H9z'/><path d='M8.5 12l1.5 1.5L13 10.5'/><path d='M15 16H9'/>",
+    include:    "<circle cx='9' cy='9' r='2.5'/><circle cx='16.5' cy='10' r='2'/><path d='M4 19c0-2.8 2.2-5 5-5s5 2.2 5 5'/><path d='M15 14c2.5 0 4.5 2 4.5 4.5'/>",
+    athlete:    "<path d='M3 12h4l2-5 4 11 2-6h6'/>",
+    rules:      "<path d='M5 3v18'/><path d='M5 4h12l-2.5 3.5L17 11H5'/>",
     terms:      "<path d='M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z'/><path d='M9 8h6M9 12h5'/>",
     equip:      "<path d='M3 8l9-4 9 4-9 4-9-4z'/><path d='M3 8v8l9 4 9-4V8'/><path d='M12 12v8'/>"
   };
