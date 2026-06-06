@@ -38,6 +38,8 @@
   <link rel="stylesheet" href="css/team.css" />
   <!-- Tips screen styles, split out to keep each CSS file under 800 lines. -->
   <link rel="stylesheet" href="css/tips.css" />
+  <!-- Tips "show, don't just tell" visuals: animated motion diagrams + video links. -->
+  <link rel="stylesheet" href="css/tips-visuals.css" />
   <!-- Today + History screen styles (kept separate for the same 800-line rule). -->
   <link rel="stylesheet" href="css/today.css" />
   <!-- Drills browser styles (split out for the same 800-line rule). -->
@@ -157,6 +159,9 @@
   <script src="js/drills-10.js"></script>
   <script src="js/drills-11.js"></script>
   <script src="js/coaching.js"></script>
+  <!-- Tips "show, don't just tell" visuals (animated SVG diagrams + video links).
+       Standalone; the Tips screen (coaching.js) composes it in at render time. -->
+  <script src="js/tips-visuals.js"></script>
   <!-- Position coaching content + API (data loads first, then the helpers that
        read it + the drill library). Loaded before roster.js, which reads
        RR.positions for its position <select> options. -->

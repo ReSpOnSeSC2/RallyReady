@@ -481,6 +481,31 @@ RR.coaching = (function () {
       points.map(function (p) { return h("li", { text: p }); }));
   }
 
+  // A full tip panel: the written guidance ("tell") followed by the visuals
+  // ("show") — an animated motion diagram and/or a row of "See it in action"
+  // video links. Visuals come from RR.tipsVisuals and degrade gracefully: if the
+  // module is unavailable, the panel is just the points (exactly as before).
+  function buildTipPanel(tip) {
+    var kids = [buildPoints(tip.points)];
+    var tv = RR.tipsVisuals;
+    if (tv) {
+      // The six-skills tip gets its animated grid; other tips get a hero diagram.
+      if (tip.icon === "skills" && tv.skillGrid) {
+        kids.push(tv.skillGrid());
+      } else if (tv.heroFor) {
+        var hero = tv.heroFor(tip.icon);
+        if (hero) kids.push(hero);
+      }
+      // A compact "See it in action" link row (the six-skills tip carries its
+      // own per-skill links, so it skips the general row to stay uncluttered).
+      if (tip.icon !== "skills" && tv.videoRow) {
+        var vids = tv.videoRow(tip.icon);
+        if (vids) kids.push(vids);
+      }
+    }
+    return h("div", { class: "tip__body" }, kids);
+  }
+
   function buildTerms() {
     var dl = h("dl", { class: "terms" });
     terms.forEach(function (t) {
@@ -597,7 +622,7 @@ RR.coaching = (function () {
     // The tips accordion. Open the first card so the screen never reads as a
     // wall of closed bars; for camps that first card is "Running a camp".
     orderedTips(team).forEach(function (t, i) {
-      host.appendChild(discloseCard(t.title, t.icon, buildPoints(t.points), i === 0));
+      host.appendChild(discloseCard(t.title, t.icon, buildTipPanel(t), i === 0));
     });
 
     // Reference sections, collapsed by default to keep the page scannable.
