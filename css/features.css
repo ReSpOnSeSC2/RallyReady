@@ -23,14 +23,14 @@
 .teamswitch__name { font-weight: 700; }
 .teamswitch__sub { font-size: var(--fs-sm); }
 .teamswitch__go { color: var(--text-muted); flex: none; }
-.teamswitch__del, .games__del, .history-copy, .history-item__tools > .history-del {
+.teamswitch__del, .history-copy, .history-item__tools > .history-del {
   flex: none; width: var(--tap-min); height: var(--tap-min);
   display: inline-flex; align-items: center; justify-content: center;
   border: 1px solid var(--border); border-radius: var(--radius-input);
   background: var(--surface); color: var(--text-muted); cursor: pointer;
   transition: color .15s var(--ease), border-color .15s var(--ease);
 }
-.teamswitch__del:hover, .games__del:hover, .history-copy:hover { color: var(--primary); border-color: var(--primary); }
+.teamswitch__del:hover, .history-copy:hover { color: var(--primary); border-color: var(--primary); }
 .teamswitch__add { margin-top: var(--sp-3); }
 
 /* ---------------------------------------------------- Backup card ----------- */
@@ -39,13 +39,45 @@
 
 /* ---------------------------------------------------- Games editor ---------- */
 .games-editor { margin-top: var(--sp-2); }
-.games__empty { font-size: var(--fs-sm); margin: 0 0 var(--sp-2); }
-.games__row { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); flex-wrap: wrap; }
-.games__row-fields { display: flex; gap: var(--sp-2); flex: 1; min-width: 0; }
-.games__date { flex: 0 0 auto; max-width: 9.5rem; }
-.games__opp { flex: 1; min-width: 6rem; }
-.games__when { font-size: var(--fs-sm); }
-.games__add { margin-top: var(--sp-1); }
+.games__empty { font-size: var(--fs-sm); margin: 0 0 var(--sp-3); }
+
+/* Each row is a self-contained card: a hairline divider and generous gaps keep
+   the date, the opponent, and the delete control clearly apart — never touching. */
+.games__row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.games__row:first-child { border-top: 0; padding-top: 0; }
+
+.games__row-fields { display: flex; gap: var(--sp-3); flex: 1; min-width: 0; }
+
+/* A labelled field: a small caption sits above each input. */
+.games__field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.games__field--date { flex: 0 0 auto; }
+.games__field--opp { flex: 1; min-width: 8rem; }
+.games__label { font-size: var(--fs-xs); font-weight: 600; color: var(--text-muted); }
+.games__date { max-width: 10rem; }
+.games__opp { width: 100%; min-width: 8rem; }
+
+/* Confirmed date drops to its own full-width line so it never crowds the row. */
+.games__when { font-size: var(--fs-sm); flex-basis: 100%; margin: 0; }
+
+/* A prominent delete: tinted fill + deep-coral glyph so it reads as a clear,
+   destructive action rather than a muted afterthought. */
+.games__del {
+  flex: none; width: var(--tap-min); height: var(--tap-min);
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; border-radius: var(--radius-input);
+  background: var(--primary-tint); color: var(--link); cursor: pointer;
+  transition: border-color .15s var(--ease), background .15s var(--ease);
+}
+.games__del:hover, .games__del:focus-visible { border-color: var(--link); }
+
+.games__add { margin-top: var(--sp-3); }
 
 /* ------------------------------------------------ Summary roster link ------- */
 .summary__roster { margin-top: var(--sp-4); }
