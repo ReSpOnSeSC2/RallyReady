@@ -91,24 +91,33 @@ the app.
 2. **Set up your Team** (you only do this once). Tap the **Team** tab and fill in:
    - Your team **name** and **age group** (this sets the drills, net height, and ball).
    - **Program type** — pick **Season** or **Summer camp**:
-     - **Season:** your practice start date, your first-game date, and how many
-       practices per week.
+     - **Season:** your practice start date, your first-game date, how many
+       practices per week and on which weekdays, and your **game schedule** (add
+       every match — practices then ramp toward the next game and ease the day before).
      - **Summer camp:** the camp start date, how many days (1–30), and how many
        sessions per day.
-   - **Session length** and, optionally, any **skills to emphasize**.
+   - **Session length**, your **squad size** and the **equipment you have**
+     (so drills suit your group and your gym), and optionally any **skills to emphasize**.
 
-   It saves as you type — there's no Save button to forget.
+   It saves as you type — there's no Save button to forget. Coach more than one team?
+   Use **Your teams** at the top of the screen to add and switch between them, and
+   **Backup & restore** to export everything to a file (or move it to a new phone).
 3. **Go to Today.** RallyReady shows you a complete session for today, ready to run:
    the phase, the "skill of the week" (or "skill of the day" at camp), how intense
    it should be, the time, every drill with steps and coaching cues, and the gear
    you'll need.
-4. **Run the session.** Tap **Coaching cues** on any block to see what to say, or
-   **Watch how** to open a video search for that drill. Don't love a drill? Tap
-   **Swap** to trade just that one for another. Want a whole fresh plan? Tap
-   **Regenerate**.
-5. **Mark complete.** When you're done, tap **Mark practice complete**. It's saved
-   to your **History**, and future practices will avoid repeating those same drills
-   for a while so things stay fresh.
+4. **Make it yours.** Change **Today's focus** to any skill from the picker, or tap
+   **Edit plan** to retime blocks (±5 min), reorder them, add or remove a block, **pin**
+   a drill you love (so **Regenerate** keeps it), **swap** a drill, or **choose** a
+   specific one from the library. Tap **Coaching cues** to see what to say, or
+   **Watch how** for a video search. Want a whole fresh plan? Tap **Regenerate**.
+5. **Run it.** Tap **Start** for a full-screen, block-by-block **practice timer** that
+   counts each block down and chimes when it's time to move on. Tap **Share** to text
+   the plan to yourself or an assistant, or **Print** a carry sheet for your clipboard.
+6. **Mark complete.** When you're done, tap **Mark practice complete**, take quick
+   **attendance**, and jot a **note** ("serve receive still shaky"). It's saved to your
+   **History** — re-open or **copy a great practice forward** to another date anytime —
+   and future practices avoid repeating those drills for a while so things stay fresh.
 
 **Running a camp?** The Today screen counts your days for you — it shows **"Day X
 of N"** at the top. If you run **two sessions a day**, you'll see a **Session 1 / 2
@@ -118,10 +127,22 @@ marker on today.
 
 **The other tabs:**
 - **Season** — your whole plan at a glance: an intensity chart and a card for each
-  phase explaining the focus and the why. (For a camp this is your camp plan.)
-- **Drills** — browse the full drill library; search and filter by skill or age.
+  phase explaining the focus and the why, plus a **Share** button. (For a camp this is
+  your camp plan.)
+- **Drills** — browse the full library; search and filter by skill, difficulty, age,
+  or **camp-friendly**; **★ favorite** the ones you love (favorites get picked more
+  often); and **add your own drills**, which join the library and your plans.
 - **Tips** — short, practical coaching guidance, plus what to expect at each age
   group and a plain-English glossary.
+
+**Reached from the Today header:**
+- **Schedule** — the next few weeks of practices (and games) at a glance; tap any day
+  to open its plan.
+- **History** — every completed practice, with attendance and notes.
+
+**Reached from the Team screen:**
+- **Roster** — add your players (name, jersey number, position); attendance on the
+  Today screen then uses them.
 
 ---
 

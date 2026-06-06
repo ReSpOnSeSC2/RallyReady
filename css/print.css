@@ -1,0 +1,135 @@
+/* print.css — print-only styling for RallyReady.
+ *
+ * RR.share.printSession() injects a hidden #rr-print-area into <body> with a
+ * clean, structured copy of one practice, then calls window.print(). This file
+ * keeps that container hidden on screen, and on paper hides the app chrome so
+ * ONLY #rr-print-area shows.
+ *
+ * Print is exempt from the app's theme-token / tinting rule, so plain hardcoded
+ * print colours (#000 / #fff / #333) and a neutral system print font are fine
+ * here — that's exactly what a black-on-white handout wants. All real rules live
+ * inside @media print; the one base rule below keeps the container from ever
+ * flashing on screen before printing.
+ */
+
+/* Base (screen + print): the print container is hidden until we're printing,
+ * so injecting it never flashes anything on screen. */
+#rr-print-area { display: none; }
+
+@media print {
+  /* Hide the live app: bars, the screen host, and any of our own overlays
+   * (toasts, the share sheet) so the page is clean. */
+  .appbar,
+  .tabbar,
+  #screen,
+  .rr-toast,
+  .share-sheet {
+    display: none !important;
+  }
+
+  /* Reveal only the print container. */
+  #rr-print-area {
+    display: block !important;
+    color: #000;
+    background: #fff;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+
+  /* Generous, even page margins. */
+  @page { margin: 16mm; }
+
+  /* Make the printed page itself plain black-on-white. */
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* ---- Header ----------------------------------------------------------- */
+  .rr-print-title {
+    font-size: 22pt;
+    margin: 0 0 4pt;
+    font-weight: 700;
+  }
+  .rr-print-sub {
+    font-size: 13pt;
+    margin: 0 0 2pt;
+    color: #333;
+  }
+  .rr-print-meta {
+    font-size: 11pt;
+    margin: 0 0 8pt;
+    color: #333;
+  }
+  .rr-print-note {
+    font-size: 11pt;
+    margin: 2pt 0;
+  }
+
+  /* ---- Blocks ----------------------------------------------------------- */
+  /* Keep an individual block together on one page where possible. */
+  .rr-print-block {
+    break-inside: avoid;
+    page-break-inside: avoid;     /* legacy alias for older print engines */
+    margin: 10pt 0;
+    padding-top: 8pt;
+    border-top: 1px solid #333;
+  }
+  .rr-print-block__title {
+    font-size: 14pt;
+    margin: 0 0 3pt;
+    font-weight: 700;
+  }
+  .rr-print-why {
+    font-style: italic;
+    margin: 0 0 4pt;
+    color: #333;
+  }
+  .rr-print-setup,
+  .rr-print-gear {
+    margin: 3pt 0;
+  }
+
+  /* Small section labels above the step / cue lists. */
+  .rr-print-label {
+    font-weight: 700;
+    margin: 5pt 0 1pt;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 10pt;
+  }
+
+  /* ---- Step + cue lists ------------------------------------------------- */
+  .rr-print-steps,
+  .rr-print-cues {
+    margin: 0 0 4pt;
+    padding-left: 20pt;
+  }
+  .rr-print-steps { list-style: decimal; }
+  .rr-print-cues  { list-style: disc; }
+  .rr-print-steps li,
+  .rr-print-cues li {
+    margin: 1pt 0;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .rr-print-watch {
+    font-size: 10pt;
+    color: #333;
+    margin: 4pt 0 0;
+    word-break: break-all;     /* long search URLs shouldn't overflow the page */
+  }
+
+  /* ---- Footer ----------------------------------------------------------- */
+  .rr-print-foot {
+    margin-top: 14pt;
+    padding-top: 6pt;
+    border-top: 1px solid #333;
+    font-size: 9pt;
+    color: #333;
+  }
+}

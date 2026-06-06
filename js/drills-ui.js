@@ -42,6 +42,8 @@ RR.drillsScreen = (function () {
     tiers: [],         // selected difficulty tier ids (empty = all)
     showAllAges: false,
     campOnly: false,
+    favoritesOnly: false,
+    customOnly: false,
     _key: null         // detects a team change to recompute camp-default
   };
 
@@ -68,6 +70,8 @@ RR.drillsScreen = (function () {
     var tierRanges = DIFF_TIERS.filter(function (t) { return filters.tiers.indexOf(t.id) !== -1; });
 
     return (RR.drills || []).filter(function (d) {
+      if (filters.favoritesOnly && !(RR.state.isFavorite && RR.state.isFavorite(d.id))) return false;
+      if (filters.customOnly && !d.custom) return false;
       if (band && !filters.showAllAges && !inAgeBand(d, band)) return false;
       if (filters.campOnly && !d.campFriendly) return false;
       if (filters.skills.length && filters.skills.indexOf(d.skill) === -1) return false;
@@ -85,13 +89,15 @@ RR.drillsScreen = (function () {
   // the empty-state copy.
   function anyFilterActive() {
     return !!(filters.query.trim() || filters.skills.length || filters.tiers.length ||
-      filters.campOnly || filters.showAllAges);
+      filters.campOnly || filters.showAllAges || filters.favoritesOnly || filters.customOnly);
   }
 
   function clearFilters(team) {
     filters.query = "";
     filters.skills = [];
     filters.tiers = [];
+    filters.favoritesOnly = false;
+    filters.customOnly = false;
     // Reset the toggles to their program-aware defaults rather than blindly off.
     filters.showAllAges = false;
     filters.campOnly = !!(team && team.programType === "camp");
@@ -115,6 +121,7 @@ RR.drillsScreen = (function () {
     }
 
     var selected = null;   // the drill being viewed in detail (resets each visit)
+    var editing = null;    // null | "new" | { drill } while the drill editor is open
 
     // Intro line (program-aware, full --text so it passes AA on --bg).
     host.appendChild(h("p", { class: "screen-sub drills-intro", text: hasTeam
@@ -174,7 +181,21 @@ RR.drillsScreen = (function () {
       toggles.push(chip("Camp-friendly", filters.campOnly, function (on) {
         filters.campOnly = on; paint();
       }));
+      toggles.push(chip("★ Favorites", filters.favoritesOnly, function (on) {
+        filters.favoritesOnly = on; paint();
+      }));
+      toggles.push(chip("Your drills", filters.customOnly, function (on) {
+        filters.customOnly = on; paint();
+      }));
       controlsHost.appendChild(filterGroup("Filters", toggles));
+
+      // Add-your-own-drill entry point.
+      var addBtn = h("button", { type: "button", class: "btn btn-ghost btn-block drills-add" }, [
+        h("span", { "aria-hidden": "true", class: "btn__icon", html: ui.icon('<path d="M12 5v14M5 12h14"/>', 18) }),
+        "Add your own drill"
+      ]);
+      addBtn.addEventListener("click", function () { editing = "new"; selected = null; paint(); });
+      controlsHost.appendChild(addBtn);
     }
 
     // A titled row of chips.
@@ -216,8 +237,9 @@ RR.drillsScreen = (function () {
     // keepFocus: true while typing in search so we don't steal focus back.
     function paint(keepFocus) {
       bodyHost.innerHTML = "";
-      controlsHost.hidden = !!selected;
+      controlsHost.hidden = !!selected || !!editing;
 
+      if (editing) { bodyHost.appendChild(editorView()); return; }
       if (selected) { bodyHost.appendChild(detailView(selected)); return; }
 
       var results = applyFilters(team);
@@ -252,7 +274,9 @@ RR.drillsScreen = (function () {
       }
 
       var list = h("div", { class: "drills-list" }, results.map(function (d) {
-        return ui.drillCard(d, { onOpen: openDrill });
+        return ui.drillCard(d, { onOpen: openDrill, onFav: function () {
+          if (filters.favoritesOnly) paint();   // a just-unstarred drill leaves the list
+        } });
       }));
       bodyHost.appendChild(list);
 
@@ -285,7 +309,34 @@ RR.drillsScreen = (function () {
         if (title) title.focus();
         window.scrollTo(0, 0);
       });
-      return h("div", { class: "drills-detail-wrap" }, [back, ui.drillDetail(drill)]);
+      var detail = ui.drillDetail(drill, {
+        onEdit: function (d) { editing = { drill: d }; selected = null; paint(); window.scrollTo(0, 0); },
+        onDelete: function (d) {
+          if (window.confirm("Delete “" + d.name + "” from your drills?")) {
+            RR.state.removeCustomDrill(d.id);
+            selected = null; paint();
+            ui.confirmToast("Drill deleted.");
+          }
+        }
+      });
+      return h("div", { class: "drills-detail-wrap" }, [back, detail]);
+    }
+
+    // The add/edit form, with its own back affordance.
+    function editorView() {
+      var wrap = h("div", { class: "drills-detail-wrap" });
+      var back = h("button", { type: "button", class: "btn btn-ghost drills-back" }, [
+        h("span", { "aria-hidden": "true", class: "drills-back__icon", html: ui.icon('<path d="M15 6l-6 6 6 6"/>', 18) }),
+        "All drills"
+      ]);
+      back.addEventListener("click", function () { editing = null; paint(); window.scrollTo(0, 0); });
+      wrap.appendChild(back);
+      RR.drillEditor.render(wrap, {
+        drill: (editing && editing.drill) ? editing.drill : null,
+        onSave: function () { editing = null; filters.customOnly = true; buildControls(); paint(); window.scrollTo(0, 0); },
+        onCancel: function () { editing = null; paint(); window.scrollTo(0, 0); }
+      });
+      return wrap;
     }
   }
 

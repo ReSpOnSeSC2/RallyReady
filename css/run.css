@@ -1,0 +1,297 @@
+/* run.css — in-practice "Run mode" overlay (RR.run).
+
+   A full-viewport overlay that floats above the whole app (incl. the tab bar)
+   and gives the coach one block at a time with a big countdown. Everything is
+   built from the shared semantic tokens so it tracks light/dark automatically;
+   the only literal colour is the translucent navy scrim. All classes are
+   namespaced with `rr-run` to stay clear of the rest of the app. */
+
+/* Lock the page behind the overlay so the gym-floor scroll stays put. */
+body.rr-run-open { overflow: hidden; }
+
+/* ---- Layer + scrim --------------------------------------------------------
+   A translucent navy wash sits under an opaque app-surface panel, so the
+   content reads as elevated without a card-in-card look. */
+.rr-run {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  /* Honour notches / home indicators on phones held in landscape. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.rr-run__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(27, 42, 74, 0.55);
+  /* Inert by design: clicks here must not close the overlay. */
+}
+
+/* ---- The panel: a centred column on a solid app background ---------------- */
+.rr-run__panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--app-max);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: rr-run-in 0.22s var(--ease);
+}
+@keyframes rr-run-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Header: date + skill/total, with the close button ------------------- */
+.rr-run__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+.rr-run__meta { min-width: 0; }
+.rr-run__metaline {
+  margin: 2px 0 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+}
+.rr-run__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s var(--ease), transform 0.06s var(--ease);
+}
+.rr-run__close:active { transform: translateY(1px); }
+
+/* ---- Scrollable body (so long step lists never trap content) ------------- */
+.rr-run__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* ---- Headline: counter, role badge, block title -------------------------- */
+.rr-run__headline { text-align: center; }
+.rr-run__counter {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.rr-run__badgerow {
+  display: flex;
+  justify-content: center;
+  margin: var(--sp-2) 0 var(--sp-1);
+}
+.rr-run__title {
+  margin: 0;
+  font-size: var(--fs-h2);
+  line-height: 1.2;
+  color: var(--text);
+}
+
+/* ---- The big countdown + progress --------------------------------------- */
+.rr-run__clockbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.rr-run__clock {
+  font-size: clamp(56px, 18vw, 96px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  color: var(--text);
+}
+.rr-run__clocklabel {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text-muted);
+}
+/* While paused, dim the number a touch so the state is unmistakable. */
+.rr-run.is-paused .rr-run__clock { opacity: 0.5; }
+
+.rr-run__prog {
+  width: 100%;
+  max-width: 320px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.rr-run__progfill {
+  height: 100%;
+  width: 0%;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  transition: width 0.9s linear;
+}
+.rr-run.is-paused .rr-run__progfill { transition: none; }
+
+/* ---- +1 / −1 minute --------------------------------------------------- */
+.rr-run__adjustrow {
+  display: flex;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+}
+.rr-run__adjust {
+  min-height: var(--tap-min);
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), transform 0.06s var(--ease);
+}
+.rr-run__adjust:active { transform: translateY(1px); }
+
+/* ---- Transport controls (≥48px tap targets) ----------------------------- */
+.rr-run__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+}
+.rr-run__ctrl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s var(--ease), transform 0.06s var(--ease),
+              opacity 0.15s var(--ease);
+}
+.rr-run__ctrl:active { transform: translateY(1px); }
+.rr-run__ctrl:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+/* The Next / Finish button leads — fill it with the brand colour. */
+.rr-run__ctrl--primary {
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: transparent;
+  box-shadow: var(--shadow);
+}
+
+/* ---- Detail: setup / steps / cues --------------------------------------- */
+.rr-run__detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-4);
+}
+.rr-run__section { display: flex; flex-direction: column; gap: var(--sp-1); }
+.rr-run__text {
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--text);
+}
+.rr-run__steps,
+.rr-run__cues {
+  margin: 0;
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.rr-run__steps li,
+.rr-run__cues li {
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  /* Keep lines readable rather than edge-to-edge on wide screens. */
+  max-width: 60ch;
+  color: var(--text);
+}
+.rr-run__cues { list-style: none; padding-left: 0; }
+.rr-run__cues li {
+  position: relative;
+  padding-left: 1.3em;
+}
+.rr-run__cues li::before {
+  content: "\201C";              /* an opening quote — these are things to say */
+  position: absolute;
+  left: 0;
+  top: -2px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+/* ---- Completion state --------------------------------------------------- */
+.rr-run__done {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--sp-3);
+  padding: var(--sp-6) var(--sp-4);
+}
+.rr-run__done-emoji { font-size: 64px; line-height: 1; }
+.rr-run__done-title {
+  margin: 0;
+  font-size: var(--fs-title);
+  color: var(--text);
+}
+.rr-run__done-sub {
+  margin: 0;
+  max-width: 40ch;
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.rr-run__done-btn { margin-top: var(--sp-2); min-width: 160px; }
+
+/* ---- Hover niceties only where a real pointer exists --------------------- */
+@media (hover: hover) {
+  .rr-run__close:hover,
+  .rr-run__adjust:hover,
+  .rr-run__ctrl:hover { background: var(--surface-2); }
+  .rr-run__ctrl--primary:hover { background: var(--primary); filter: brightness(1.04); }
+}
+
+/* ---- Reduced motion: no animation/transition anywhere in the overlay ----- */
+@media (prefers-reduced-motion: reduce) {
+  .rr-run * { animation: none !important; transition: none !important; }
+  .rr-run__panel { animation: none !important; }
+}

@@ -232,6 +232,14 @@ RR.periodization = (function () {
       // surfaces a plan on real practice days instead of inventing one daily.
       practiceDays: (win.practiceDays && win.practiceDays.length) ? win.practiceDays.slice() : null
     };
+    // The match schedule: the opener is game 1, plus any games the coach added.
+    // Sorted, de-duplicated by date, so the in-season planner can build toward each.
+    var games = [{ date: opener, opponent: "" }].concat(win.games || []);
+    var seen = {};
+    plan.games = games
+      .filter(function (g) { return g && g.date && !seen[g.date] && (seen[g.date] = true); })
+      .sort(function (a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+
     plan.seasonSkillByWeek = buildSeasonSkillByWeek(plan);   // weeks 1..prepWeeks
     return plan;
   }
@@ -396,6 +404,27 @@ RR.periodization = (function () {
     return iso;
   }
 
+  // gameContext(plan, date) -> what the match schedule means for this date:
+  //   { isGameDay, todaysOpponent, isDayBeforeGame, tomorrowsOpponent,
+  //     next: { date, opponent, daysAway } | null }
+  // Season-only (camps have no schedule). Used to ease the day before a match and
+  // to flag game days on the Today/Calendar screens.
+  function gameContext(plan, date) {
+    var empty = { isGameDay: false, todaysOpponent: "", isDayBeforeGame: false, tomorrowsOpponent: "", next: null };
+    if (!plan || plan.type === "camp" || !plan.games || !plan.games.length) return empty;
+    var iso = toISO(date || new Date());
+    var tomorrow = addDays(iso, 1);
+    var ctx = Object.assign({}, empty);
+    var best = null;
+    plan.games.forEach(function (g) {
+      if (g.date === iso) { ctx.isGameDay = true; ctx.todaysOpponent = g.opponent || ""; }
+      if (g.date === tomorrow) { ctx.isDayBeforeGame = true; ctx.tomorrowsOpponent = g.opponent || ""; }
+      if (g.date >= iso && (!best || g.date < best.date)) best = g;
+    });
+    if (best) ctx.next = { date: best.date, opponent: best.opponent || "", daysAway: daysBetween(iso, best.date) };
+    return ctx;
+  }
+
   // phaseForDate(plan, date) -> the phase that contains the date.
   function phaseForDate(plan, date) {
     if (!plan) return null;
@@ -439,6 +468,13 @@ RR.periodization = (function () {
     var nudge = t === "Competitive" ? 1 : (t === "Technical" ? -1 : 0);
     var val = ph.targetIntensity + nudge;
     if (ph.eases) val = Math.min(val, ph.targetIntensity);
+    // In-season, the schedule overrides the undulation: ease the day before a
+    // match (fresh legs) and keep game day light.
+    if (ph.key === "inseason") {
+      var g = gameContext(plan, iso);
+      if (g.isGameDay) val = Math.min(val, ph.targetIntensity - 3);
+      else if (g.isDayBeforeGame) val = Math.min(val, ph.targetIntensity - 2);
+    }
     return clampInt(val, 1, 10);
   }
 
@@ -469,6 +505,7 @@ RR.periodization = (function () {
   return {
     computePlan: computePlan,
     phaseForDate: phaseForDate,
+    gameContext: gameContext,
     intensityForDate: intensityForDate,
     dayType: dayType,
     skillFocus: skillFocus,

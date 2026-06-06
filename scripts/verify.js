@@ -346,6 +346,44 @@ useTeam(teamB);
   console.log(`LIBRARY: ${RR.drills.length} drills loaded`);
 })();
 
+// =====================================================================
+// NEW FEATURES — game schedule, focus override, set-a-specific-drill
+// =====================================================================
+(function featureChecks() {
+  const teamC = {
+    name: "Test Games C", ageGroup: "13-14 (Developing)", programType: "season",
+    practiceStart: "2026-08-03", seasonStart: "2026-09-07", practicesPerWeek: 3, practiceDays: [1, 3, 5],
+    games: [{ date: "2026-09-18", opponent: "Rivals" }], sessionMinutes: 75, emphasis: []
+  };
+  useTeam(teamC);
+  const planC = P.computePlan(teamC);
+  ok(planC && planC.games && planC.games.length === 2, "C: plan carries opener + scheduled game");
+
+  const gc = P.gameContext(planC, "2026-09-17");
+  ok(gc.isDayBeforeGame, "C: day before a game is detected");
+  ok(gc.next && gc.next.opponent === "Rivals", "C: next-game opponent surfaced");
+
+  // The day before a match is eased (shorter) vs a normal in-season day.
+  const eve = G.generateSession(teamC, "2026-09-17", 0, 0);
+  const norm = G.generateSession(teamC, "2026-09-16", 0, 0);
+  ok(eve.totalMinutes < norm.totalMinutes, `C: day-before-game session eased (${eve.totalMinutes} < ${norm.totalMinutes})`);
+
+  // Coach focus override drives the session's skill.
+  const fo = G.generateSession(teamC, "2026-09-16", 0, 0, { forceSkill: "Blocking" });
+  ok(fo.skillFocus === "Blocking" && fo.forcedSkill === "Blocking", "C: forceSkill overrides the focus");
+
+  // setBlockDrill swaps one block to a chosen drill, leaving others intact.
+  const baseC = G.generateSession(teamC, "2026-09-09", 0, 0);
+  const chosen = RR.drills.find((d) => d.skill === "Setting" && !d.isGame);
+  const sb = G.setBlockDrill(baseC, 1, chosen);
+  ok(sb.blocks[1].drill.id === chosen.id, "C: setBlockDrill places the chosen drill");
+  let intact = true;
+  baseC.blocks.forEach((b, k) => { if (k !== 1 && b.drill.id !== sb.blocks[k].drill.id) intact = false; });
+  ok(intact, "C: setBlockDrill leaves other blocks intact");
+
+  console.log("FEATURES: game-aware easing, focus override, set-block-drill ok");
+})();
+
 console.log("\n──────────────────────────────────────────");
 if (fail) {
   console.log(`RESULT: ${pass} passed, ${fail} FAILED`);

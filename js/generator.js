@@ -181,11 +181,23 @@ RR.generator = (function () {
     return drill.ageMin <= band.max && drill.ageMax >= band.min;
   }
 
+  // Gear a drill needs but the coach hasn't said they own. Balls, a net, cones
+  // and a wall are assumed available everywhere; anything else is an "extra" the
+  // coach ticks on the Team screen.
+  var BASIC_EQUIP = { balls: true, net: true, cones: true, wall: true };
+  function equipmentOk(drill, owned) {
+    var eq = drill.equipment || [];
+    for (var i = 0; i < eq.length; i++) {
+      if (!BASIC_EQUIP[eq[i]] && !owned[eq[i]]) return false;
+    }
+    return true;
+  }
+
   // Filter the library to the drills eligible for one block, given how strict we
   // are being. `relax` widens the net per the required ladder:
-  //   0: full rules; 1: ignore recent-used; 2: widen difficulty by 1 each side;
-  //   3: drop the campFriendly preference (it was only ever a soft boost, so this
-  //      mainly matters as a guarantee we never come up empty).
+  //   0: full rules; 1: ignore recent-used; 2: widen difficulty + drop the
+  //      roster-size/equipment constraints; 3: drop the campFriendly preference.
+  // The ladder guarantees a block is never empty even on a tiny squad with no gear.
   function eligiblePool(req, ctx, relax) {
     var band = ctx.band;
     var dmin = req.dMin, dmax = req.dMax;
@@ -195,6 +207,11 @@ RR.generator = (function () {
       if (!ageEligible(d, band)) return false;
       if (ctx.used[d.id]) return false;                 // already in this session
       if (relax < 1 && ctx.recent[d.id]) return false;  // used in a recent session
+      // Suit the squad size and the gear on hand (relaxed only as a last resort).
+      if (relax < 2) {
+        if (ctx.rosterSize && d.minPlayers && d.minPlayers > ctx.rosterSize) return false;
+        if (!equipmentOk(d, ctx.owned)) return false;
+      }
 
       // Role match.
       if (req.kind === "warmup") { if (d.skill !== "Warmup") return false; }
@@ -216,7 +233,8 @@ RR.generator = (function () {
   // phase wants (cooperative vs. competitive), and staples on anchor blocks.
   function weightFor(drill, req, ctx) {
     var w = 1;
-    if (ctx.emphasis[drill.skill]) w *= 1.6;                 // coach emphasis
+    if (ctx.emphasis[drill.skill]) w *= 2.2;                 // coach emphasis (weighted strongly)
+    if (ctx.favorites && ctx.favorites[drill.id]) w *= 1.5;  // a starred favorite
     if (req.campPrefer && drill.campFriendly) w *= 2.0;      // camp blocks
     if ((req.kind === "warmup" || req.kind === "cooldown") && drill.isStaple) w *= 1.6;
     if (req.favorite && drill.campFriendly) w *= 1.8;        // confidence/showcase
@@ -438,10 +456,13 @@ RR.generator = (function () {
     };
   }
 
-  // generateSession(team, date, regenCount=0, slot=0) -> a full session object.
-  function generateSession(team, date, regenCount, slot) {
+  // generateSession(team, date, regenCount=0, slot=0, opts={}) -> a full session.
+  // opts.forceSkill  — a drill skill category (e.g. "Defense") the coach has chosen
+  //                    to feature today, overriding the curriculum's skill focus.
+  function generateSession(team, date, regenCount, slot, opts) {
     regenCount = regenCount || 0;
     slot = slot || 0;
+    opts = opts || {};
     var P = RR.periodization;
     var iso = P.toISO(date || new Date());
 
@@ -458,9 +479,28 @@ RR.generator = (function () {
     var primarySkill = P.focusToSkill(skillFocus);
     var band = RR.team.ageRange(team.ageGroup);
 
-    // Emphasis as a lookup for the weighting step.
+    // The day before a match becomes a fresher, confidence-building session — the
+    // same easing the taper uses. Season-only (camps have no schedule).
+    var gctx = (!isCamp && P.gameContext) ? P.gameContext(plan, iso) : null;
+    if (gctx && gctx.isDayBeforeGame && phase.key === "inseason") {
+      phase = Object.assign({}, phase, { eases: true, volumeFactor: 0.8 });
+    }
+
+    // A coach-chosen focus for the day overrides the curriculum's pick.
+    if (opts.forceSkill) {
+      primarySkill = opts.forceSkill;
+      skillFocus = opts.forceSkill;
+    }
+
+    // Emphasis + favorites as lookups for the weighting step.
     var emphasis = {};
     (team.emphasis || []).forEach(function (s) { emphasis[s] = true; });
+    var favorites = {};
+    try {
+      ((RR.state && RR.state.getState().favorites) || []).forEach(function (id) { favorites[id] = true; });
+    } catch (e) { /* favorites optional */ }
+    var owned = {};
+    (team.equipment || []).forEach(function (tk) { owned[tk] = true; });
 
     // The seed: same (team, date, regenCount, slot) -> same session.
     var seed = hashStr(
@@ -475,6 +515,7 @@ RR.generator = (function () {
       team: team, plan: plan, phase: phase, isCamp: isCamp,
       intensity: intensity, dayType: dayType, skillFocus: skillFocus,
       primarySkill: primarySkill, band: band, emphasis: emphasis,
+      favorites: favorites, owned: owned, rosterSize: team.rosterSize || 0,
       seed: seed, foldMiniGame: foldMiniGame,
       recent: recentDrillIds(team, iso, slot),
       used: {}, byId: buildDrillIndex()
@@ -505,6 +546,9 @@ RR.generator = (function () {
       blocks: blocks,
       coachNote: coachNoteFor(ctx),
       focusReminder: focusReminderFor(ctx),
+      // Match-schedule context for the screens (game day / day-before banners).
+      gameContext: gctx || null,
+      forcedSkill: opts.forceSkill || null,
       // Kept so swapBlock can rebuild a single block without re-deriving the plan.
       _seed: seed
     };
@@ -547,10 +591,29 @@ RR.generator = (function () {
     return next;
   }
 
+  // setBlockDrill(session, blockIndex, drill) -> a NEW session with that block's
+  // drill replaced by a specific one (the coach picked it from the library, or it
+  // was pinned and re-applied after a Regenerate). Minutes, role and rotation
+  // metadata are preserved; `drill` may be a drill object or an id.
+  function setBlockDrill(session, blockIndex, drill) {
+    if (!session || !session.blocks || !session.blocks[blockIndex]) return session;
+    if (typeof drill === "string") drill = buildDrillIndex()[drill];
+    if (!drill) return session;
+    var next = clone(session);
+    var block = next.blocks[blockIndex];
+    block.title = drill.name;
+    block.drill = clone(drill);                  // carries videoSearchUrl untouched
+    if (block._pool && block._pool.indexOf(drill.id) !== -1) {
+      block._offset = block._pool.indexOf(drill.id);
+    }
+    return next;
+  }
+
   // ---- Public API (pure) ----------------------------------------------------
   return {
     generateSession: generateSession,
     swapBlock: swapBlock,
+    setBlockDrill: setBlockDrill,
     // Exposed for inspection / the console self-checks below.
     _mulberry32: mulberry32,
     _hashStr: hashStr

@@ -1,0 +1,200 @@
+/* features.css — styles for the in-house additions (multi-team + backup, game
+   schedule editor, roster link, favorites, custom-drill editor, plan editing +
+   drill picker, the Today action bar, focus picker, game banners, and the
+   complete-with-attendance flow).
+
+   Impeccable: tinted neutrals only (semantic tokens, never pure black/gray),
+   no gray text on coloured fills, no card-in-card, no bounce easing (var(--ease)),
+   transform/opacity motion only, ≥48px tap targets, reduced-motion respected.
+   Every value is a theme token so it reads correctly in light AND dark. */
+
+/* ---------------------------------------------------- Teams switcher -------- */
+.teamswitch__list { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.teamswitch__item { display: flex; align-items: stretch; gap: var(--sp-2); }
+.teamswitch__pick {
+  flex: 1; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+  min-height: var(--tap-min); padding: var(--sp-2) var(--sp-3); text-align: left; cursor: pointer;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-input);
+  transition: border-color .15s var(--ease), background-color .15s var(--ease);
+}
+.teamswitch__pick.is-active { border-color: var(--primary); background: var(--primary-tint); }
+.teamswitch__main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.teamswitch__name { font-weight: 700; }
+.teamswitch__sub { font-size: var(--fs-sm); }
+.teamswitch__go { color: var(--text-muted); flex: none; }
+.teamswitch__del, .games__del, .history-copy, .history-item__tools > .history-del {
+  flex: none; width: var(--tap-min); height: var(--tap-min);
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: var(--radius-input);
+  background: var(--surface); color: var(--text-muted); cursor: pointer;
+  transition: color .15s var(--ease), border-color .15s var(--ease);
+}
+.teamswitch__del:hover, .games__del:hover, .history-copy:hover { color: var(--primary); border-color: var(--primary); }
+.teamswitch__add { margin-top: var(--sp-3); }
+
+/* ---------------------------------------------------- Backup card ----------- */
+.backup__row { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+.backup__btn { flex: 1 1 46%; }
+
+/* ---------------------------------------------------- Games editor ---------- */
+.games-editor { margin-top: var(--sp-2); }
+.games__empty { font-size: var(--fs-sm); margin: 0 0 var(--sp-2); }
+.games__row { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); flex-wrap: wrap; }
+.games__row-fields { display: flex; gap: var(--sp-2); flex: 1; min-width: 0; }
+.games__date { flex: 0 0 auto; max-width: 9.5rem; }
+.games__opp { flex: 1; min-width: 6rem; }
+.games__when { font-size: var(--fs-sm); }
+.games__add { margin-top: var(--sp-1); }
+
+/* ------------------------------------------------ Summary roster link ------- */
+.summary__roster { margin-top: var(--sp-4); }
+
+/* ---------------------------------------------------- Favorite star --------- */
+.drill-card-wrap { position: relative; }
+.drill-card-wrap .drill-card__top { padding-right: 40px; }
+.favstar {
+  position: absolute; top: var(--sp-2); right: var(--sp-2);
+  width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: var(--text-muted); cursor: pointer;
+  border-radius: var(--radius-pill);
+  transition: color .15s var(--ease), transform .15s var(--ease);
+}
+.favstar.is-on { color: var(--sun); }
+.favstar:hover { color: var(--sun); }
+.favstar:active { transform: scale(0.9); }
+/* In the drill detail head the star sits inline, not absolutely. */
+.drill-detail__headrow { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); }
+.drill-detail__headrow .favstar { position: static; }
+.drill-tag--custom {
+  display: inline-flex; align-items: center; padding: 2px var(--sp-2);
+  font-size: var(--fs-xs); font-weight: 700; border-radius: var(--radius-pill);
+  background: var(--primary-tint); color: var(--text);
+}
+.drill-detail__custom-ctl { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+.btn-danger { color: var(--link); }
+
+/* ---------------------------------------------------- Add-drill button ------ */
+.drills-add { margin-top: var(--sp-2); }
+
+/* ---------------------------------------------------- Drill editor ---------- */
+.de-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+.de-area { font-family: inherit; line-height: 1.5; resize: vertical; }
+.de-flags { display: flex; gap: var(--sp-4); margin: var(--sp-2) 0; flex-wrap: wrap; }
+.de-check { display: inline-flex; align-items: center; gap: var(--sp-2); min-height: var(--tap-min); cursor: pointer; }
+.de-check input { width: 20px; height: 20px; accent-color: var(--primary); }
+.de-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-4); }
+.de-actions .btn { flex: 1; }
+
+/* ---------------------------------------------------- Plan edit blocks ------ */
+.pe-block__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.pe-block__time { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.pe-block__min { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 4.5rem; text-align: center; }
+.pe-block__title { margin: var(--sp-2) 0 2px; font-size: var(--fs-h3); }
+.pe-block__role { font-size: var(--fs-sm); margin: 0 0 var(--sp-3); }
+.pe-block__tools { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.pe-tool {
+  width: var(--tap-min); height: var(--tap-min); display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: var(--radius-input);
+  background: var(--surface-2); color: var(--text); cursor: pointer;
+  transition: border-color .15s var(--ease), color .15s var(--ease), background-color .15s var(--ease);
+}
+.pe-tool:hover { border-color: var(--primary); }
+.pe-tool.is-on { border-color: var(--primary); background: var(--primary-tint); color: var(--text); }
+.pe-tool--danger:hover { border-color: var(--link); color: var(--link); }
+.pe-add { margin-top: var(--sp-3); }
+.pe-add__row { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
+.pe-add__btn { flex: 1 1 40%; }
+
+/* ---------------------------------------------------- Drill picker modal ---- */
+.pick__overlay {
+  position: fixed; inset: 0; z-index: 900; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(27, 42, 74, 0.55); padding: 0;
+  animation: pickFade .18s var(--ease);
+}
+.pick__sheet {
+  width: 100%; max-width: var(--app-max); max-height: 82vh; display: flex; flex-direction: column;
+  background: var(--bg); border-radius: var(--radius-card) var(--radius-card) 0 0;
+  padding: var(--sp-4) var(--sp-4) calc(var(--sp-4) + env(safe-area-inset-bottom));
+  box-shadow: var(--shadow); animation: pickUp .22s var(--ease);
+}
+.pick__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-3); }
+.pick__close {
+  width: var(--tap-min); height: var(--tap-min); display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: var(--text-muted); cursor: pointer; border-radius: var(--radius-pill);
+}
+.pick__close:hover { color: var(--text); }
+.pick__list { overflow-y: auto; margin-top: var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-1); }
+.pick__row {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+  min-height: var(--tap-min); padding: var(--sp-2) var(--sp-3); text-align: left; cursor: pointer;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-input);
+  transition: border-color .15s var(--ease), background-color .15s var(--ease);
+}
+.pick__row:hover { border-color: var(--primary); background: var(--surface-2); }
+.pick__name { font-weight: 600; }
+.pick__meta { font-size: var(--fs-sm); flex: none; }
+.pick__empty { padding: var(--sp-4) 0; text-align: center; }
+@keyframes pickFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pickUp { from { transform: translateY(8%); } to { transform: translateY(0); } }
+
+/* ---------------------------------------------------- Today head links ------ */
+.today-head__links { display: flex; gap: var(--sp-2); }
+.today-head__link { padding-inline: var(--sp-3); }
+
+/* ---------------------------------------------------- Focus picker ---------- */
+.focusbar {
+  display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4);
+  padding: var(--sp-2) var(--sp-3); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--radius-input);
+}
+.focusbar .eyebrow { flex: none; }
+.focusbar__select { flex: 1; }
+
+/* ---------------------------------------------------- Game banners ---------- */
+.gamebanner {
+  display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4);
+  padding: var(--sp-3); border-radius: var(--radius-input);
+  background: var(--surface-2); border-left: 4px solid var(--accent);
+}
+.gamebanner--today { border-left-color: var(--primary); background: var(--primary-tint); }
+.gamebanner--eve { border-left-color: var(--i-taper); }
+.gamebanner__tag {
+  flex: none; font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+  padding: 3px var(--sp-2); border-radius: var(--radius-pill); background: var(--accent); color: var(--navy);
+}
+.gamebanner--today .gamebanner__tag { background: var(--primary); color: var(--on-primary); }
+.gamebanner--eve .gamebanner__tag { background: var(--i-taper); color: var(--navy); }
+.gamebanner__tag--soft { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+.gamebanner__text { font-size: var(--fs-sm); color: var(--text); }
+
+/* ---------------------------------------------------- Today action bar ------ */
+.today-actions__row { display: flex; gap: var(--sp-2); }
+.today-actions__row > .btn { flex: 1; }
+.util-btn { flex-direction: column; gap: 2px; font-size: var(--fs-xs); padding: var(--sp-2); min-height: var(--tap-min); }
+.util-btn .btn__icon { margin: 0; }
+
+/* ---------------------------------------------------- Complete flow --------- */
+.complete__att { margin-bottom: var(--sp-3); }
+.complete__att .eyebrow, .complete__notes-wrap .eyebrow { display: block; margin-bottom: var(--sp-2); }
+.complete__notes { width: 100%; font-family: inherit; line-height: 1.5; resize: vertical; }
+.complete__notes-wrap { margin-bottom: var(--sp-4); }
+.complete .btn-block + .btn-block { margin-top: var(--sp-2); }
+.complete-log { margin: var(--sp-2) 0; }
+.complete-log__att { font-weight: 700; margin: 0 0 2px; }
+.complete-log__note { font-style: italic; color: var(--text-muted); margin: 0; }
+.history-open__note { display: block; font-style: italic; color: var(--text-muted); font-size: var(--fs-sm); margin-top: 2px; }
+.history-item__tools { display: flex; gap: var(--sp-2); }
+
+/* ---------------------------------------------------- Reduced motion -------- */
+@media (prefers-reduced-motion: reduce) {
+  .pick__overlay, .pick__sheet { animation: none; }
+  .favstar, .pe-tool, .teamswitch__pick, .pick__row { transition: none; }
+}
+
+/* ---------------------------------------------------- Wide screens ---------- */
+@media (min-width: 540px) {
+  .de-actions { justify-content: flex-end; }
+  .de-actions .btn { flex: 0 0 auto; min-width: 8rem; }
+}

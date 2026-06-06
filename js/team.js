@@ -47,6 +47,26 @@ RR.team = (function () {
   var CAMP_MAX_DAYS = 30;                             // camps run 1–30 days
   var SKILLS = ["Passing", "Setting", "Serving", "Hitting", "Blocking", "Defense", "Teamwork"];
 
+  // Typical squad sizes — drives drill selection so a plan suits how many players
+  // actually show up (a drill needing 12 won't land on a team of 8).
+  var ROSTER_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 24];
+  // "Extra" gear the coach may or may not own. Balls, a net, cones and a wall are
+  // assumed available everywhere, so they're not listed; a drill that needs one
+  // of THESE is only offered when the coach has ticked it. Tokens match the
+  // drill library's `equipment` strings exactly so the generator can filter on them.
+  var EQUIPMENT_EXTRAS = [
+    { token: "bands", label: "Resistance bands" },
+    { token: "mini bands", label: "Mini bands" },
+    { token: "agility ladder", label: "Agility ladder" },
+    { token: "jump ropes", label: "Jump ropes" },
+    { token: "medicine ball", label: "Medicine ball" },
+    { token: "reaction ball", label: "Reaction ball" },
+    { token: "hoops", label: "Hoops / targets" },
+    { token: "foam roller", label: "Foam roller" },
+    { token: "box", label: "Plyo box / step" },
+    { token: "mats", label: "Tumbling mats" }
+  ];
+
   // A coach runs either a full season or a short summer-camp-style block.
   var PROGRAM_TYPES = [
     { value: "season", label: "Season" },
@@ -79,8 +99,11 @@ RR.team = (function () {
     campStart: "",           // "YYYY-MM-DD" — day one of camp
     campDays: 5,             // length in days (1–30)
     sessionsPerDay: 2,
+    games: [],               // season match schedule: [{date, opponent}]
     // Shared:
     sessionMinutes: 75,      // length of one practice/session
+    rosterSize: 12,          // how many players, so drills suit the group size
+    equipment: [],           // EXTRA gear on hand (tokens from EQUIPMENT_EXTRAS)
     emphasis: []             // subset of SKILLS, lightly weights drill selection
   };
 
@@ -227,6 +250,9 @@ RR.team = (function () {
       sessionsPerWeek: t.practicesPerWeek,
       practiceDays: practiceDaysFor(t),
       prepWeeks: weeks,
+      // The full match schedule (sorted, blanks removed), so the in-season planner
+      // can build toward each game. The opener (seasonStart) is implied as game 1.
+      games: (RR.gamesEditor ? RR.gamesEditor.clean(t.games) : (t.games || [])),
       label: weeks + "-week season"
     };
   }
@@ -249,6 +275,14 @@ RR.team = (function () {
 
   // ---- The screen -----------------------------------------------------------
   function renderTeam(host) {
+    // The multi-team switcher + backup/restore sit above the form. Switching or
+    // restoring re-renders the whole screen so the form reflects the new team.
+    if (RR.teamsUI) {
+      RR.teamsUI.render(host, { onChange: function () {
+        if (RR.app && RR.app.route) RR.app.route();   // re-render the whole screen
+      } });
+    }
+
     // Working copy of the team. The DOM inputs are the source of truth while
     // editing; we mirror their values here and persist the whole object on change.
     var form = getTeam() || clone(DEFAULT_FORM);
@@ -259,6 +293,9 @@ RR.team = (function () {
     // refresh the summary. This is the single auto-save path for every field.
     function commit() {
       RR.state.update({ team: clone(form) });
+      // First save: adopt the id RR.state assigned, so later edits update THIS
+      // team instead of creating a new one on every keystroke.
+      if (!form.id) { var at = RR.state.getActiveTeamId && RR.state.getActiveTeamId(); if (at) form.id = at; }
       validate();
       flashSaved();
       refreshSummary();
@@ -314,14 +351,19 @@ RR.team = (function () {
       }), "A full season, or a 1–30 day camp.", true),
       // Program-specific schedule (dates + cadence) renders here.
       scheduleHost,
-      // Shared: session length + optional emphasis.
+      // Shared: session length, roster size, gear on hand, optional emphasis.
       field("Session length", segmented({
         options: SESSION_LENGTHS.map(function (n) { return { value: n, label: String(n) }; }),
         value: form.sessionMinutes,
         onSelect: function (v) { form.sessionMinutes = v; commit(); },
         suffix: "min"
       }), "Minutes per session.", true),
-      field("Skill emphasis", chipRow(), "Optional — lightly weights which drills get picked.", true)
+      field("Squad size", rosterSizeSelect(),
+        "Roughly how many players — drills are picked to suit the group."),
+      field("Equipment on hand", equipmentRow(),
+        "Balls, a net and cones are assumed. Tick any extras you have so drills can use them.", true),
+      field("Skill emphasis", chipRow(),
+        "Optional — weights which skills get featured.", true)
     ]);
 
     var formCard = h("section", { class: "card" }, [
@@ -460,7 +502,11 @@ RR.team = (function () {
             }
           }), null, true),
           field("Which days?", weekdayPicker(),
-            "Tap the days you practice — your plan only fills these.", true)
+            "Tap the days you practice — your plan only fills these.", true),
+          field("Game schedule", RR.gamesEditor
+            ? RR.gamesEditor.build(form, commit)
+            : h("p", { class: "muted", text: "—" }),
+            "Add your matches. Practices ramp toward the next game and ease the day before.", true)
         ]);
       }
     }
@@ -511,6 +557,41 @@ RR.team = (function () {
       }
       sel.addEventListener("change", function () { form.campDays = parseInt(sel.value, 10); commit(); });
       return sel;
+    }
+
+    // Squad size — a native select (clearer than a 9-wide segmented control).
+    function rosterSizeSelect() {
+      var sel = h("select", { class: "input" });
+      ROSTER_SIZES.forEach(function (n) {
+        var label = n + (n === ROSTER_SIZES[ROSTER_SIZES.length - 1] ? "+ players" : " players");
+        sel.appendChild(h("option", { value: String(n), text: label, selected: form.rosterSize === n }));
+      });
+      sel.addEventListener("change", function () { form.rosterSize = parseInt(sel.value, 10); commit(); });
+      return sel;
+    }
+
+    // Extra-equipment toggles. Tokens match the drill library so the generator can
+    // exclude drills needing gear the coach doesn't have.
+    function equipmentRow() {
+      var row = h("div", { class: "chips", role: "group" });
+      EQUIPMENT_EXTRAS.forEach(function (item) {
+        var on = (form.equipment || []).indexOf(item.token) !== -1;
+        var b = h("button", {
+          type: "button", class: "chip" + (on ? " is-on" : ""),
+          "aria-pressed": on ? "true" : "false", text: item.label
+        });
+        b.addEventListener("click", function () {
+          if (!Array.isArray(form.equipment)) form.equipment = [];
+          var i = form.equipment.indexOf(item.token);
+          if (i === -1) form.equipment.push(item.token); else form.equipment.splice(i, 1);
+          var nowOn = form.equipment.indexOf(item.token) !== -1;
+          b.classList.toggle("is-on", nowOn);
+          b.setAttribute("aria-pressed", nowOn ? "true" : "false");
+          commit();
+        });
+        row.appendChild(b);
+      });
+      return row;
     }
 
     function chipRow() {
@@ -574,10 +655,22 @@ RR.team = (function () {
         ];
       }
 
-      var grid = cadenceCells.concat([
+      var extraCells = [
         summaryItem("Net height", ref.net, true),
         summaryItem("Ball", ref.ball, true),
+        summaryItem("Squad", form.rosterSize + " players"),
         summaryItem("Emphasis", form.emphasis.length ? form.emphasis.join(", ") : "Balanced")
+      ];
+      if (!isCamp) {
+        var nGames = (RR.gamesEditor ? RR.gamesEditor.clean(form.games) : (form.games || [])).length;
+        extraCells.push(summaryItem("Games", nGames ? String(nGames) + " scheduled" : "Opener only"));
+      }
+      var grid = cadenceCells.concat(extraCells);
+
+      var rosterLink = h("a", { class: "btn btn-ghost btn-block summary__roster", href: "#roster" }, [
+        h("span", { "aria-hidden": "true", class: "btn__icon",
+          html: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.3 2.7-5.5 5.5-5.5s5.5 2.2 5.5 5.5"/><path d="M16.4 5.2a3.2 3.2 0 0 1 0 5.8"/><path d="M17.6 14.9c2.3.5 3.9 2.4 3.9 5.1"/></svg>' }),
+        "Manage roster & attendance"
       ]);
 
       summaryHost.appendChild(h("section", { class: "card summary" }, [
@@ -586,7 +679,8 @@ RR.team = (function () {
           h("span", { class: "pill", text: form.ageGroup })
         ]),
         h("div", { class: "summary-hero" }, hero),
-        h("div", { class: "summary-grid" }, grid)
+        h("div", { class: "summary-grid" }, grid),
+        rosterLink
       ]));
     }
 
