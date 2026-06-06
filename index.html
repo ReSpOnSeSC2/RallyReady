@@ -126,7 +126,7 @@
   <!--
     Modules load in dependency order; each attaches to the single global
     namespace `RR` (state.js creates it first).
-    state -> drills (+ drills-2..10) -> coaching -> periodization -> generator -> ui -> install -> team -> season -> today -> app
+    state -> drills (+ drills-2..11) -> coaching -> periodization -> generator -> ui -> install -> team -> season -> today -> app
     The drill library is split across several files for the <800-lines-per-file rule;
     each drills-N.js concatenates its drills onto RR.drills, so they load in order after drills.js.
   -->
@@ -141,6 +141,7 @@
   <script src="js/drills-8.js"></script>
   <script src="js/drills-9.js"></script>
   <script src="js/drills-10.js"></script>
+  <script src="js/drills-11.js"></script>
   <script src="js/coaching.js"></script>
   <script src="js/periodization.js"></script>
   <script src="js/generator.js"></script>
@@ -150,7 +151,8 @@
   <script src="js/format.js"></script>
   <script src="js/extras-build.js"></script>
   <!-- Per-drill organization overrides + court diagrams. extras-data(.js,-2) are
-       the games; -3..-11 add the skill / warm-up / cool-down diagrams by category. -->
+       the games; -3..-11 add the skill / warm-up / cool-down diagrams by category;
+       -12 adds the equipment-drill diagrams (hoops/targets, mat defense). -->
   <script src="js/extras-data.js"></script>
   <script src="js/extras-data-2.js"></script>
   <script src="js/extras-data-3.js"></script>
@@ -162,6 +164,7 @@
   <script src="js/extras-data-9.js"></script>
   <script src="js/extras-data-10.js"></script>
   <script src="js/extras-data-11.js"></script>
+  <script src="js/extras-data-12.js"></script>
   <script src="js/ui.js"></script>
   <!-- Install ("Add to Home Screen") helper; loads before today.js, which mounts it. -->
   <script src="js/install.js"></script>

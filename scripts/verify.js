@@ -31,6 +31,7 @@ const FILES = [
   "js/state.js",
   "js/drills.js", "js/drills-2.js", "js/drills-3.js", "js/drills-4.js",
   "js/drills-5.js", "js/drills-6.js", "js/drills-7.js", "js/drills-8.js", "js/drills-9.js",
+  "js/drills-10.js", "js/drills-11.js",
   "js/coaching.js", "js/periodization.js", "js/team.js", "js/generator.js"
 ];
 for (const f of FILES) {

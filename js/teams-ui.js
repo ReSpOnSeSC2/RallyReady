@@ -149,5 +149,40 @@ RR.teamsUI = (function () {
     ]));
   }
 
-  return { render: render, renderBackup: renderBackup };
+  // ---- "What's left" checklist card -----------------------------------------
+  // Shown in place of the at-a-glance summary until every required field is
+  // filled in, so a coach is told exactly what to complete before a plan can be
+  // generated — rather than the summary just silently staying hidden. The list
+  // of missing fields (and the rules) come from RR.team so the two never drift.
+  function setupChecklistCard(team) {
+    var miss = (RR.team.missingRequired ? RR.team.missingRequired(team) : []);
+    // Every required field is present but the team still isn't set up: the only
+    // remaining cause is a season opener on/before the practice start. Name it so
+    // the list is never empty and the coach knows what to fix.
+    var dateOrderIssue = !miss.length && !RR.team.isSetUp(team);
+
+    function item(label) {
+      return h("li", { class: "setup-check__item" }, [
+        h("span", { class: "setup-check__dot", "aria-hidden": "true" }),
+        h("span", { text: label })
+      ]);
+    }
+    var items = miss.map(item);
+    if (dateOrderIssue) items.push(item("A season opener that falls after practices begin"));
+
+    var lead = items.length === 1
+      ? "Finish this to generate your plan:"
+      : "Finish these to generate your plan:";
+
+    return h("section", { class: "card setup-check" }, [
+      h("div", { class: "card-head" }, [
+        h("h2", { text: "Almost ready" }),
+        h("span", { class: "pill setup-check__tag", text: "Plan not ready yet" })
+      ]),
+      h("p", { class: "muted setup-check__lead", text: lead }),
+      h("ul", { class: "setup-check__list" }, items)
+    ]);
+  }
+
+  return { render: render, renderBackup: renderBackup, setupChecklistCard: setupChecklistCard };
 })();
