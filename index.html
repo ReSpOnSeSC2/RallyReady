@@ -48,6 +48,10 @@
        focus picker, game banners, attendance) — split for the 800-line rule. -->
   <link rel="stylesheet" href="css/features.css" />
   <link rel="stylesheet" href="css/roster.css" />
+  <!-- Players tab + 1-on-1 profile (squad grid, photos, notes, goals, skills). -->
+  <link rel="stylesheet" href="css/players.css" />
+  <!-- Position coaching guides + lineup builder. -->
+  <link rel="stylesheet" href="css/positions.css" />
   <link rel="stylesheet" href="css/calendar.css" />
   <!-- In-practice run-mode timer overlay. -->
   <link rel="stylesheet" href="css/run.css" />
@@ -108,6 +112,15 @@
       </svg>
       <span class="tab-label">Drills</span>
     </a>
+    <a href="#players">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <circle cx="9" cy="8" r="3.2" />
+        <path d="M3.5 20c0-3.3 2.7-5.5 5.5-5.5s5.5 2.2 5.5 5.5" />
+        <path d="M16.4 5.2a3.2 3.2 0 0 1 0 5.8" />
+        <path d="M17.6 14.9c2.3.5 3.9 2.4 3.9 5.1" />
+      </svg>
+      <span class="tab-label">Players</span>
+    </a>
     <a href="#tips">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
         <path d="M9.5 18.5h5" />
@@ -118,12 +131,11 @@
     </a>
     <a href="#team">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-        <circle cx="9" cy="8" r="3.2" />
-        <path d="M3.5 20c0-3.3 2.7-5.5 5.5-5.5s5.5 2.2 5.5 5.5" />
-        <path d="M16.4 5.2a3.2 3.2 0 0 1 0 5.8" />
-        <path d="M17.6 14.9c2.3.5 3.9 2.4 3.9 5.1" />
+        <path d="M12 2.5 3 7l9 4.5L21 7z" />
+        <path d="M3 12l9 4.5L21 12" />
+        <path d="M3 17l9 4.5L21 17" />
       </svg>
-      <span class="tab-label">Team</span>
+      <span class="tab-label">Teams</span>
     </a>
   </nav>
 
@@ -150,6 +162,11 @@
   <!-- Tips "show, don't just tell" visuals (animated SVG diagrams + video links).
        Standalone; the Tips screen (coaching.js) composes it in at render time. -->
   <script src="js/tips-visuals.js"></script>
+  <!-- Position coaching content + API (data loads first, then the helpers that
+       read it + the drill library). Loaded before roster.js, which reads
+       RR.positions for its position <select> options. -->
+  <script src="js/positions-data.js"></script>
+  <script src="js/positions.js"></script>
   <script src="js/periodization.js"></script>
   <script src="js/generator.js"></script>
   <!-- Court-diagram engine + "how it's organized" engine + their per-drill data.
@@ -173,6 +190,9 @@
   <script src="js/extras-data-11.js"></script>
   <script src="js/extras-data-12.js"></script>
   <script src="js/ui.js"></script>
+  <!-- Player photo pipeline + store (separate localStorage key). Loads before the
+       roster/players modules that read and write photos. -->
+  <script src="js/photos.js"></script>
   <!-- Install ("Add to Home Screen") helper; loads before today.js, which mounts it. -->
   <script src="js/install.js"></script>
   <!-- Shared feature modules — load after ui.js (they read RR.ui), before the
@@ -184,6 +204,12 @@
   <script src="js/run.js"></script>
   <script src="js/share.js"></script>
   <script src="js/roster.js"></script>
+  <!-- Players tab, 1-on-1 profile, position coaching screen, lineup builder.
+       They compose RR.ui / RR.roster / RR.photos / RR.positions / RR.diagram. -->
+  <script src="js/players-ui.js"></script>
+  <script src="js/player-profile.js"></script>
+  <script src="js/positions-ui.js"></script>
+  <script src="js/lineup.js"></script>
   <script src="js/calendar.js"></script>
   <script src="js/team.js"></script>
   <script src="js/season.js"></script>

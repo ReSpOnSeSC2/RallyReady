@@ -592,6 +592,19 @@ RR.coaching = (function () {
     return tips.slice();
   }
 
+  // A card that points coaches to the per-position guides + recommended drills.
+  function buildPositionCard() {
+    return h("section", { class: "card tips-poscard" }, [
+      h("div", { class: "card-head" }, [
+        h("h2", { text: "Coach by position" }),
+        h("span", { class: "pill", text: "6 roles" })
+      ]),
+      h("p", { class: "age-guide__text",
+        text: "How to coach setters, hitters, middles, liberos and more — responsibilities, cues, common mistakes, rotation basics, and drills pulled from the library for each role." }),
+      h("a", { class: "btn btn-primary tips-setup-link", href: "#positions", text: "Open position coaching" })
+    ]);
+  }
+
   function renderTips(host) {
     var team = (RR.state && RR.state.getState().team) || null;
     var setUp = !!(RR.team && RR.team.isSetUp && RR.team.isSetUp(team));
@@ -601,6 +614,10 @@ RR.coaching = (function () {
 
     // Top: age guidance + reference (or the all-bands table until a team exists).
     host.appendChild(setUp ? buildAgeCard(team) : buildAllBandsCard());
+
+    // Position coaching entry point (the guides + recommended drills live on their
+    // own screen, reached here and from the Players tab).
+    host.appendChild(buildPositionCard());
 
     // The tips accordion. Open the first card so the screen never reads as a
     // wall of closed bars; for camps that first card is "Running a camp".

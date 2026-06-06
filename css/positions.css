@@ -1,0 +1,140 @@
+/* positions.css — Position Coaching screen, lineup builder, and the Today
+   position-breakout card. Semantic tokens only (fixed skill/diagram hues keep
+   navy text), so both themes pass contrast. No card-in-card; tap targets ≥48px;
+   hover gated to hover-capable devices. */
+
+.pos-body { display: block; }
+
+/* Age-emphasis note */
+.pos-emph__text { margin: var(--sp-1) 0 0; color: var(--text); }
+.pos-emph--compact { padding: var(--sp-4); }
+
+/* The Tips entry card */
+.tips-poscard .age-guide__text { margin: 0 0 var(--sp-4); }
+
+/* ---- Position guide tiles (overview) ------------------------------------- */
+.pos-cards { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-2); }
+.pos-tile {
+  display: flex; align-items: center; gap: var(--sp-3); width: 100%;
+  min-height: var(--tap-min); padding: var(--sp-3);
+  border: 1px solid var(--border); border-radius: var(--radius-input);
+  background: var(--surface); color: var(--text); text-align: left; cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.pos-tile__abbr {
+  flex: none; width: 40px; height: 40px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--primary-tint); color: var(--text); font-weight: 800; font-size: var(--fs-sm);
+}
+.pos-tile__text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.pos-tile__name { font-weight: 700; }
+.pos-tile__tag { font-size: var(--fs-sm); overflow: hidden; text-overflow: ellipsis; }
+.pos-tile__chev { flex: none; color: var(--text-muted); }
+@media (hover: hover) { .pos-tile:hover { background: var(--surface-2); border-color: var(--field-border); } }
+
+.pos-lineup-link { margin-top: var(--sp-4); }
+
+/* ---- Squad by position ---------------------------------------------------- */
+.pos-squad__row { gap: var(--sp-3); cursor: pointer; }
+.pos-squad__main { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.pos-squad__pos { font-weight: 700; }
+.pos-squad__names { font-size: var(--fs-sm); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pos-squad__gap {
+  font-size: var(--fs-xs); font-weight: 800; color: var(--navy);
+  background: var(--i-mid); padding: 2px 8px; border-radius: var(--radius-pill);
+}
+.pos-squad__exploring { margin: var(--sp-3) 0 0; font-size: var(--fs-sm); }
+
+/* ---- Breakout opt-in (overview) + Today breakout card --------------------- */
+.pos-breakout .card-head { margin-bottom: var(--sp-2); }
+.pos-breakout__toggle { min-width: 64px; justify-content: center; }
+
+.breakout { border-style: dashed; }
+.breakout__title { font-size: var(--fs-h3); margin: var(--sp-1) 0 var(--sp-2); }
+.breakout__note { margin: 0 0 var(--sp-3); color: var(--text); }
+.breakout__chips { gap: var(--sp-2); }
+.breakout__chip { gap: 6px; text-decoration: none; }
+.breakout__abbr {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 5px; border-radius: var(--radius-pill);
+  background: var(--primary-tint); color: var(--text); font-size: var(--fs-xs); font-weight: 800;
+}
+
+/* ---- One position guide --------------------------------------------------- */
+.pos-guide { display: flex; flex-direction: column; gap: var(--sp-4); }
+.pos-guide .drills-back { align-self: flex-start; }
+
+/* Collapsible detail sections (keep the guide short and scannable). */
+.pos-disc { padding: 0; overflow: hidden; }
+.pos-disc__toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+  width: 100%; min-height: var(--tap-min); padding: var(--sp-4) var(--sp-5);
+  background: transparent; border: none; cursor: pointer; text-align: left; color: var(--text);
+}
+.pos-disc__title { font-size: var(--fs-h3); font-weight: 800; letter-spacing: -0.015em; }
+.pos-disc__chev { flex: none; color: var(--text-muted); transition: transform 0.18s var(--ease); }
+.pos-disc__chev.is-open { transform: rotate(180deg); }
+.pos-disc__panel { padding: 0 var(--sp-5) var(--sp-5); }
+@media (hover: hover) { .pos-disc__toggle:hover { background: var(--surface-2); } }
+
+.pos-head__top { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.pos-head__abbr {
+  flex: none; width: 52px; height: 52px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--primary); color: var(--on-primary); font-weight: 800; font-size: var(--fs-h3);
+}
+.pos-head__name { font-size: var(--fs-h2); }
+.pos-head__tag { margin: 2px 0 0; }
+.pos-head__blurb { margin: 0 0 var(--sp-3); color: var(--text); }
+.pos-head__skills { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+/* Responsibilities */
+.pos-resp__block + .pos-resp__block { margin-top: var(--sp-3); }
+.pos-resp__list { margin: var(--sp-1) 0 0; padding-left: 1.2em; }
+.pos-resp__list li { margin-bottom: var(--sp-2); }
+
+/* Cues + mistakes */
+.pos-cuelist { margin: 0; padding-left: 1.2em; }
+.pos-cuelist li { margin-bottom: var(--sp-2); }
+.pos-mistakelist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.pos-mistake {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: var(--sp-3); background: var(--surface-2); border-radius: var(--radius-input);
+}
+.pos-mistake__tag {
+  display: inline-block; font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--navy); background: var(--i-hard);
+  padding: 1px 8px; border-radius: var(--radius-pill); margin-right: 4px;
+}
+.pos-mistake__tag--fix { background: var(--i-easy); }
+.pos-mistake__fix { color: var(--text); }
+
+/* Rotation diagram */
+.pos-rot__note { margin: 0 0 var(--sp-3); color: var(--text); }
+.pos-rot__fig { display: flex; justify-content: center; }
+
+/* Players in this role */
+.pos-players__grid { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.pos-playerchip {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  padding: 4px 12px 4px 4px; border-radius: var(--radius-pill);
+  border: 1px solid var(--field-border); background: var(--surface); color: var(--text);
+  cursor: pointer; min-height: 40px; font-weight: 700;
+}
+.pos-playerchip .pl-avatar { width: 32px; height: 32px; font-size: 14px; }
+@media (hover: hover) { .pos-playerchip:hover { background: var(--surface-2); } }
+
+/* Recommended drills */
+.pos-drills__hint { margin: 0 0 var(--sp-3); font-size: var(--fs-sm); }
+.pos-drills__list { display: flex; flex-direction: column; gap: var(--sp-3); }
+.pos-watch { display: flex; justify-content: center; padding-top: var(--sp-1); }
+
+/* ======================================================================= */
+/*  Lineup builder                                                         */
+/* ======================================================================= */
+.lineup-body { display: flex; flex-direction: column; gap: var(--sp-4); }
+.lineup-court__fig { display: flex; justify-content: center; margin-top: var(--sp-2); }
+.lineup-slot { margin-bottom: var(--sp-3); }
+.lineup-slot:last-child { margin-bottom: 0; }
+.lineup-tips .muted { margin: var(--sp-1) 0 0; }
+.lineup-clear { margin-top: 0; }
