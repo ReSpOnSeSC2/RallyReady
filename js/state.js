@@ -241,10 +241,14 @@ RR.state = (function () {
   }
 
   // ---- Backup / restore (no backend — a plain JSON file) --------------------
+  // Player photos live in their own localStorage store (RR.photos), so the backup
+  // bundles them alongside the main data; restore puts them back too. Older
+  // backups (no `photos` key) import fine — photos simply stay as they are.
   function exportData() {
     return JSON.stringify({
       app: "RallyReady", schemaVersion: SCHEMA, exportedAt: new Date().toISOString(),
-      data: current
+      data: current,
+      photos: (RR.photos && RR.photos.all) ? RR.photos.all() : {}
     }, null, 2);
   }
   // Returns { ok:true } or { ok:false, error }. Replaces all local data on success.
@@ -254,6 +258,11 @@ RR.state = (function () {
       var data = parsed && parsed.data ? parsed.data : parsed;
       if (!data || typeof data !== "object") return { ok: false, error: "Not a RallyReady backup file." };
       current = migrate(data);
+      // Restore photos only when the backup carried them, so importing an older
+      // file never wipes existing photos.
+      if (parsed && parsed.photos && RR.photos && RR.photos.replaceAll) {
+        RR.photos.replaceAll(parsed.photos);
+      }
       syncCustomDrills(); save(); notify();
       return { ok: true };
     } catch (e) {

@@ -1,0 +1,236 @@
+/* players.css — the Players tab + 1-on-1 profile + photo cropper.
+   Semantic tokens only (plus the fixed avatar hue, which carries navy text like
+   the intensity badges), so every surface reads correctly in light AND dark. No
+   card-in-card; tap targets ≥48px; hover effects gated to hover-capable devices. */
+
+/* ---- Quick links to the position tools ----------------------------------- */
+.pl-quick { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.pl-quick__btn { flex: 1 1 0; min-width: 0; padding: 0 var(--sp-3); }
+
+/* ---- Shared avatar (photo or tinted initials) ---------------------------- */
+.pl-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--navy);                 /* navy on the fixed hue — AA in both themes */
+  background: var(--surface-2);
+}
+.pl-avatar--photo { object-fit: cover; }
+.pl-avatar--initials {
+  /* A stable per-name hue (set inline as --avatar-hue). Fixed L/C so navy text
+     always clears AA, and it reads the same in both themes (like a badge). */
+  background: oklch(74% 0.13 var(--avatar-hue, 250));
+}
+.pl-avatar--blank { background: var(--surface-2); color: var(--text-muted); }
+
+/* ---- Add-player form ------------------------------------------------------ */
+.pl-add__grid { display: flex; gap: var(--sp-4); align-items: flex-start; }
+.pl-add__photo { display: flex; flex-direction: column; align-items: center; gap: var(--sp-1); flex: none; }
+.pl-add__photobtn {
+  width: 64px; height: 64px; padding: 0; border: 2px dashed var(--field-border);
+  border-radius: 50%; background: var(--surface); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.pl-add__avatar { display: inline-flex; }
+.pl-add__avatar .pl-avatar { width: 60px; height: 60px; }
+.pl-add__photolabel { font-size: var(--fs-xs); }
+.pl-add__fields { flex: 1 1 auto; min-width: 0; }
+.pl-add__fields .field { margin-bottom: var(--sp-3); }
+.pl-add__row { display: grid; grid-template-columns: 96px 1fr; gap: var(--sp-3); }
+.pl-add__btn { width: 100%; margin-top: var(--sp-1); }
+.pl-add__privacy { margin: var(--sp-3) 0 0; font-size: var(--fs-xs); text-align: center; }
+.pl-fileinput { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* ---- Squad grid ----------------------------------------------------------- */
+.pl-grouptoggle { display: flex; gap: var(--sp-2); margin: var(--sp-1) 0 var(--sp-4); }
+.pl-grouptoggle .seg { flex: 1 1 0; }
+.pl-empty {
+  margin: var(--sp-3) 0 0; padding: var(--sp-4); text-align: center;
+  background: var(--surface-2); border-radius: var(--radius-input);
+}
+.pl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--sp-3);
+}
+.pl-groups { display: flex; flex-direction: column; gap: var(--sp-5); }
+.pl-group__head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.pl-group__head .eyebrow { margin: 0; }
+.pl-group__count {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--radius-pill);
+  background: var(--surface-2); font-size: var(--fs-xs); font-weight: 800;
+}
+.pl-group__coach { margin-left: auto; font-size: var(--fs-sm); font-weight: 700; color: var(--link); text-decoration: none; }
+
+/* A player card: avatar with a number badge, name, position. */
+.pl-card {
+  display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-2);
+  border: 1px solid var(--border); border-radius: var(--radius-card);
+  background: var(--surface); box-shadow: var(--shadow);
+  cursor: pointer; text-align: center; min-height: var(--tap-min);
+  transition: transform 0.06s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.pl-card:active { transform: translateY(1px); }
+.pl-card__avatarwrap { position: relative; }
+.pl-card__avatarwrap .pl-avatar { width: 56px; height: 56px; font-size: 22px; }
+.pl-card__num {
+  position: absolute; right: -4px; bottom: -4px;
+  min-width: 22px; height: 22px; padding: 0 5px; border-radius: var(--radius-pill);
+  background: var(--primary); color: var(--on-primary);
+  border: 2px solid var(--surface);
+  font-size: var(--fs-xs); font-weight: 800;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.pl-card__name { font-weight: 700; font-size: var(--fs-sm); line-height: 1.2; word-break: break-word; }
+.pl-card__pos {
+  font-size: var(--fs-xs); font-weight: 700; color: var(--text);
+  background: var(--surface-2); padding: 2px 8px; border-radius: var(--radius-pill);
+}
+.pl-card__pos--none { background: transparent; font-weight: 600; }
+
+@media (hover: hover) {
+  .pl-card:hover { background: var(--surface-2); border-color: var(--field-border); }
+  .pl-group__coach:hover { text-decoration: underline; }
+}
+
+/* ---- Photo cropper modal -------------------------------------------------- */
+.crop__backdrop {
+  position: fixed; inset: 0; z-index: 300;
+  display: flex; align-items: center; justify-content: center; padding: var(--sp-4);
+  background: rgba(27, 42, 74, 0.55);     /* navy scrim (translucent overlay) */
+}
+.crop__dialog {
+  width: 100%; max-width: 360px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-card); box-shadow: var(--shadow);
+  padding: var(--sp-5);
+}
+.crop__title { font-size: var(--fs-h3); margin-bottom: var(--sp-3); }
+.crop__stage {
+  width: 100%; max-width: 280px; aspect-ratio: 1 / 1; margin: 0 auto;
+  border-radius: var(--radius-card); overflow: hidden; background: var(--surface-2);
+  touch-action: none; cursor: grab; border: 1px solid var(--border);
+}
+.crop__stage:active { cursor: grabbing; }
+.crop__preview { width: 100%; height: 100%; object-fit: cover; display: block; user-select: none; -webkit-user-drag: none; }
+.crop__zoomrow { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-4); }
+.crop__zoom { flex: 1 1 auto; accent-color: var(--primary); min-height: var(--tap-min); }
+.crop__hint { margin: var(--sp-1) 0 0; font-size: var(--fs-xs); text-align: center; }
+.crop__actions { display: flex; gap: var(--sp-3); margin-top: var(--sp-4); }
+.crop__actions .btn { flex: 1 1 0; }
+
+/* ======================================================================= */
+/*  1-on-1 player profile                                                  */
+/* ======================================================================= */
+.pl-back { margin-bottom: var(--sp-4); }
+
+/* Header: photo + identity */
+.pp-header { display: flex; gap: var(--sp-4); align-items: center; }
+.pp-photo { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); flex: none; }
+.pp-photo__frame { display: inline-flex; }
+.pp-photo__frame .pl-avatar { width: 96px; height: 96px; font-size: 36px; }
+.pp-photo__actions { display: flex; flex-direction: column; gap: var(--sp-1); width: 100%; }
+.pp-photo__btn { min-height: 36px; padding: 0 var(--sp-3); font-size: var(--fs-sm); }
+.pp-id { min-width: 0; }
+.pp-id__name { font-size: var(--fs-h2); word-break: break-word; }
+.pp-id__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); }
+.pp-id__num { font-weight: 800; color: var(--text); }
+.pp-id__pos {
+  font-weight: 700; font-size: var(--fs-sm); color: var(--text);
+  background: var(--surface-2); padding: 3px 10px; border-radius: var(--radius-pill);
+}
+.pp-id__pos--link { color: var(--link); text-decoration: none; }
+.pp-id__pos2 { font-size: var(--fs-sm); }
+
+/* Generic icon button used across the profile */
+.pp-iconbtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: var(--tap-min); min-height: var(--tap-min); padding: 0;
+  border: 1px solid var(--field-border); border-radius: var(--radius-input);
+  background: var(--surface); color: var(--text); cursor: pointer;
+}
+.pp-iconbtn--danger { color: var(--link); }
+@media (hover: hover) { .pp-iconbtn:hover { background: var(--surface-2); } }
+
+/* Play details */
+.pp-dl { margin: 0; }
+.pp-dl__row { display: flex; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); }
+.pp-dl__row:last-child { border-bottom: none; }
+.pp-dl dt { color: var(--text-muted); font-weight: 600; }
+.pp-dl dd { margin: 0; font-weight: 700; text-align: right; }
+.pp-details__form { display: flex; flex-direction: column; gap: var(--sp-2); }
+.pp-height { display: flex; align-items: center; gap: var(--sp-2); }
+.pp-num { width: 72px; }
+.pp-height__u { color: var(--text-muted); font-weight: 700; }
+.pp-details__save { margin-top: var(--sp-2); }
+
+/* Skill tracker */
+.pp-skills__hint { margin: 0 0 var(--sp-3); font-size: var(--fs-sm); }
+.pp-skill { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); }
+.pp-skill:last-child { border-bottom: none; }
+.pp-skill__name { flex: 1 1 auto; font-weight: 700; }
+.pp-skill__dots { display: inline-flex; gap: 6px; }
+.pp-skill__dot {
+  width: 24px; height: 24px; border-radius: 50%; padding: 0; cursor: pointer;
+  background: transparent;
+}
+.pp-skill__dot.dot--off { border: 2px solid var(--field-border); }
+.pp-skill__dot.dot--on { border: 2px solid var(--text); }
+.pp-skill__val { width: 34px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pp-trend { background: var(--surface-2); }
+
+/* Goals */
+.pp-goals__add-row { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.pp-goals__add-row .input { flex: 1 1 auto; }
+.pp-goals__add { min-width: var(--tap-min); padding: 0 var(--sp-3); }
+.pp-goal-list { margin-top: var(--sp-2); }
+.pp-goal { gap: var(--sp-3); }
+.pp-goal__check {
+  flex: none; width: 28px; height: 28px; padding: 0; border-radius: 8px;
+  border: 2px solid var(--field-border); background: var(--surface);
+  color: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+}
+.pp-goal__check.is-done { background: var(--accent); border-color: var(--accent); color: var(--navy); }
+.pp-goal__text { flex: 1 1 auto; font-weight: 600; }
+.pp-goal.is-done .pp-goal__text { text-decoration: line-through; color: var(--text-muted); }
+
+/* Coaching notes */
+.pp-notes__add-row { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.pp-notes__input { resize: vertical; }
+.pp-notes__add { align-self: flex-end; }
+.pp-note-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.pp-note { padding: var(--sp-3); background: var(--surface-2); border-radius: var(--radius-input); }
+.pp-note__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-1); }
+.pp-note__ts { font-size: var(--fs-xs); font-weight: 700; color: var(--text-muted); }
+.pp-note__tools { display: flex; gap: var(--sp-1); }
+.pp-note__tools .pp-iconbtn { min-width: 36px; min-height: 36px; }
+.pp-note__text { margin: 0; white-space: pre-wrap; }
+.pp-note__edit { resize: vertical; }
+.pp-note__editactions { display: flex; gap: var(--sp-2); justify-content: flex-end; margin-top: var(--sp-2); }
+
+/* Attendance */
+.pp-att__summary { margin: 0 0 var(--sp-3); }
+.pp-att__recent { list-style: none; margin: var(--sp-2) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.pp-att__chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+  border-radius: var(--radius-pill); font-size: var(--fs-sm); font-weight: 700;
+  background: var(--surface-2); color: var(--text);
+}
+.pp-att__dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.pp-att__chip.is-present .pp-att__dot { background: var(--i-easy); }
+.pp-att__chip.is-absent .pp-att__dot { background: var(--i-hard); }
+.pp-att__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Stack the profile header on the narrowest phones so nothing crowds. */
+@media (max-width: 360px) {
+  .pp-header { flex-direction: column; align-items: flex-start; }
+  .pp-photo { flex-direction: row; align-items: center; }
+  .pp-photo__actions { flex-direction: row; width: auto; }
+}

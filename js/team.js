@@ -705,10 +705,10 @@ RR.team = (function () {
       }
       var grid = cadenceCells.concat(extraCells);
 
-      var rosterLink = h("a", { class: "btn btn-ghost btn-block summary__roster", href: "#roster" }, [
+      var rosterLink = h("a", { class: "btn btn-ghost btn-block summary__roster", href: "#players" }, [
         h("span", { "aria-hidden": "true", class: "btn__icon",
           html: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3.3 2.7-5.5 5.5-5.5s5.5 2.2 5.5 5.5"/><path d="M16.4 5.2a3.2 3.2 0 0 1 0 5.8"/><path d="M17.6 14.9c2.3.5 3.9 2.4 3.9 5.1"/></svg>' }),
-        "Manage roster & attendance"
+        "Manage players & attendance"
       ]);
 
       summaryHost.appendChild(h("section", { class: "card summary" }, [

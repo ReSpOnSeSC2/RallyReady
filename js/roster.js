@@ -1,14 +1,16 @@
-// roster.js — the "Roster & attendance" screen (RR.roster).
+// roster.js — roster DATA + attendance helpers (RR.roster).
 //
-// Manage the active team's players (add / edit / remove; name + optional jersey
-// number + optional position) and expose the helpers the Today screen uses to
-// take attendance when a practice is marked complete.
+// The squad SCREEN moved to the Players tab (js/players-ui.js) and the 1-on-1
+// view (js/player-profile.js); this module is now the shared roster data layer
+// they (and the Today completion flow) build on:
+//   • player CRUD on the active team's `team.roster[]`
+//   • a reusable position <select> (options from RR.positions, the single source)
+//   • the attendance field/summary the Today "mark complete" flow uses
+//   • per-player attendance history derived from saved practices (for the profile)
 //
-// Persistence goes through RR.state: a player lives on `team.roster` as
-// { id, name, number, position }. We always read the freshest team, clone before
-// mutating, keep `team.rosterSize` in step with the squad, and write the WHOLE
-// team back with RR.state.update({ team }). No mock data — an empty roster shows
-// a friendly, inviting empty state.
+// A player is { id, name, number, position, ...optional profile fields }. We
+// always read the freshest team, clone before mutating, keep `team.rosterSize` in
+// step with the squad, and write the WHOLE team back via RR.state.update({ team }).
 window.RR = window.RR || {};
 
 RR.roster = (function () {
@@ -16,18 +18,15 @@ RR.roster = (function () {
 
   var h = RR.ui.h;
 
-  // Positions offered in the editor selects. The leading "" is "no position yet".
-  var POSITIONS = [
-    "", "Setter", "Outside hitter", "Opposite",
-    "Middle blocker", "Libero", "Defensive specialist", "Not sure yet"
-  ];
-
-  // ------------------------------------------------------------------ icons --
-  var ICON_ADD = '<path d="M12 5v14"/><path d="M5 12h14"/>';
-  var ICON_EDIT = '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>';
-  var ICON_REMOVE = '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>';
-  var ICON_SAVE = '<path d="M5 12l5 5L20 7"/>';
-  var ICON_CANCEL = '<path d="M18 6 6 18"/><path d="M6 6l12 12"/>';
+  // Options for the position <select>: the single source of truth is RR.positions
+  // (so roster, players, profile and the Drills filter never drift apart). Fall
+  // back to a literal list only if positions.js somehow didn't load.
+  function positionOptions() {
+    return (RR.positions && RR.positions.SELECT_OPTIONS) || [
+      "", "Setter", "Outside hitter", "Opposite",
+      "Middle blocker", "Libero", "Defensive specialist", "Not sure yet"
+    ];
+  }
 
   // --------------------------------------------------------------- data I/O --
   // Freshest active team (or null). Never cache — other screens may have written.
@@ -80,264 +79,72 @@ RR.roster = (function () {
     if (!team || !Array.isArray(team.roster)) return [];
     return JSON.parse(JSON.stringify(team.roster));
   }
+  // The roster sorted the canonical way (number then name) — used by the screens.
+  function getSortedRoster() { return sortedRoster(activeTeam()); }
 
-  // ------------------------------------------------------- screen rendering --
-  function renderRoster(host) {
-    host.innerHTML = "";
-
-    // Gate: a team must exist before there's anything to roster.
-    if (!(RR.team && RR.team.isSetUp && RR.team.isSetUp())) {
-      host.appendChild(RR.ui.emptyState({
-        title: "Set up your team first",
-        blurb: "Add your team on the Team tab, then build your roster here.",
-        btnLabel: "Set up your team",
-        hash: "#team"
-      }));
-      return;
-    }
-
-    // A clear way back to the Team screen this roster was opened from — the
-    // roster is a sub-screen with no tab of its own, so without this a coach can
-    // only return via the browser's back gesture.
-    var back = h("a", { class: "btn btn-ghost roster-back", href: "#team" }, [
-      h("span", { class: "roster-ico", "aria-hidden": "true", html: RR.ui.icon('<path d="M15 18l-6-6 6-6"/>', 18) }),
-      "Back to Team"
-    ]);
-    host.appendChild(back);
-
-    host.appendChild(h("p", { class: "screen-sub",
-      text: "Add the players on your squad. Numbers and positions are optional — a name is all you need." }));
-
-    host.appendChild(buildAddCard(host));
-    host.appendChild(buildListCard(host));
+  function getPlayer(id) {
+    var list = getRoster();
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
   }
 
-  // Re-render the whole screen in place (after any roster change) so the count,
-  // sort order and empty states all stay truthful.
-  function refresh(host) { renderRoster(host); }
-
-  // ---- Add-player form ------------------------------------------------------
-  function buildAddCard(host) {
-    var nameInput = h("input", {
-      type: "text", class: "input", id: "roster-add-name",
-      placeholder: "Player name", autocomplete: "off", "aria-label": "Player name"
+  // ---------------------------------------------------------- player CRUD ----
+  // Add a player from a fields object ({name, number, position, ...}). Returns the
+  // new id, or null when there's no team or no name.
+  function addPlayer(fields) {
+    var name = (fields && fields.name || "").trim();
+    if (!name) return null;
+    var team = cloneTeam();
+    if (!team) return null;
+    var player = Object.assign({}, fields, {
+      id: RR.state.genId("player"),
+      name: name,
+      number: cleanNumber(fields.number),
+      position: fields.position || ""
     });
-    var numberInput = h("input", {
-      type: "text", class: "input", inputmode: "numeric", maxlength: "3",
-      placeholder: "No.", "aria-label": "Jersey number (optional)"
-    });
-    numberInput.addEventListener("input", function () {
-      var cleaned = cleanNumber(numberInput.value);
-      if (cleaned !== numberInput.value) numberInput.value = cleaned;
-    });
-    var positionSelect = buildPositionSelect("");
-
-    function submit() {
-      var name = nameInput.value.trim();
-      if (!name) { nameInput.focus(); return; }   // name required; ignore empties
-
-      var team = cloneTeam();
-      if (!team) return;
-      team.roster.push({
-        id: RR.state.genId("player"),
-        name: name,
-        number: cleanNumber(numberInput.value),
-        position: positionSelect.value || ""
-      });
-      persistTeam(team);
-      RR.ui.confirmToast("Player added.");
-      refresh(host);
-      // After re-render the old nodes are gone; focus the fresh name field.
-      var fresh = document.getElementById("roster-add-name");
-      if (fresh) fresh.focus();
-    }
-
-    // Enter anywhere in the name/number fields submits the form.
-    [nameInput, numberInput].forEach(function (el) {
-      el.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") { e.preventDefault(); submit(); }
-      });
-    });
-
-    var addBtn = h("button", {
-      type: "button", class: "btn btn-primary roster-add__btn",
-      "aria-label": "Add player to roster"
-    }, [
-      h("span", { class: "roster-ico", "aria-hidden": "true", html: RR.ui.icon(ICON_ADD, 18) }),
-      "Add player"
-    ]);
-    addBtn.addEventListener("click", submit);
-
-    return h("section", { class: "card roster-add" }, [
-      RR.ui.sectionTitle("Add a player", null, "h2"),
-      h("div", { class: "roster-add__grid" }, [
-        h("div", { class: "field roster-add__name" }, [
-          h("label", { for: "roster-add-name", text: "Name" }),
-          nameInput
-        ]),
-        h("div", { class: "field roster-add__num" }, [
-          h("label", { class: "field-label", text: "Number" }),
-          numberInput
-        ]),
-        h("div", { class: "field roster-add__pos" }, [
-          h("label", { class: "field-label", text: "Position" }),
-          positionSelect
-        ])
-      ]),
-      addBtn
-    ]);
+    team.roster.push(player);
+    persistTeam(team);
+    return player.id;
   }
 
-  function buildPositionSelect(value) {
-    var sel = h("select", { class: "input", "aria-label": "Position (optional)" });
-    POSITIONS.forEach(function (p) {
+  // Merge `patch` into one player and persist. Returns the updated player or null.
+  function updatePlayer(id, patch) {
+    var team = cloneTeam();
+    if (!team) return null;
+    var updated = null;
+    team.roster = team.roster.map(function (p) {
+      if (p.id !== id) return p;
+      updated = Object.assign({}, p, patch, { id: id });
+      if (patch && Object.prototype.hasOwnProperty.call(patch, "number")) {
+        updated.number = cleanNumber(patch.number);
+      }
+      return updated;
+    });
+    if (!updated) return null;
+    persistTeam(team);
+    return updated;
+  }
+
+  // Remove a player and their stored photo (kept in the separate RR.photos store).
+  function removePlayer(id) {
+    var team = cloneTeam();
+    if (!team) return;
+    team.roster = team.roster.filter(function (p) { return p.id !== id; });
+    persistTeam(team);
+    if (RR.photos && RR.photos.remove) RR.photos.remove(id);
+  }
+
+  // A labelled position <select>, reused by the Players add form and the profile.
+  function positionSelect(value, ariaLabel) {
+    var sel = h("select", { class: "input", "aria-label": ariaLabel || "Position (optional)" });
+    positionOptions().forEach(function (p) {
       sel.appendChild(h("option", {
         value: p,
         text: p === "" ? "Position (optional)" : p,
-        selected: p === value
+        selected: p === (value || "")
       }));
     });
     return sel;
-  }
-
-  // ---- Roster list ----------------------------------------------------------
-  function buildListCard(host) {
-    var team = activeTeam();
-    var players = sortedRoster(team);
-
-    var headerRight = players.length
-      ? h("span", { class: "pill", text: players.length + (players.length === 1 ? " player" : " players") })
-      : null;
-
-    var card = h("section", { class: "card roster-list" }, [
-      RR.ui.sectionTitle("Your roster", headerRight, "h2")
-    ]);
-
-    if (!players.length) {
-      card.appendChild(h("p", { class: "muted roster-empty",
-        text: "No players yet — add your first above." }));
-      return card;
-    }
-
-    var ul = h("ul", { class: "list roster-ul" });
-    players.forEach(function (player) {
-      ul.appendChild(buildPlayerRow(player, host));
-    });
-    card.appendChild(ul);
-    return card;
-  }
-
-  // One roster row, in display mode. Edit swaps it in place for an editor row.
-  function buildPlayerRow(player, host) {
-    var li = h("li", { class: "row roster-row" });
-
-    var badge = player.number
-      ? h("span", { class: "roster-badge", "aria-hidden": "true", text: player.number })
-      : h("span", { class: "roster-badge roster-badge--empty", "aria-hidden": "true", text: "–" });
-
-    var nameLine = [h("span", { class: "roster-row__name", text: player.name })];
-    if (player.position) {
-      nameLine.push(h("span", { class: "muted roster-row__pos", text: player.position }));
-    }
-
-    var numberLabel = player.number ? ("number " + player.number) : "no number";
-    var info = h("div", { class: "roster-row__info" }, [
-      badge,
-      h("div", { class: "roster-row__text" }, nameLine)
-    ]);
-
-    var editBtn = h("button", {
-      type: "button", class: "btn-ghost roster-iconbtn",
-      "aria-label": "Edit " + player.name + " (" + numberLabel + ")"
-    }, [h("span", { "aria-hidden": "true", html: RR.ui.icon(ICON_EDIT, 18) })]);
-    editBtn.addEventListener("click", function () {
-      var editor = buildEditorRow(player, host);
-      li.replaceWith(editor);
-      var input = editor.querySelector(".roster-edit__name");
-      if (input) input.focus();
-    });
-
-    var removeBtn = h("button", {
-      type: "button", class: "btn-ghost roster-iconbtn roster-iconbtn--danger",
-      "aria-label": "Remove " + player.name + " from roster"
-    }, [h("span", { "aria-hidden": "true", html: RR.ui.icon(ICON_REMOVE, 18) })]);
-    removeBtn.addEventListener("click", function () {
-      if (!window.confirm("Remove " + player.name + " from the roster?")) return;
-      var team = cloneTeam();
-      if (!team) return;
-      team.roster = team.roster.filter(function (p) { return p.id !== player.id; });
-      persistTeam(team);
-      RR.ui.confirmToast("Player removed.");
-      refresh(host);
-    });
-
-    li.appendChild(info);
-    li.appendChild(h("div", { class: "roster-row__actions" }, [editBtn, removeBtn]));
-    return li;
-  }
-
-  // Inline editor for one player: name + number + position with Save / Cancel.
-  function buildEditorRow(player, host) {
-    var li = h("li", { class: "row roster-row roster-row--editing" });
-
-    var nameInput = h("input", {
-      type: "text", class: "input roster-edit__name", value: player.name || "",
-      autocomplete: "off", "aria-label": "Player name"
-    });
-    var numberInput = h("input", {
-      type: "text", class: "input roster-edit__num", inputmode: "numeric", maxlength: "3",
-      value: player.number || "", placeholder: "No.", "aria-label": "Jersey number (optional)"
-    });
-    numberInput.addEventListener("input", function () {
-      var cleaned = cleanNumber(numberInput.value);
-      if (cleaned !== numberInput.value) numberInput.value = cleaned;
-    });
-    var positionSelect = buildPositionSelect(player.position || "");
-    positionSelect.classList.add("roster-edit__pos");
-
-    function save() {
-      var name = nameInput.value.trim();
-      if (!name) { nameInput.focus(); return; }   // name stays required on edit
-      var team = cloneTeam();
-      if (!team) return;
-      team.roster = team.roster.map(function (p) {
-        if (p.id !== player.id) return p;
-        return {
-          id: p.id,
-          name: name,
-          number: cleanNumber(numberInput.value),
-          position: positionSelect.value || ""
-        };
-      });
-      persistTeam(team);
-      RR.ui.confirmToast("Player updated.");
-      refresh(host);
-    }
-    function cancel() { refresh(host); }
-
-    nameInput.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") { e.preventDefault(); save(); }
-      else if (e.key === "Escape") { e.preventDefault(); cancel(); }
-    });
-
-    var saveBtn = h("button", {
-      type: "button", class: "btn btn-primary roster-iconbtn",
-      "aria-label": "Save changes to " + player.name
-    }, [h("span", { "aria-hidden": "true", html: RR.ui.icon(ICON_SAVE, 18) })]);
-    saveBtn.addEventListener("click", save);
-
-    var cancelBtn = h("button", {
-      type: "button", class: "btn-ghost roster-iconbtn",
-      "aria-label": "Cancel editing " + player.name
-    }, [h("span", { "aria-hidden": "true", html: RR.ui.icon(ICON_CANCEL, 18) })]);
-    cancelBtn.addEventListener("click", cancel);
-
-    li.appendChild(h("div", { class: "roster-edit__fields" }, [
-      nameInput,
-      h("div", { class: "roster-edit__meta" }, [numberInput, positionSelect])
-    ]));
-    li.appendChild(h("div", { class: "roster-row__actions" }, [saveBtn, cancelBtn]));
-    return li;
   }
 
   // =================================================================== //
@@ -345,24 +152,20 @@ RR.roster = (function () {
   // =================================================================== //
 
   // attendanceField(existing) -> { node, getValue }
-  //   node      — a DOM node of present/absent toggle chips, one per player.
-  //               Everyone defaults to present unless `existing` (an array of
-  //               present player ids) says otherwise.
-  //   getValue() — returns an array of PRESENT player ids.
-  // When the roster is empty: node is a muted hint and getValue() returns null.
+  //   node      — present/absent toggle chips, one per player (default present
+  //               unless `existing`, an array of present ids, says otherwise).
+  //   getValue() — returns an array of PRESENT player ids (null on empty roster).
   function attendanceField(existing) {
     var players = sortedRoster(activeTeam());
 
     if (!players.length) {
       return {
         node: h("p", { class: "muted roster-att__hint",
-          text: "Add players on the Roster screen to take attendance." }),
+          text: "Add players on the Players tab to take attendance." }),
         getValue: function () { return null; }
       };
     }
 
-    // First-time (no saved attendance) defaults everyone to present; otherwise we
-    // honour exactly what was recorded before.
     var hasExisting = Array.isArray(existing);
     var present = {};
     players.forEach(function (p) {
@@ -410,11 +213,51 @@ RR.roster = (function () {
     return count + " of " + players.length + " present";
   }
 
+  // Per-player attendance history from completed practices (for the 1-on-1
+  // profile). Only sessions for the ACTIVE team that actually recorded attendance
+  // count, so "present at X of Y" is honest. Returns { present, total, rate, recent }.
+  function attendanceHistory(playerId) {
+    var st = RR.state.getState();
+    var activeId = RR.state.getActiveTeamId();
+    var teamName = st.team && st.team.name;
+    var sessions = (st.savedSessions || []).filter(function (s) {
+      var mine = (s.teamId != null) ? (s.teamId === activeId) : (s.teamName === teamName);
+      return mine && Array.isArray(s.attendance);
+    });
+    sessions.sort(function (a, b) { return (b.completedAt || 0) - (a.completedAt || 0); });
+    var present = 0;
+    var recent = sessions.slice(0, 6).map(function (s) {
+      var here = s.attendance.indexOf(playerId) !== -1;
+      return { date: s.date, present: here };
+    });
+    sessions.forEach(function (s) { if (s.attendance.indexOf(playerId) !== -1) present++; });
+    var total = sessions.length;
+    return { present: present, total: total, rate: total ? present / total : 0, recent: recent };
+  }
+
+  // Legacy route safety: anything still asking RR.roster to render delegates to
+  // the Players screen (the #roster hash also redirects there in app.js).
+  function render(host) {
+    if (RR.players && RR.players.render) { RR.players.render(host); return; }
+    host.appendChild(h("p", { class: "muted", text: "Open the Players tab." }));
+  }
+
   return {
-    render: renderRoster,
-    renderRoster: renderRoster,
+    // data
     getRoster: getRoster,
+    getSortedRoster: getSortedRoster,
+    getPlayer: getPlayer,
+    addPlayer: addPlayer,
+    updatePlayer: updatePlayer,
+    removePlayer: removePlayer,
+    cleanNumber: cleanNumber,
+    positionSelect: positionSelect,
+    // attendance
     attendanceField: attendanceField,
-    summarizeAttendance: summarizeAttendance
+    summarizeAttendance: summarizeAttendance,
+    attendanceHistory: attendanceHistory,
+    // legacy alias
+    render: render,
+    renderRoster: render
   };
 })();

@@ -39,6 +39,7 @@ RR.drillsScreen = (function () {
   var filters = {
     query: "",
     skills: [],        // selected skill categories (empty = all)
+    positions: [],     // selected positions (empty = all) — match a role's focus skills
     tiers: [],         // selected difficulty tier ids (empty = all)
     showAllAges: false,
     campOnly: false,
@@ -46,6 +47,17 @@ RR.drillsScreen = (function () {
     customOnly: false,
     _key: null         // detects a team change to recompute camp-default
   };
+
+  // The union of focus skills for the currently selected positions, used to keep
+  // the Position filter in step with how each role maps onto the library.
+  function positionSkillSet() {
+    var set = {};
+    if (!RR.positions) return set;
+    filters.positions.forEach(function (pos) {
+      RR.positions.focusSkills(pos).forEach(function (s) { set[s] = true; });
+    });
+    return set;
+  }
 
   // The chip filters collapse into a disclosure so they don't fill the screen
   // before any drills show. Search stays visible; this only hides the chips.
@@ -56,7 +68,7 @@ RR.drillsScreen = (function () {
   // How many filter facets are currently narrowing the list (search excluded —
   // it has its own always-visible box). Drives the count badge on the toggle.
   function activeFilterCount() {
-    return filters.skills.length + filters.tiers.length +
+    return filters.skills.length + filters.positions.length + filters.tiers.length +
       (filters.showAllAges ? 1 : 0) + (filters.campOnly ? 1 : 0) +
       (filters.favoritesOnly ? 1 : 0) + (filters.customOnly ? 1 : 0);
   }
@@ -82,6 +94,7 @@ RR.drillsScreen = (function () {
     var band = team ? RR.team.ageRange(team.ageGroup) : null;
     var q = filters.query.trim().toLowerCase();
     var tierRanges = DIFF_TIERS.filter(function (t) { return filters.tiers.indexOf(t.id) !== -1; });
+    var posSkills = positionSkillSet();   // {} when no positions selected (skips the check)
 
     return (RR.drills || []).filter(function (d) {
       if (filters.favoritesOnly && !(RR.state.isFavorite && RR.state.isFavorite(d.id))) return false;
@@ -89,6 +102,7 @@ RR.drillsScreen = (function () {
       if (band && !filters.showAllAges && !inAgeBand(d, band)) return false;
       if (filters.campOnly && !d.campFriendly) return false;
       if (filters.skills.length && filters.skills.indexOf(d.skill) === -1) return false;
+      if (filters.positions.length && !posSkills[d.skill]) return false;
       if (tierRanges.length) {
         var ok = tierRanges.some(function (t) { return d.difficulty >= t.min && d.difficulty <= t.max; });
         if (!ok) return false;
@@ -102,13 +116,14 @@ RR.drillsScreen = (function () {
   // Has the coach narrowed anything? Drives the "Clear filters" affordance and
   // the empty-state copy.
   function anyFilterActive() {
-    return !!(filters.query.trim() || filters.skills.length || filters.tiers.length ||
+    return !!(filters.query.trim() || filters.skills.length || filters.positions.length || filters.tiers.length ||
       filters.campOnly || filters.showAllAges || filters.favoritesOnly || filters.customOnly);
   }
 
   function clearFilters(team) {
     filters.query = "";
     filters.skills = [];
+    filters.positions = [];
     filters.tiers = [];
     filters.favoritesOnly = false;
     filters.customOnly = false;
@@ -188,6 +203,17 @@ RR.drillsScreen = (function () {
           toggleIn(filters.tiers, t.id, on); paint();
         }, t.color);
       })));
+
+      // Position chips — narrow the library to a role's focus skills (e.g. a
+      // setter sees Setting / Ball Control / Defense drills). Derived from
+      // RR.positions, so there's no fragile per-drill position tagging.
+      if (RR.positions && RR.positions.LIST.length) {
+        panel.appendChild(filterGroup("Position", RR.positions.LIST.map(function (pos) {
+          return chip(RR.positions.abbr(pos) || pos, filters.positions.indexOf(pos) !== -1, function (on) {
+            toggleIn(filters.positions, pos, on); paint();
+          });
+        })));
+      }
 
       // Toggle chips: age band + camp-friendly. The age toggle only appears once a
       // team (with an age band) exists; the camp chip is always offered.

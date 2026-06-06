@@ -10,14 +10,21 @@ RR.app = (function () {
     today:   { title: "Today",   blurb: "Your next practice plan will appear here, ready to run." },
     season:  { title: "Season",  blurb: "Map out your season and see the intensity curve week by week." },
     drills:  { title: "Drills",  blurb: "Browse the drill library and find the right activity for any skill." },
+    players: { title: "Players", blurb: "Your squad — photos, positions and 1-on-1 coaching." },
     tips:    { title: "Tips",    blurb: "Quick coaching tips and what to expect at each age group." },
-    team:    { title: "Team",    blurb: "Set up your team's name and age group to tailor every practice." },
-    // These three aren't tabs — they're reached from in-screen links — but each is
-    // a real route so it gets a title, a focus target, and back/forward support.
-    history:  { title: "History",  blurb: "Your completed practices." },
-    calendar: { title: "Schedule", blurb: "The next few weeks of practices and games at a glance." },
-    roster:   { title: "Roster",   blurb: "Your players and practice attendance." }
+    team:    { title: "Teams",   blurb: "Create, switch and set up the teams you coach." },
+    // These aren't tabs — they're reached from in-screen links — but each is a real
+    // route so it gets a title, a focus target, and back/forward support.
+    history:   { title: "History",  blurb: "Your completed practices." },
+    calendar:  { title: "Schedule", blurb: "The next few weeks of practices and games at a glance." },
+    player:    { title: "Player",   blurb: "1-on-1 coaching: notes, goals, skills and attendance." },
+    positions: { title: "Position coaching", blurb: "How to coach every position, with drills." },
+    lineup:    { title: "Lineup",   blurb: "Place your starting six into the rotation." }
   };
+
+  // Hashes that no longer have a screen of their own redirect to their replacement
+  // (the Roster screen became the Players tab).
+  var REDIRECTS = { roster: "players" };
 
   var DEFAULT_ROUTE = "today";
 
@@ -131,9 +138,18 @@ RR.app = (function () {
     } else if (routeId === "calendar" && RR.calendar) {
       // The Schedule / agenda view.
       RR.calendar.render(host);
-    } else if (routeId === "roster" && RR.roster) {
-      // Roster & attendance.
-      RR.roster.render(host);
+    } else if (routeId === "players" && RR.players) {
+      // The Players tab: the squad grid + add form.
+      RR.players.render(host);
+    } else if (routeId === "player" && RR.playerProfile) {
+      // The 1-on-1 player profile (reached from the Players grid).
+      RR.playerProfile.render(host);
+    } else if (routeId === "positions" && RR.positionsScreen) {
+      // Position coaching guides + recommended drills.
+      RR.positionsScreen.render(host);
+    } else if (routeId === "lineup" && RR.lineup) {
+      // The starting-lineup builder.
+      RR.lineup.render(host);
     } else if (routeId === "season" && RR.season) {
       // The Season/Camp screen owns its body and sets its own program-aware title.
       RR.season.renderSeason(host);
@@ -152,7 +168,10 @@ RR.app = (function () {
 
   function updateTabs(routeId) {
     // Sub-screens with no tab of their own light up their nearest parent tab.
-    var PARENT = { history: "today", calendar: "today", roster: "team" };
+    var PARENT = {
+      history: "today", calendar: "today",
+      player: "players", positions: "players", lineup: "players"
+    };
     var activeTab = PARENT[routeId] || routeId;
     var tabs = document.querySelectorAll(".tabbar a");
     for (var i = 0; i < tabs.length; i++) {
@@ -166,6 +185,9 @@ RR.app = (function () {
   }
 
   function route() {
+    // Honour retired-hash redirects (e.g. #roster -> #players) before rendering.
+    var raw = (location.hash || "").replace(/^#/, "");
+    if (REDIRECTS[raw]) { location.replace("#" + REDIRECTS[raw]); return; }
     var id = currentRoute();
     renderScreen(id);
     updateTabs(id);
@@ -199,8 +221,9 @@ RR.app = (function () {
     }
 
     // Normalize empty/unknown hashes to the default route (no extra history entry).
+    // Retired hashes that have a redirect are left for route() to forward.
     var raw = (location.hash || "").replace(/^#/, "");
-    if (!SCREENS[raw]) { location.replace("#" + DEFAULT_ROUTE); }
+    if (!SCREENS[raw] && !REDIRECTS[raw]) { location.replace("#" + DEFAULT_ROUTE); }
     route();
     window.addEventListener("hashchange", route);
     registerServiceWorker();
