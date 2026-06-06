@@ -199,20 +199,34 @@ RR.extras = RR.extras || {};
   // ---- Multi-station / rotating passing -------------------------------------
 
   E["shuttle-passing-to-target"] = {
-    diagram: {
-      caption: "Two short lines face each other with a target (coach/cone/hoop) in the middle. Front player passes to the target, then jogs to the BACK of the other line — the shuttle keeps everyone moving.",
-      w: 9, h: 8,
-      players: [
-        { x: 1.8, y: 3, label: "", team: "a" }, { x: 1.8, y: 4, label: "", team: "a" }, { x: 1.8, y: 5, label: "", team: "a" },
-        { x: 7.2, y: 3, label: "", team: "b" }, { x: 7.2, y: 4, label: "", team: "b" }, { x: 7.2, y: 5, label: "", team: "b" },
-        { x: 4.5, y: 4, label: "T", team: "n", note: "target" }
-      ],
-      paths: [
-        { from: [2.2, 3], to: [4.1, 3.8], kind: "ball", label: "pass", curve: 0.15 },
-        { from: [2, 3.3], to: [7, 5.2], kind: "move", label: "to back of other line", curve: 0.35 }
-      ],
-      legend: [{ tone: "a", text: "Line A" }, { tone: "b", text: "Line B" }, { tone: "n", text: "Target" }]
-    }
+    diagrams: dk.seq(
+      { title: "Pass to the target",
+        caption: "Two short lines face each other with a target in the middle. The front player of Line A (player 1) passes the ball to the TARGET — a cone, hoop, or coach. It's an accuracy rep, so nobody catches it; the target just marks where a perfect pass would land.",
+        w: 9, h: 8,
+        players: [
+          { x: 1.8, y: 3, label: "1", team: "a" }, { x: 1.8, y: 4, label: "2", team: "a" }, { x: 1.8, y: 5, label: "3", team: "a" },
+          { x: 7.2, y: 3, label: "", team: "b" }, { x: 7.2, y: 4, label: "", team: "b" }, { x: 7.2, y: 5, label: "", team: "b" },
+          { x: 4.5, y: 4, label: "T", team: "n", note: "cone / hoop / coach" }
+        ],
+        paths: [
+          { from: [2.3, 3], to: [4.0, 3.9], kind: "ball", label: "pass", curve: 0.12 }
+        ],
+        legend: [{ tone: "a", text: "Line A" }, { tone: "b", text: "Line B" }, { tone: "n", text: "Target" }] },
+      { title: "Follow your pass — to the BACK of the OTHER line",
+        caption: "After passing, player 1 jogs to the BACK of the OTHER line (Line B). Now the front of Line B passes to the same target and follows ACROSS to Line A. The two lines keep feeding each other back and forth — constant motion, and the target never moves.",
+        w: 9, h: 8,
+        players: [
+          { x: 1.8, y: 3.5, label: "2", team: "a" }, { x: 1.8, y: 4.5, label: "3", team: "a" },
+          { x: 7.2, y: 3, label: "", team: "b" }, { x: 7.2, y: 4, label: "", team: "b" }, { x: 7.2, y: 5, label: "", team: "b" },
+          { x: 7.2, y: 6, label: "1", team: "a", note: "now at back of Line B" },
+          { x: 4.5, y: 4, label: "T", team: "n", note: "cone / hoop / coach" }
+        ],
+        paths: [
+          { from: [2.1, 3], to: [7.0, 6.0], kind: "move", curve: -0.5 },
+          { from: [6.9, 3], to: [5.0, 3.9], kind: "ball", label: "next pass", curve: -0.12 }
+        ],
+        legend: [{ tone: "a", text: "Line A" }, { tone: "b", text: "Line B" }, { tone: "n", text: "Target" }] }
+    )
   };
   E["butterfly-passing"] = {
     diagrams: dk.seq(
