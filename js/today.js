@@ -296,6 +296,11 @@ RR.today = (function () {
 
       bodyHost.appendChild(buildHero(currentSession, currentCompleted));
 
+      // The plan's utility actions (Start, Edit, Share, Print, Regenerate) sit in
+      // a toolbar at the TOP, right under the hero; only the primary "Mark
+      // practice complete" CTA stays at the bottom of the screen.
+      if (!currentCompleted && !editMode) bodyHost.appendChild(buildTopActions());
+
       if (!currentCompleted && !editMode) bodyHost.appendChild(buildFocusBar(iso, slot));
       bodyHost.appendChild(buildCoachNote(currentSession));
 
@@ -478,6 +483,30 @@ RR.today = (function () {
     }
 
     // ---- Action bar ---------------------------------------------------------
+    // Top-of-screen toolbar: every utility action for the plan, grouped together
+    // so the bottom of the screen can hold a single, prominent primary CTA.
+    function buildTopActions() {
+      return h("div", { class: "today-toolbar", role: "group", "aria-label": "Plan actions" }, [
+        utilBtn("Start", '<path d="M8 5v14l11-7z"/>', function () { if (RR.run) RR.run.start(currentSession, team); }),
+        utilBtn("Edit plan", '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', function () { editMode = true; paint(); }),
+        utilBtn("Share", '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>', function () { if (RR.share) RR.share.session(currentSession, team); }),
+        utilBtn("Print", '<path d="M6 9V3h12v6"/><rect x="6" y="13" width="12" height="8"/><path d="M6 17H3v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5h-3"/>', function () { if (RR.share) RR.share.printSession(currentSession, team); }),
+        utilBtn("Regenerate", '<path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v5h-5"/>', regenerate)
+      ]);
+    }
+
+    // Build a fresh plan for the day (kept pins survive). Shared by the toolbar.
+    function regenerate() {
+      var prev = currentSession;
+      bumpRegen(team.name, nav.date, nav.slot);
+      var force = getFocus(team.name, nav.date, nav.slot);
+      var fresh = RR.generator.generateSession(team, nav.date, getRegen(team.name, nav.date, nav.slot), nav.slot, force ? { forceSkill: force } : null);
+      fresh = applyPins(fresh, prev);
+      var hasPins = fresh.blocks.some(function (b) { return b._pinned; });
+      if (hasPins) savePlanned(team.name, nav.date, nav.slot, fresh); else clearPlanned(team.name, nav.date, nav.slot);
+      paint(); ui.confirmToast(hasPins ? "Fresh plan — pinned drills kept." : "Fresh practice ready.");
+    }
+
     function buildActions(completed, completion) {
       if (editMode) {
         var done = h("button", { type: "button", class: "btn btn-primary btn-block" }, ["Done editing"]);
@@ -490,30 +519,11 @@ RR.today = (function () {
       }
       if (completed) return buildCompletedActions(completion);
 
-      var utility = h("div", { class: "today-actions__row" }, [
-        utilBtn("Start", '<path d="M8 5v14l11-7z"/>', function () { if (RR.run) RR.run.start(currentSession, team); }),
-        utilBtn("Edit plan", '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', function () { editMode = true; paint(); }),
-        utilBtn("Share", '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/>', function () { if (RR.share) RR.share.session(currentSession, team); }),
-        utilBtn("Print", '<path d="M6 9V3h12v6"/><rect x="6" y="13" width="12" height="8"/><path d="M6 17H3v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5h-3"/>', function () { if (RR.share) RR.share.printSession(currentSession, team); })
-      ]);
-
-      var regen = h("button", { type: "button", class: "btn btn-ghost" }, [
-        h("span", { "aria-hidden": "true", class: "btn__icon", html: ui.icon('<path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v5h-5"/>', 18) }), "Regenerate"]);
-      regen.addEventListener("click", function () {
-        var prev = currentSession;
-        bumpRegen(team.name, nav.date, nav.slot);
-        var force = getFocus(team.name, nav.date, nav.slot);
-        var fresh = RR.generator.generateSession(team, nav.date, getRegen(team.name, nav.date, nav.slot), nav.slot, force ? { forceSkill: force } : null);
-        fresh = applyPins(fresh, prev);
-        var hasPins = fresh.blocks.some(function (b) { return b._pinned; });
-        if (hasPins) savePlanned(team.name, nav.date, nav.slot, fresh); else clearPlanned(team.name, nav.date, nav.slot);
-        paint(); ui.confirmToast(hasPins ? "Fresh plan — pinned drills kept." : "Fresh practice ready.");
-      });
-
-      var done2 = h("button", { type: "button", class: "btn btn-primary" }, ["Mark practice complete"]);
+      // Normal state: the bottom holds only the primary CTA — every utility
+      // action now lives in the top toolbar (buildTopActions).
+      var done2 = h("button", { type: "button", class: "btn btn-primary btn-block" }, ["Mark practice complete"]);
       done2.addEventListener("click", function () { openCompleteForm(); });
-
-      return h("div", { class: "today-actions" }, [utility, h("div", { class: "today-actions__row" }, [regen, done2])]);
+      return h("div", { class: "today-actions today-actions--cta" }, [done2]);
     }
 
     function utilBtn(label, svg, fn) {
