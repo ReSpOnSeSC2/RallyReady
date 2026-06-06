@@ -6,6 +6,17 @@
  * one card depth (no nested cards), transform/opacity motion with var(--ease).
  */
 
+/* ------------------------------------------------------------- Back link --- */
+/* Compact, left-aligned "Back to Team" — the roster is reached from the Team
+   summary, so it needs an obvious way home. Sits above the intro copy. */
+.roster-back {
+  width: auto;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-3);
+  padding-left: var(--sp-3);
+  padding-right: var(--sp-4);
+}
+
 /* --------------------------------------------------------------- Add form -- */
 .roster-add { margin-bottom: var(--sp-4); }
 

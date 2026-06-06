@@ -161,10 +161,24 @@
 .summary-host:empty { margin-top: 0; }
 .summary .card-head .pill { flex: none; }
 
-/* "What's left" checklist — stands in for the summary on the Team screen until
-   every required field is filled and a plan can be generated. Reuses .card /
-   .card-head / .pill / .muted. */
+/* Setup notice host — sits at the TOP of the Team screen (above the form) so the
+   "what's left" checklist is the first thing a coach sees, not buried at the foot
+   of a long page. Collapses to nothing once the team is fully set up. */
+.notice-host { margin-bottom: var(--sp-4); }
+.notice-host:empty { margin-bottom: 0; }
+
+/* "What's left" checklist — shown above the form until every required field is
+   filled and a plan can be generated. An accent border makes it read as an
+   actionable notice without shouting. Reuses .card / .card-head / .pill / .muted. */
+.setup-check {
+  border-color: var(--focus);
+  border-left-width: 4px;
+}
+.setup-check .card-head { align-items: center; }
 .setup-check .card-head .pill { flex: none; }
+.setup-check__head { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
+.setup-check__head h2 { margin-bottom: 0; }
+.setup-check__icon { flex: none; display: inline-flex; color: var(--focus); }
 .setup-check__tag { background: var(--surface-2); color: var(--text); }
 .setup-check__lead { margin: 0 0 var(--sp-3); }
 .setup-check__list {

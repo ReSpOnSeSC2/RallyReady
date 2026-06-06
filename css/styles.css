@@ -379,6 +379,18 @@ textarea.input {
 .datefield.is-empty::-webkit-datetime-edit { color: transparent; }   /* hide "mm/dd/yyyy" */
 .datefield:not(.is-empty)::before { content: none; }
 
+/* A native date field packs the date text AND a calendar-picker icon into the box.
+   With the form's roomy input padding there isn't room for both on narrower phones,
+   so the year (the last digits of mm/dd/yyyy) gets clipped. Tighten the horizontal
+   padding and trim the icon's gap so the whole date always fits; the field still
+   drops to its own row when its column gets too narrow (see .field-row). */
+/* .input.datefield (0,2,0) intentionally outweighs the base input.input (0,1,1)
+   padding rule above — a plain .datefield would lose to it and never tighten. */
+.input.datefield { padding-left: var(--sp-2); padding-right: var(--sp-2); }
+.datefield::-webkit-datetime-edit { padding: 0; }
+.datefield::-webkit-datetime-edit-fields-wrapper { padding: 0; }
+.datefield::-webkit-calendar-picker-indicator { margin-inline-start: var(--sp-1); padding: 0; }
+
 /* ---------------------------------------------------- Bottom tab bar (nav) */
 .tabbar {
   position: fixed;

@@ -96,6 +96,15 @@ RR.roster = (function () {
       return;
     }
 
+    // A clear way back to the Team screen this roster was opened from — the
+    // roster is a sub-screen with no tab of its own, so without this a coach can
+    // only return via the browser's back gesture.
+    var back = h("a", { class: "btn btn-ghost roster-back", href: "#team" }, [
+      h("span", { class: "roster-ico", "aria-hidden": "true", html: RR.ui.icon('<path d="M15 18l-6-6 6-6"/>', 18) }),
+      "Back to Team"
+    ]);
+    host.appendChild(back);
+
     host.appendChild(h("p", { class: "screen-sub",
       text: "Add the players on your squad. Numbers and positions are optional — a name is all you need." }));
 

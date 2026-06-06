@@ -41,7 +41,7 @@ RR.state = (function () {
     favorites: [],          // starred drill ids
     installDismissed: false,// user dismissed the "Install RallyReady" banner
     settings: {
-      practiceMinutes: 75   // sensible default practice length
+      practiceMinutes: 60   // sensible default practice length
     }
   };
 
