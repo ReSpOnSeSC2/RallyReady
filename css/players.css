@@ -159,6 +159,22 @@
 .pp-iconbtn--danger { color: var(--link); }
 @media (hover: hover) { .pp-iconbtn:hover { background: var(--surface-2); } }
 
+/* Position (primary + optional secondary) */
+.pp-position__chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.pp-position__chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-weight: 700; font-size: var(--fs-sm); color: var(--text);
+  background: var(--surface-2); padding: 4px 12px; border-radius: var(--radius-pill);
+}
+.pp-position__chip--link { color: var(--link); text-decoration: none; }
+.pp-position__chip--2nd { background: transparent; border: 1px solid var(--field-border); }
+.pp-position__tag {
+  font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.pp-position__form { display: flex; flex-direction: column; gap: var(--sp-3); }
+.pp-position__save { margin-top: var(--sp-1); }
+@media (hover: hover) { .pp-position__chip--link:hover { text-decoration: underline; } }
+
 /* Play details */
 .pp-dl { margin: 0; }
 .pp-dl__row { display: flex; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); }
