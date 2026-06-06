@@ -1,0 +1,215 @@
+/* tips-visuals.css — the "show, don't just tell" visuals on the Tips screen.
+ *
+ * Styles the animated SVG motion diagrams (RR.tipsVisuals) and the per-topic
+ * "See it in action" video links. Uses ONLY the app's semantic + brand tokens,
+ * so every diagram renders correctly in BOTH light and dark themes. Structural
+ * strokes (court, net, floor) use semantic tokens so they re-theme; the ball,
+ * player and brand accents use fixed hues so a thing always reads the same
+ * colour. ALL motion lives behind prefers-reduced-motion — with motion off,
+ * every travelling ball simply parks at the end of its path, so the diagram is
+ * still a complete, readable still. No images, no GIFs, no network. */
+
+/* ====================== Figure wrapper (mirrors .dgm) ==================== */
+.tv {
+  margin: var(--sp-4) 0 0;
+}
+.tv__title {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--text);
+}
+.tv__canvas {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.tv-svg {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  display: block;
+}
+.tv--compact .tv-svg { max-width: 100%; }
+.tv__cap {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* ============================ SVG primitives ============================ */
+.tv-floor { stroke: var(--text-muted); stroke-width: 2; opacity: 0.55; stroke-linecap: round; }
+.tv-net   { stroke: var(--text); stroke-width: 3; stroke-dasharray: 2 3; }
+.tv-post  { fill: var(--text); }
+.tv-target { fill: var(--sun); fill-opacity: 0.5; stroke: none; }
+.tv-foot  { fill: var(--text-muted); opacity: 0.5; }
+.tv-hands { fill: var(--teal); stroke: var(--surface-2); stroke-width: 1; }
+.tv-platform { stroke: var(--coral); stroke-width: 4; stroke-linecap: round; }
+
+.tv-fig__head { fill: var(--teal); stroke: var(--surface-2); stroke-width: 1.5; }
+.tv-fig__body { fill: var(--teal); stroke: var(--surface-2); stroke-width: 1.5; }
+
+.tv-trail { fill: none; stroke: var(--text-muted); stroke-width: 2; stroke-dasharray: 5 5; opacity: 0.7; }
+.tv-arrowhead { fill: var(--text-muted); }
+
+.tv-ball-face { fill: var(--white); stroke: var(--navy); stroke-width: 1.4; }
+.tv-ball-seam { fill: none; stroke: var(--navy); stroke-width: 1.1; }
+
+.tv-label {
+  fill: var(--text-muted);
+  font-family: var(--font-stack);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* The travelling ball — loops along its offset-path, fading at the seam so the
+   restart never snaps. transform-box keeps the glyph centred on the path. */
+.tv-ball {
+  offset-rotate: 0deg;
+  animation-name: tv-travel;
+  animation-timing-function: var(--ease);
+  animation-iteration-count: infinite;
+}
+@keyframes tv-travel {
+  0%   { offset-distance: 0%;   opacity: 0; }
+  8%   { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+/* ============================ Rotation diagram ========================== */
+.tv-court { fill: var(--surface); stroke: var(--text); stroke-width: 1.6; }
+.tv-net-h { stroke: var(--text); stroke-width: 3; stroke-dasharray: 2 3; }
+.tv-rot-loop { fill: none; stroke: var(--text-muted); stroke-width: 1.4; stroke-dasharray: 4 5; opacity: 0.7; }
+.tv-pos { fill: var(--slate); stroke: var(--surface); stroke-width: 1.5; }
+.tv-pos-label { fill: #fff; font-family: var(--font-stack); font-size: 14px; font-weight: 800; }
+.tv-rot-hi {
+  fill: none;
+  stroke: var(--coral);
+  stroke-width: 3;
+  offset-rotate: 0deg;
+  animation: tv-rotate 7s linear infinite;
+}
+@keyframes tv-rotate {
+  0%   { offset-distance: 0%; }
+  100% { offset-distance: 100%; }
+}
+
+/* ============================ Practice blocks ========================== */
+.tv-seg { stroke: var(--surface-2); stroke-width: 1.5; }
+.tv-seg--warm  { fill: var(--teal); }
+.tv-seg--skill { fill: var(--sun); }
+.tv-seg--game  { fill: var(--coral); }
+.tv-seg--cool  { fill: var(--i-taper); }
+.tv-seg-label {
+  fill: var(--text-muted);
+  font-family: var(--font-stack);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.tv-sweep {
+  fill: #fff;
+  opacity: 0.35;
+  animation: tv-sweep 4.2s var(--ease) infinite;
+}
+@keyframes tv-sweep {
+  0%   { transform: translateX(-46px); opacity: 0; }
+  12%  { opacity: 0.4; }
+  88%  { opacity: 0.4; }
+  100% { transform: translateX(300px); opacity: 0; }
+}
+
+/* ============================ Breathing pulse ========================== */
+.tv-breathe-ring { fill: none; stroke: var(--teal); stroke-width: 1.5; opacity: 0.35; }
+.tv-breathe-ring--2 { opacity: 0.55; }
+.tv-breathe-core { fill: var(--teal); opacity: 0.22; }
+.tv-breathe {
+  transform-origin: 100px 62px;
+  transform-box: view-box;
+  animation: tv-breathe 6s ease-in-out infinite;
+}
+@keyframes tv-breathe {
+  0%, 100% { transform: scale(0.72); }
+  45%      { transform: scale(1.12); }
+  55%      { transform: scale(1.12); }
+}
+.tv-breathe-word {
+  fill: var(--text-muted);
+  font-family: var(--font-stack);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* ====================== Six-skill animated grid ======================== */
+.tv-skills {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-4);
+  margin-top: var(--sp-4);
+}
+.tv-skill {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.tv-skill .tv { margin-top: 0; width: 100%; }
+.tv-skill .tv-watch { margin-top: var(--sp-2); }
+@media (min-width: 540px) {
+  .tv-skills { grid-template-columns: 1fr 1fr; gap: var(--sp-4) var(--sp-5); }
+}
+
+/* ====================== "See it in action" links ======================= */
+.tip__media { margin-top: var(--sp-5); }
+.tip__media .eyebrow { margin-bottom: var(--sp-2); }
+.tip__videos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.tv-watch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 var(--sp-4);
+  border: 1.5px solid var(--field-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--link);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  text-decoration: none;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.tv-watch:hover { border-color: var(--link); }
+.tv-watch__i {
+  display: inline-flex;
+  color: var(--link);
+}
+
+/* ===================== Motion: off under reduced-motion ================= */
+/* With motion disabled every animated element settles into a complete, static
+   still: travelling balls park at the END of their path (in the target / over
+   the net), the rotation highlight rests on a spot, the breath sits mid-size,
+   and the practice sweep disappears. The diagram still reads fully. */
+@media (prefers-reduced-motion: reduce) {
+  .tv-ball {
+    animation: none;
+    offset-distance: 100%;
+    opacity: 1;
+  }
+  .tv-rot-hi {
+    animation: none;
+    offset-distance: 75%;
+    opacity: 1;
+  }
+  .tv-sweep { animation: none; opacity: 0; }
+  .tv-breathe { animation: none; transform: scale(1); }
+}
