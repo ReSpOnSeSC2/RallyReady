@@ -265,14 +265,24 @@ RR.ui = (function () {
     return list ? detailSection("How it's organized", list) : null;
   }
 
-  // ---- Court diagram figure (or null) ---------------------------------------
-  // A top-down SVG of where players stand and where the ball goes, for the
-  // drills/games where position matters. Authored specs live in RR.extras.
-  function diagramFigure(drill) {
+  // ---- Court diagram figures (or null) --------------------------------------
+  // A top-down SVG of where players stand and where the ball goes. A drill may
+  // have several (one per step), so this returns a wrapper holding every figure;
+  // multi-step sets get auto "Step N" headings when the author didn't name them.
+  function diagramFigures(drill) {
     if (!RR.format || !RR.diagram || !drill) return null;
-    var spec = RR.format.diagram(drill);
-    return spec ? RR.diagram.figure(spec) : null;
+    var specs = RR.format.diagrams(drill);
+    if (!specs.length) return null;
+    var multi = specs.length > 1;
+    var wrap = h("div", { class: "drill-diagrams" + (multi ? " drill-diagrams--multi" : "") });
+    specs.forEach(function (spec, i) {
+      var fig = RR.diagram.figure(spec, multi ? { fallbackTitle: "Step " + (i + 1) } : null);
+      if (fig) wrap.appendChild(fig);
+    });
+    return wrap.childNodes.length ? wrap : null;
   }
+  // Back-compat alias (single wrapper of all figures).
+  function diagramFigure(drill) { return diagramFigures(drill); }
 
   // drillDetail(drill) — the full read-out for one drill: setup, steps, cues,
   // equipment, age range, difficulty dots, easier/harder, and the "Watch how"
@@ -536,6 +546,7 @@ RR.ui = (function () {
     organizeList: organizeList,
     organizeSection: organizeSection,
     diagramFigure: diagramFigure,
+    diagramFigures: diagramFigures,
     kindOf: kindOf,
     blockCard: blockCard,
     // dates + toast

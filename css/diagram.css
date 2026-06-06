@@ -35,6 +35,28 @@
   line-height: 1.45;
 }
 
+/* ===================== Multi-step diagram sequence ===================== */
+/* A drill with several phases shows one figure per step, stacked. */
+.drill-diagrams {
+  display: grid;
+  gap: var(--sp-3);
+}
+.drill-diagrams--multi {
+  gap: var(--sp-4);
+}
+.drill-diagrams--multi .dgm {
+  padding-top: var(--sp-2);
+}
+.drill-diagrams--multi .dgm + .dgm {
+  border-top: 1px dashed var(--border);
+}
+.dgm__title {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--text);
+}
+
 /* ================================ Figure ================================ */
 .dgm {
   margin: var(--sp-2) 0 0;
