@@ -24,13 +24,54 @@
   pointer-events: none;
   display: inline-flex;
 }
-.drills-search__input { padding-left: calc(var(--sp-4) + 34px); }
+/* Leave room for the leading icon. Qualify with `input` so this beats the base
+   `input.input { padding: … }` shorthand (equal specificity, later in source). */
+input.drills-search__input { padding-left: calc(var(--sp-4) + 30px); }
 /* Hide the native search "clear" control so our own Clear affordance is the
    single, consistent way to reset. */
 .drills-search__input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
 
 .drills-fgroup { display: flex; flex-direction: column; gap: var(--sp-2); }
 .drills-chips { gap: var(--sp-2); }
+
+/* ---- Collapsible filter disclosure ---------------------------------------- */
+/* Keeps the search visible but folds the chip groups away so they don't fill
+   the screen. The count badge shows active filters while collapsed. */
+.drills-filters__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--surface);
+  border: 2px solid var(--field-border);
+  border-radius: var(--radius-pill);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.drills-filters__toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.drills-filters__toggle-icon, .drills-filters__chev { display: inline-flex; color: var(--text-muted); }
+.drills-filters__chev { margin-left: auto; transition: transform 0.15s var(--ease); }
+.drills-filters__chev.is-open { transform: rotate(180deg); }
+.drills-filters__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+}
+.drills-filters__count[hidden] { display: none; }
+.drills-filters { display: flex; flex-direction: column; gap: var(--sp-4); }
+.drills-filters[hidden] { display: none; }
 
 /* Small category colour dot inside a chip (decorative; the label carries
    meaning). Sits before the chip text. */
