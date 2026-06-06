@@ -4,7 +4,7 @@
 // coach's 1-on-1 hub:
 //   • header — photo/avatar (change/remove), name, number, position(s)
 //   • position — assign / switch the primary + optional secondary position
-//   • play details — dominant hand, height, birthday/age (volleyball context)
+//   • player details — dominant hand, height, birthday/age (volleyball context)
 //   • skill tracker — 0–5 per core skill, with a season trend
 //   • focus goals — coach-set targets the player can tick off
 //   • coaching notes — a timestamped log (add / edit / delete)
@@ -168,7 +168,7 @@ RR.playerProfile = (function () {
 
     function positionEditor() {
       var primary = RR.roster.positionSelect(player.position || "", "Primary position");
-      var secondary = secondarySelect(player.position2 || "");
+      var secondary = RR.roster.secondaryPositionSelect(player.position2 || "");
 
       var saveBtn = h("button", { type: "button", class: "btn btn-primary pp-position__save" }, ["Save position"]);
       saveBtn.addEventListener("click", function () {
@@ -194,18 +194,7 @@ RR.playerProfile = (function () {
     return card;
   }
 
-  // A secondary-position <select>: a "None" blank plus the real coachable roles
-  // (no "Not sure yet" — a backup spot should be a concrete position).
-  function secondarySelect(value) {
-    var sel = h("select", { class: "input", "aria-label": "Secondary position (optional)" });
-    sel.appendChild(h("option", { value: "", text: "None", selected: !value }));
-    ((RR.positions && RR.positions.LIST) || []).forEach(function (pos) {
-      sel.appendChild(h("option", { value: pos, text: pos, selected: pos === value }));
-    });
-    return sel;
-  }
-
-  // ---- Play details (hand / height / birthday) ------------------------------
+  // ---- Player details (hand / height / birthday) ----------------------------
   function detailsCard(player, host) {
     var card = h("section", { class: "card pp-details" });
     var editing = false;
@@ -213,12 +202,12 @@ RR.playerProfile = (function () {
     function paint() {
       card.innerHTML = "";
       var editBtn = h("button", { type: "button", class: "btn-ghost pp-iconbtn",
-        "aria-label": editing ? "Stop editing details" : "Edit play details" },
+        "aria-label": editing ? "Stop editing details" : "Edit player details" },
         [h("span", { "aria-hidden": "true", html: ui.icon(editing
           ? '<path d="M18 6 6 18M6 6l12 12"/>'
           : '<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', 18) })]);
       editBtn.addEventListener("click", function () { editing = !editing; paint(); });
-      card.appendChild(ui.sectionTitle("Play details", editBtn, "h2"));
+      card.appendChild(ui.sectionTitle("Player details", editBtn, "h2"));
       card.appendChild(editing ? detailsEditor() : detailsView());
     }
 
