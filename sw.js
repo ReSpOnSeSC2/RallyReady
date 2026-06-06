@@ -1,7 +1,10 @@
 // RallyReady service worker.
-// Caches the app shell so the app loads and runs fully OFFLINE after first visit.
+// Caches the app shell so the app loads and runs fully OFFLINE after first visit,
+// while staying fresh online: navigations are network-first and static assets are
+// stale-while-revalidate (see the fetch handler), so a deployed update shows up on
+// the next launch rather than being pinned to the cache.
 // Bump CACHE_VERSION whenever any cached file changes to force clients to update.
-const CACHE_VERSION = "rallyready-v27";
+const CACHE_VERSION = "rallyready-v28";
 
 // Core files that make up the offline app shell. Everything here is fetched and
 // cached up front on install, so the app loads with NO network after first visit.
@@ -104,9 +107,19 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Cache-first strategy: serve from cache, fall back to the network when needed.
-// This keeps everything working with no connection after the first visit. Only
-// same-origin GETs are handled; anything else is left to the browser.
+// Freshness-first strategy, so a deployed update is picked up promptly instead
+// of being masked by the cache. Only same-origin GETs are handled; anything else
+// is left to the browser. Every successful same-origin response is written back
+// to the cache, so the app still loads and runs fully OFFLINE after first visit.
+function cachePut(req, res) {
+  // Only cache complete, same-origin 200s (skip opaque/partial/range responses).
+  if (res && res.ok && res.type === "basic") {
+    const copy = res.clone();
+    caches.open(CACHE_VERSION).then((cache) => cache.put(req, copy));
+  }
+  return res;
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
@@ -114,34 +127,32 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // SPA navigations (address bar, refresh, deep link) resolve to the cached
-  // shell when offline, so any route loads with no network.
+  // SPA navigations (address bar, refresh, deep link): NETWORK-FIRST, so an
+  // online launch always gets the latest shell. Fall back to the cached shell
+  // when offline, so any route still loads with no connection.
   if (req.mode === "navigate") {
     event.respondWith(
-      caches.match(req).then((hit) =>
-        hit ||
-        fetch(req).catch(() =>
-          caches.match("./index.html").then((shell) => shell || caches.match("./"))
+      fetch(req)
+        .then((res) => cachePut(req, res))
+        .catch(() =>
+          caches.match(req).then((hit) =>
+            hit || caches.match("./index.html").then((shell) => shell || caches.match("./"))
+          )
         )
-      )
     );
     return;
   }
 
-  // Static assets: cache-first, then network. Newly fetched same-origin files
-  // are added to the cache so subsequent loads are instant and offline-safe.
+  // Static assets (JS/CSS/icons): STALE-WHILE-REVALIDATE. Serve the cached copy
+  // instantly (fast, offline-safe) while fetching a fresh one in the background
+  // and updating the cache — so the very next load runs the latest code even if
+  // a release ever ships without a CACHE_VERSION bump. Uncached → wait on network.
   event.respondWith(
     caches.match(req).then((hit) => {
-      if (hit) return hit;
-      return fetch(req)
-        .then((res) => {
-          if (res && res.ok && res.type === "basic") {
-            const copy = res.clone();
-            caches.open(CACHE_VERSION).then((cache) => cache.put(req, copy));
-          }
-          return res;
-        })
-        .catch(() => hit);   // offline and uncached: let the request fail gracefully
+      const network = fetch(req)
+        .then((res) => cachePut(req, res))
+        .catch(() => hit);   // offline: fall back to whatever we cached
+      return hit || network;
     })
   );
 });
