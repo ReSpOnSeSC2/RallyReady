@@ -176,36 +176,64 @@
 .coachnote__main { margin: 0; color: var(--text); font-weight: 700; }
 .coachnote__sub { margin: var(--sp-2) 0 0; color: var(--text); font-size: var(--fs-sm); }
 
-/* ------------------------------------------------------------- Block card -- */
-.blocks { display: flex; flex-direction: column; gap: var(--sp-4); margin-bottom: var(--sp-4); }
-.block { padding: var(--sp-4); }
+/* ------------------------------------------------------------- Block card --
+   A COLLAPSIBLE practice block: the whole card is one toggle button showing a
+   compact summary (role · title · time · why); tapping it reveals the detail
+   (setup, how it's organized, the court diagram, the steps, cues and gear).
+   Folding the detail away turns Today from one long scroll into a short,
+   scannable list — the coach opens only the block they're setting up. */
+.blocks { display: flex; flex-direction: column; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.block { padding: 0; overflow: hidden; }
 .block + .block { margin-top: 0; }   /* the flex gap owns the spacing */
 
+/* The summary is the tap target for the entire block. */
+.block__summary {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-4);
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+}
 .block__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
+  gap: var(--sp-2);
   margin-bottom: var(--sp-2);
 }
 .block__min {
+  margin-left: auto;
   flex: none;
   font-size: var(--fs-sm);
   font-weight: 800;
   color: var(--text);
 }
+.block__chev {
+  flex: none;
+  display: inline-flex;
+  color: var(--text-muted);
+  transition: transform 0.18s var(--ease);
+}
+.block.is-open .block__chev { transform: rotate(180deg); }
 .block__role {
-  margin: 0;
+  display: block;
   font-size: var(--fs-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
 }
-.block__title { margin: 2px 0 var(--sp-1); font-size: var(--fs-h3); }
-.block__why { margin: 0 0 var(--sp-3); color: var(--text-muted); font-size: var(--fs-sm); }
+.block__title { display: block; margin: 2px 0 var(--sp-1); font-size: var(--fs-h3); font-weight: 800; line-height: 1.2; }
+.block__why { display: block; margin: 0; color: var(--text-muted); font-size: var(--fs-sm); }
 
+/* The detail region, revealed on expand. */
+.block__detail { padding: 0 var(--sp-4) var(--sp-4); }
+.block__detail[hidden] { display: none; }
 .block__section { margin-bottom: var(--sp-3); }
+.block__section:first-child { padding-top: var(--sp-1); }
 .block__section p { margin: var(--sp-1) 0 0; color: var(--text); }
 .block__steps, .block__cues { margin: var(--sp-1) 0 0; padding-left: 1.25em; color: var(--text); }
 .block__steps li, .block__cues li { margin-bottom: var(--sp-1); }
@@ -225,9 +253,9 @@
 }
 .watch__icon { display: inline-flex; }
 
-/* Tools row: cues toggle + optional Swap. */
-.block__tools { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); }
-.block__toggle, .block__swap {
+/* Tools row inside the detail: the optional Swap control. */
+.block__tools { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+.block__swap {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -242,21 +270,7 @@
   cursor: pointer;
   transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
 }
-.block__swap { margin-left: auto; }
 .block__swap-icon { display: inline-flex; }
-/* The toggle gets a rotating caret that flips when its region is expanded. */
-.block__toggle::after {
-  content: "";
-  width: 9px; height: 9px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(45deg);
-  transition: transform 0.15s var(--ease);
-}
-.block__toggle[aria-expanded="true"]::after { transform: rotate(-135deg); }
-
-.block__more { margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--border); }
-.block__more[hidden] { display: none; }
 
 /* ---------------------------------------------------- Equipment / reference */
 .gear__chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: 0 0 var(--sp-4); padding: 0; list-style: none; }
@@ -416,7 +430,8 @@
 /* ------------------------------------------------- Hover (pointer devices) -- */
 @media (hover: hover) {
   .navbtn:hover:not(:disabled) { background: var(--surface-2); }
-  .block__toggle:hover, .block__swap:hover { background: var(--surface-2); }
+  .block__summary:hover { background: var(--surface-2); }
+  .block__swap:hover { background: var(--surface-2); }
   .today-head__history:hover { background: var(--surface-2); }
   .today-help-btn:hover > span { background: var(--surface-2); color: var(--text); }
   .history-del:hover { color: var(--focus); background: var(--surface-2); }
@@ -425,5 +440,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .block__toggle::after { transition: none; }
+  .block__chev { transition: none; }
 }

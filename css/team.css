@@ -1,0 +1,242 @@
+/* team.css — Team setup screen styles, split out of styles.css to keep every
+   stylesheet under the 800-line rule. (All CSS files load on every screen, so
+   moving these rules here changes nothing functionally — it's purely file size.)
+
+   Setup form (segmented controls, chips, auto-save cue, inline validation), the
+   compact two-up field layout, and the at-a-glance summary card. Reuses
+   .card / .field / .input / .pill / .btn. */
+
+/* Full --text (not muted): a subtitle sits on --bg, where muted would miss AA. */
+.team-intro { margin: 0 0 var(--sp-4); color: var(--text); }
+
+/* Card header row: title on the left, status/badge on the right. */
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.card-head h2 { margin-bottom: 0; }
+
+/* "Saved ✓" cue — a small success pill that appears after each auto-save, then
+   fades. Dark text on bright teal clears AA in both themes (teal as text would not). */
+.save-cue {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--on-primary);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.save-cue.is-show { opacity: 1; transform: none; }
+.save-cue__check { font-weight: 900; }
+
+/* Group label (segmented / chips) — matches a native field <label> visually. */
+.field > .field-label {
+  display: block;
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  margin-bottom: var(--sp-2);
+}
+
+/* Per-field helper text, shown between the label and the control. */
+.field-hint {
+  margin: calc(-1 * var(--sp-1)) 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* Two short fields side by side — dates, selects — so they don't each take a
+   full row. Falls back to a single column when the column gets too narrow. */
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sp-3);
+  align-items: start;
+  margin-bottom: var(--sp-3);
+}
+.field-row .field { margin-bottom: 0; }
+
+/* A touch tighter than the default field rhythm — the setup form is long, so a
+   slightly closer stack keeps it scannable without feeling cramped. */
+.team-form .field { margin-bottom: var(--sp-3); }
+.team-form > .field:last-child { margin-bottom: 0; }
+
+/* Gentle inline validation message — hidden until needed. Full-contrast --text on
+   a tinted surface (AA in both themes); the coral icon carries the error signal,
+   so meaning never rests on color alone. */
+.field-error {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin: var(--sp-2) 0 0;
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  border-radius: var(--radius-input);
+}
+.field-error.is-show { display: flex; }
+.field-error__icon { flex: none; display: inline-flex; color: var(--focus); }
+.input[aria-invalid="true"] { border-color: var(--focus); }
+
+/* Segmented single-select (practices/week, session length). Wraps on narrow
+   screens; one roving tab stop; clear selected state in both themes. */
+/* Even tile grid: as many equal columns as fit, so the controls never leave a
+   single stretched button on its own row (the old flex-wrap did). */
+.segmented { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: var(--sp-2); }
+.seg {
+  width: 100%;               /* fill the grid cell so the label centers in the tile */
+  min-height: var(--tap-min);
+  display: inline-flex;
+  align-items: center;       /* vertically center the label in the tile */
+  justify-content: center;   /* horizontally center it */
+  gap: 4px;
+  padding: 0 var(--sp-2);
+  text-align: center;
+  border: 2px solid var(--field-border);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+.seg__unit { font-size: var(--fs-xs); font-weight: 700; color: var(--text-muted); }
+.seg.is-on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.seg.is-on .seg__unit { color: var(--on-primary); }
+
+/* Multi-select emphasis chips. */
+.chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  padding: 0 var(--sp-4);
+  border: 2px solid var(--field-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+.chip.is-on {
+  background: var(--primary-tint);
+  border-color: var(--focus);   /* deepened coral clears 3:1 on the card surface */
+  color: var(--text);
+}
+/* Non-color cue for the selected state (a check), so it isn't conveyed by color alone. */
+.chip.is-on::before { content: "✓"; margin-right: 6px; font-weight: 900; }
+
+/* Season "which days?" picker — seven compact weekday chips that wrap to fit. The
+   check still marks selection, but tighter padding keeps the row readable on phones. */
+.weekdays { gap: var(--sp-2); }
+.chip--day {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 3.25rem;
+  padding: 0 var(--sp-2);
+}
+.chip--day.is-on::before { margin-right: 4px; }
+
+/* At-a-glance summary card. */
+.summary-host { margin-top: var(--sp-4); }
+.summary-host:empty { margin-top: 0; }
+.summary .card-head .pill { flex: none; }
+
+/* "What's left" checklist — stands in for the summary on the Team screen until
+   every required field is filled and a plan can be generated. Reuses .card /
+   .card-head / .pill / .muted. */
+.setup-check .card-head .pill { flex: none; }
+.setup-check__tag { background: var(--surface-2); color: var(--text); }
+.setup-check__lead { margin: 0 0 var(--sp-3); }
+.setup-check__list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: var(--sp-2);
+}
+.setup-check__item {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-weight: 700; color: var(--text);
+}
+.setup-check__dot {
+  flex: none; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--focus); background: var(--primary-tint);
+}
+
+.summary-hero {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+  padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+.summary-hero__num {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text);   /* emphasis comes from size/weight; guaranteed AA on the card */
+}
+.summary-hero__unit { font-weight: 700; }
+.summary-hero__date {
+  flex-basis: 100%;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+}
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+}
+.summary-item__label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.summary-item__value { font-size: var(--fs-body); font-weight: 700; color: var(--text); }
+.summary-item--accent { border-color: var(--focus); background: var(--primary-tint); }
+/* On the tinted accent cells, the label must be full-contrast (muted would fail AA there). */
+.summary-item--accent .summary-item__label { color: var(--text); }
+.summary-item:last-child:nth-child(odd) { grid-column: 1 / -1; }   /* lone row spans full width */
+
+/* "Set up your team first" empty state (Today / Season). */
+.empty-team { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); }
+.empty-team__tag { background: var(--surface-2); }
+.empty-team .btn { margin-top: var(--sp-2); }
+
+@media (hover: hover) {
+  .seg:hover { background: var(--surface-2); }
+  .seg.is-on:hover { background: var(--primary); filter: brightness(1.04); }
+  .chip:hover { background: var(--surface-2); }
+  .chip.is-on:hover { background: var(--primary-tint); }
+}
