@@ -310,6 +310,11 @@ RR.today = (function () {
         var blocksWrap = h("div", { class: "blocks" });
         currentSession.blocks.forEach(function (_b, i) { blocksWrap.appendChild(renderBlock(i)); });
         bodyHost.appendChild(blocksWrap);
+        // Optional position-breakout add-on (13+ teams that opted in on the
+        // Position coaching screen). It's a coaching suggestion layered on top of
+        // the plan — the deterministic generator itself is never altered.
+        var bo = buildBreakout(currentSession);
+        if (bo) bodyHost.appendChild(bo);
       }
 
       gearNode = buildGear(currentSession);
@@ -319,6 +324,43 @@ RR.today = (function () {
       // Keep a print-ready carry sheet resident so any print path (the button,
       // Ctrl/Cmd+P, or a phone's "Save as PDF") produces this practice.
       if (RR.share && RR.share.setPrintable) RR.share.setPrintable(currentSession, team);
+    }
+
+    // Optional position-breakout suggestion. Returns null unless the team opted in
+    // (Position coaching screen) AND is 13+, where specialising is age-appropriate.
+    function buildBreakout(session) {
+      if (!team.positionBreakout || !RR.positions || !RR.team || !RR.team.ageRange) return null;
+      var band = RR.team.ageRange(team.ageGroup);
+      if (!band || band.min < 13) return null;
+
+      var mins = Math.max(10, Math.round(session.totalMinutes * 0.2 / 5) * 5);
+      // Which roles to break into: those actually on the roster, else all six.
+      var roster = RR.roster ? RR.roster.getRoster() : [];
+      var present = [];
+      roster.forEach(function (p) {
+        if (RR.positions.isCoachable(p.position) && present.indexOf(p.position) === -1) present.push(p.position);
+      });
+      var roles = present.length ? present : RR.positions.LIST.slice();
+
+      var chips = h("div", { class: "chips breakout__chips" }, roles.map(function (pos) {
+        var b = h("a", { class: "chip breakout__chip", href: "#positions",
+          "aria-label": "Open the " + pos + " guide" }, [
+          h("span", { class: "breakout__abbr", "aria-hidden": "true", text: RR.positions.abbr(pos) }),
+          h("span", { text: pos })
+        ]);
+        b.addEventListener("click", function () {
+          if (RR.positionsScreen && RR.positionsScreen.focus) RR.positionsScreen.focus(pos);
+        });
+        return b;
+      }));
+
+      return h("section", { class: "card breakout" }, [
+        h("span", { class: "eyebrow", text: "Optional add-on" }),
+        h("h3", { class: "breakout__title", text: "Position breakout · ~" + mins + " min" }),
+        h("p", { class: "breakout__note",
+          text: "Split the squad into position groups for about " + mins + " minutes so players sharpen their specialist skills. Tap a role for its coaching guide and drills." }),
+        chips
+      ]);
     }
 
     // Game-schedule banner (season).
