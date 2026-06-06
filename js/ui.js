@@ -528,6 +528,76 @@ RR.ui = (function () {
     toastTimer = setTimeout(function () { toastNode.classList.remove("is-show"); }, 2600);
   }
 
+  // ---- Collapsible disclosure card ------------------------------------------
+  // A real <button> header + a hideable panel, keyboard-operable with a rotating
+  // chevron and aria-expanded/controls wired for screen readers. Used to keep long
+  // screens short (open only the part you need). The panel holds `content` (which
+  // must NOT itself be a .card, to avoid nesting cards).
+  // `bare` renders without the .card chrome (a plain section) so a disclosure can
+  // live INSIDE another card without nesting cards (forbidden by the design rules).
+  var discSeq = 0;
+  function disclosure(title, content, open, bare) {
+    var pid = "disc-" + (++discSeq);
+    var chev = h("span", { class: "disclosure__chev" + (open ? " is-open" : ""), "aria-hidden": "true",
+      html: icon('<path d="M6 9l6 6 6-6"/>', 20) });
+    var toggle = h("button", { type: "button", class: "disclosure__toggle",
+      "aria-expanded": open ? "true" : "false", "aria-controls": pid }, [
+      h("span", { class: "disclosure__title", text: title }), chev
+    ]);
+    var panel = h("div", { class: "disclosure__panel", id: pid }, [content]);
+    if (!open) panel.hidden = true;
+    toggle.addEventListener("click", function () {
+      var o = toggle.getAttribute("aria-expanded") !== "true";
+      toggle.setAttribute("aria-expanded", o ? "true" : "false");
+      panel.hidden = !o;
+      chev.classList.toggle("is-open", o);
+    });
+    return h("section", { class: "disclosure" + (bare ? " disclosure--bare" : " card") }, [toggle, panel]);
+  }
+
+  // ---- Segmented single-select control (roving-tabindex a11y) ---------------
+  // opts: { options:[{value,label}], value, onSelect(value), suffix? }. A
+  // radiogroup of buttons where exactly one is the tab stop; arrow keys move and
+  // select. Shared so the setup form (and anything else) doesn't re-implement it.
+  function segmented(opts) {
+    var group = h("div", { class: "segmented", role: "radiogroup" });
+    opts.options.forEach(function (o) {
+      var on = String(o.value) === String(opts.value);
+      var btn = h("button", {
+        type: "button", class: "seg" + (on ? " is-on" : ""),
+        role: "radio", "aria-checked": on ? "true" : "false", tabindex: on ? "0" : "-1"
+      }, [o.label, opts.suffix ? h("span", { class: "seg__unit", text: opts.suffix }) : null]);
+      btn.addEventListener("click", function () { pick(btn, o.value); });
+      group.appendChild(btn);
+    });
+    if (!group.querySelector('.seg[tabindex="0"]')) {
+      var first = group.querySelector(".seg");
+      if (first) first.setAttribute("tabindex", "0");
+    }
+    group.addEventListener("keydown", function (e) {
+      var keys = ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"];
+      if (keys.indexOf(e.key) === -1) return;
+      e.preventDefault();
+      var segs = Array.prototype.slice.call(group.querySelectorAll(".seg"));
+      var cur = segs.indexOf(document.activeElement);
+      if (cur === -1) cur = segs.findIndex(function (s) { return s.classList.contains("is-on"); });
+      var dir = (e.key === "ArrowRight" || e.key === "ArrowDown") ? 1 : -1;
+      var next = (cur + dir + segs.length) % segs.length;
+      segs[next].focus();
+      segs[next].click();
+    });
+    function pick(btn, value) {
+      Array.prototype.forEach.call(group.querySelectorAll(".seg"), function (b) {
+        var sel = b === btn;
+        b.classList.toggle("is-on", sel);
+        b.setAttribute("aria-checked", sel ? "true" : "false");
+        b.setAttribute("tabindex", sel ? "0" : "-1");
+      });
+      opts.onSelect(value);
+    }
+    return group;
+  }
+
   return {
     h: h,
     append: append,
@@ -538,6 +608,8 @@ RR.ui = (function () {
     sectionTitle: sectionTitle,
     watchLink: watchLink,
     emptyState: emptyState,
+    disclosure: disclosure,
+    segmented: segmented,
     programLabel: programLabel,
     // drill + block builders
     skillColor: skillColor,

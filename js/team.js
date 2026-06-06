@@ -371,43 +371,56 @@ RR.team = (function () {
       // Age group — drives drills, net height, and ball.
       field("Age group", ageSelect(), "Changes drills, net height, and ball."),
       // Program type — a full season or a short summer-camp-style block.
-      field("Program type", segmented({
+      field("Program type", RR.ui.segmented({
         options: PROGRAM_TYPES,
         value: form.programType,
         onSelect: function (v) { form.programType = v; renderSchedule(); commit(); }
       }), "A full season, or a 1–30 day camp.", true),
       // Program-specific schedule (dates + cadence) renders here.
       scheduleHost,
-      // Shared: session length, roster size, gear on hand, optional emphasis.
-      field("Session length", segmented({
-        options: SESSION_LENGTHS.map(function (n) { return { value: n, label: String(n) }; }),
-        value: form.sessionMinutes,
-        onSelect: function (v) { form.sessionMinutes = v; commit(); },
-        suffix: "min"
-      }), "Minutes per session.", true),
-      field("Squad size", rosterSizeSelect(),
-        "Roughly how many players — drills are picked to suit the group."),
-      field("Equipment on hand", equipmentRow(),
-        "Balls, a net and cones are assumed. Tick any extras you have so drills can use them.", true),
-      field("Skill emphasis", chipRow(),
-        "Optional — weights which skills get featured.", true)
+      // Shared, secondary settings (sensible defaults) tuck behind a disclosure so
+      // the form stays short — open it to fine-tune session length, squad size,
+      // gear on hand, and skill emphasis.
+      RR.ui.disclosure("More options (optional)", h("div", { class: "team-optional" }, [
+        field("Session length", RR.ui.segmented({
+          options: SESSION_LENGTHS.map(function (n) { return { value: n, label: String(n) }; }),
+          value: form.sessionMinutes,
+          onSelect: function (v) { form.sessionMinutes = v; commit(); },
+          suffix: "min"
+        }), "Minutes per session.", true),
+        field("Squad size", rosterSizeSelect(),
+          "Roughly how many players — drills are picked to suit the group."),
+        field("Equipment on hand", equipmentRow(),
+          "Balls, a net and cones are assumed. Tick any extras you have so drills can use them.", true),
+        field("Skill emphasis", chipRow(),
+          "Optional — weights which skills get featured.", true)
+      ]), false, true)
     ]);
 
-    var formCard = h("section", { class: "card" }, [
-      h("div", { class: "card-head" }, [
-        h("h2", { text: "Team setup" }),
-        savedCue
-      ]),
+    // The form body (savedCue + fields), not wrapped in its own card here so it
+    // can sit either in an open card (a new team) or inside a collapsed disclosure
+    // (a team that's ALREADY set up — returning coaches want the summary first,
+    // with the long form tucked behind one tap). This keeps the screen short.
+    var setUpAtRender = isSetUp(form);
+    var formBody = h("div", { class: "team-form-body" }, [
+      h("div", { class: "team-saverow" }, [savedCue]),
       formEl
     ]);
+    var formContainer = setUpAtRender
+      ? RR.ui.disclosure("Edit team setup", formBody, false)
+      : h("section", { class: "card" }, [
+          h("div", { class: "card-head" }, [h("h2", { text: "Team setup" })]),
+          formBody
+        ]);
 
-    // "What's left to fill in" lives ABOVE the form so a coach sees up front what
-    // still blocks plan generation — not buried at the foot of a long screen. The
-    // at-a-glance summary stays below the form, where it reads as a result.
+    // "What's left to fill in" (noticeHost) sits ABOVE the form for a new team so
+    // a coach sees up front what still blocks plan generation. Once set up, the
+    // at-a-glance summary leads and the editor collapses below it.
     noticeHost = h("div", { class: "notice-host" });
     summaryHost = h("div", { class: "summary-host" });
 
-    append(host, [intro, noticeHost, formCard, summaryHost]);
+    if (setUpAtRender) append(host, [intro, summaryHost, formContainer, noticeHost]);
+    else append(host, [intro, noticeHost, formContainer, summaryHost]);
 
     // Backup & restore lives at the foot of the screen, below the form.
     if (RR.teamsUI && RR.teamsUI.renderBackup) {
@@ -518,7 +531,7 @@ RR.team = (function () {
             field("Camp start date", dateInput("campStart"), "Day one of camp."),
             field("Camp length", campDaysSelect(), "How many days it runs (1–30).")
           ),
-          field("Sessions per day", segmented({
+          field("Sessions per day", RR.ui.segmented({
             options: SESSIONS_PER_DAY.map(function (n) { return { value: n, label: String(n) }; }),
             value: form.sessionsPerDay,
             onSelect: function (v) { form.sessionsPerDay = v; commit(); }
@@ -729,47 +742,6 @@ RR.team = (function () {
       ]);
     }
 
-    // ----- Segmented (single-select) control with roving-tabindex a11y -----
-    function segmented(opts) {
-      var group = h("div", { class: "segmented", role: "radiogroup" });
-      opts.options.forEach(function (o) {
-        var on = String(o.value) === String(opts.value);
-        var btn = h("button", {
-          type: "button", class: "seg" + (on ? " is-on" : ""),
-          role: "radio", "aria-checked": on ? "true" : "false", tabindex: on ? "0" : "-1"
-        }, [o.label, opts.suffix ? h("span", { class: "seg__unit", text: opts.suffix }) : null]);
-        btn.addEventListener("click", function () { pick(btn, o.value); });
-        group.appendChild(btn);
-      });
-      // Ensure exactly one tab stop even if the saved value matched nothing.
-      if (!group.querySelector('.seg[tabindex="0"]')) {
-        var first = group.querySelector(".seg");
-        if (first) first.setAttribute("tabindex", "0");
-      }
-      group.addEventListener("keydown", function (e) {
-        var keys = ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"];
-        if (keys.indexOf(e.key) === -1) return;
-        e.preventDefault();
-        var segs = Array.prototype.slice.call(group.querySelectorAll(".seg"));
-        var cur = segs.indexOf(document.activeElement);
-        if (cur === -1) cur = segs.findIndex(function (s) { return s.classList.contains("is-on"); });
-        var dir = (e.key === "ArrowRight" || e.key === "ArrowDown") ? 1 : -1;
-        var next = (cur + dir + segs.length) % segs.length;
-        segs[next].focus();
-        segs[next].click();
-      });
-
-      function pick(btn, value) {
-        Array.prototype.forEach.call(group.querySelectorAll(".seg"), function (b) {
-          var sel = b === btn;
-          b.classList.toggle("is-on", sel);
-          b.setAttribute("aria-checked", sel ? "true" : "false");
-          b.setAttribute("tabindex", sel ? "0" : "-1");
-        });
-        opts.onSelect(value);
-      }
-      return group;
-    }
   }
 
   // ---- Reusable empty state for Today / Season ------------------------------

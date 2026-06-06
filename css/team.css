@@ -40,6 +40,10 @@
 .save-cue.is-show { opacity: 1; transform: none; }
 .save-cue__check { font-weight: 900; }
 
+/* The "Saved ✓" cue now leads the form body (right-aligned), so it works whether
+   the form is an open card or tucked inside the "Edit team setup" disclosure. */
+.team-saverow { display: flex; justify-content: flex-end; min-height: 18px; margin-bottom: var(--sp-1); }
+
 /* Group label (segmented / chips) — matches a native field <label> visually. */
 .field > .field-label {
   display: block;
