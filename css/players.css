@@ -182,7 +182,9 @@
   background: transparent;
 }
 .pp-skill__dot.dot--off { border: 2px solid var(--field-border); }
-.pp-skill__dot.dot--on { border: 2px solid var(--text); }
+/* Rated dots fill with the brand coral so the score reads at a glance in both
+   themes (coral is a fixed brand hue, identical in light and dark). */
+.pp-skill__dot.dot--on { border: 2px solid var(--coral); background: var(--coral); }
 .pp-skill__val { width: 34px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
 .pp-trend { background: var(--surface-2); }
 
