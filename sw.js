@@ -1,7 +1,7 @@
 // RallyReady service worker.
 // Caches the app shell so the app loads and runs fully OFFLINE after first visit.
 // Bump CACHE_VERSION whenever any cached file changes to force clients to update.
-const CACHE_VERSION = "rallyready-v17";
+const CACHE_VERSION = "rallyready-v18";
 
 // Core files that make up the offline app shell. Everything here is fetched and
 // cached up front on install, so the app loads with NO network after first visit.
@@ -32,6 +32,7 @@ const APP_SHELL = [
   "./js/drills-7.js",
   "./js/drills-8.js",
   "./js/drills-9.js",
+  "./js/drills-10.js",
   "./js/coaching.js",
   "./js/periodization.js",
   "./js/generator.js",

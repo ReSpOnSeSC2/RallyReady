@@ -228,11 +228,24 @@ RR.generator = (function () {
     });
   }
 
-  // Weight a single drill for the seeded weighted pick. Lightly boosts the team's
-  // emphasis skills, the campFriendly drills on camp blocks, the game framing the
-  // phase wants (cooperative vs. competitive), and staples on anchor blocks.
+  // A global prior for how proven/popular and high-transfer a drill is. A drill
+  // may carry an explicit `value` (1 = niche … 5 = a core drill every coach runs);
+  // otherwise the curated `isStaple` flag stands in, since staples ARE the popular,
+  // foundational drills. Centred at 3 so it gently favours the high-value, high-
+  // improvement drills everywhere (not just warm-ups) without crowding out variety
+  // — the weighted shuffle still rotates the rest in over successive sessions.
+  function valueWeight(drill) {
+    var v = (typeof drill.value === "number") ? drill.value : (drill.isStaple ? 4 : 3);
+    if (v < 1) v = 1; else if (v > 5) v = 5;
+    return 1 + 0.22 * (v - 3);   // 2->0.78  3->1.0  4->1.22  5->1.44
+  }
+
+  // Weight a single drill for the seeded weighted pick. Starts from how popular /
+  // helpful-for-improvement the drill is (valueWeight), then lightly boosts the
+  // team's emphasis skills, the campFriendly drills on camp blocks, the game
+  // framing the phase wants (cooperative vs. competitive), and staples on anchors.
   function weightFor(drill, req, ctx) {
-    var w = 1;
+    var w = valueWeight(drill);
     if (ctx.emphasis[drill.skill]) w *= 2.2;                 // coach emphasis (weighted strongly)
     if (ctx.favorites && ctx.favorites[drill.id]) w *= 1.5;  // a starred favorite
     if (req.campPrefer && drill.campFriendly) w *= 2.0;      // camp blocks
