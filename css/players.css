@@ -175,7 +175,7 @@
 .pp-position__save { margin-top: var(--sp-1); }
 @media (hover: hover) { .pp-position__chip--link:hover { text-decoration: underline; } }
 
-/* Play details */
+/* Player details */
 .pp-dl { margin: 0; }
 .pp-dl__row { display: flex; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); }
 .pp-dl__row:last-child { border-bottom: none; }

@@ -79,7 +79,8 @@ RR.players = (function () {
       var cleaned = RR.roster.cleanNumber(numberInput.value);
       if (cleaned !== numberInput.value) numberInput.value = cleaned;
     });
-    var positionSelect = RR.roster.positionSelect("");
+    var positionSelect = RR.roster.positionSelect("", "Primary position");
+    var position2Select = RR.roster.secondaryPositionSelect("");
 
     // Photo control: a tappable avatar that picks + crops an image.
     var avatarWrap = h("span", { class: "pl-add__avatar" });
@@ -104,8 +105,12 @@ RR.players = (function () {
     function submit() {
       var name = nameInput.value.trim();
       if (!name) { nameInput.focus(); return; }
+      var position = positionSelect.value || "";
+      var position2 = position2Select.value || "";
+      // A secondary only makes sense alongside a (different) primary.
+      if (!position || position2 === position) position2 = "";
       var id = RR.roster.addPlayer({
-        name: name, number: numberInput.value, position: positionSelect.value || ""
+        name: name, number: numberInput.value, position: position, position2: position2
       });
       if (id && pendingPhoto && RR.photos) RR.photos.set(id, pendingPhoto);
       ui.confirmToast("Player added.");
@@ -144,6 +149,9 @@ RR.players = (function () {
             h("div", { class: "field pl-add__pos" }, [
               h("label", { class: "field-label", text: "Position" }), positionSelect
             ])
+          ]),
+          h("div", { class: "field pl-add__pos2" }, [
+            h("label", { class: "field-label", text: "Secondary position (optional)" }), position2Select
           ])
         ])
       ]),

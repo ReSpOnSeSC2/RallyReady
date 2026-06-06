@@ -135,14 +135,28 @@ RR.roster = (function () {
   }
 
   // A labelled position <select>, reused by the Players add form and the profile.
+  // The blank/unset option reads "No position" (short, so it never gets clipped
+  // inside a narrow field — every field that uses this has its own visible label).
   function positionSelect(value, ariaLabel) {
     var sel = h("select", { class: "input", "aria-label": ariaLabel || "Position (optional)" });
     positionOptions().forEach(function (p) {
       sel.appendChild(h("option", {
         value: p,
-        text: p === "" ? "Position (optional)" : p,
+        text: p === "" ? "No position" : p,
         selected: p === (value || "")
       }));
+    });
+    return sel;
+  }
+
+  // A SECONDARY-position <select>: a "None" blank plus the real coachable roles
+  // (no "Not sure yet" — a backup spot should be a concrete position). Shared by
+  // the add-player form and the profile so the two never drift apart.
+  function secondaryPositionSelect(value, ariaLabel) {
+    var sel = h("select", { class: "input", "aria-label": ariaLabel || "Secondary position (optional)" });
+    sel.appendChild(h("option", { value: "", text: "None", selected: !value }));
+    ((RR.positions && RR.positions.LIST) || []).forEach(function (pos) {
+      sel.appendChild(h("option", { value: pos, text: pos, selected: pos === (value || "") }));
     });
     return sel;
   }
@@ -252,6 +266,7 @@ RR.roster = (function () {
     removePlayer: removePlayer,
     cleanNumber: cleanNumber,
     positionSelect: positionSelect,
+    secondaryPositionSelect: secondaryPositionSelect,
     // attendance
     attendanceField: attendanceField,
     summarizeAttendance: summarizeAttendance,
