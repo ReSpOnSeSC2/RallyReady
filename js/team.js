@@ -191,6 +191,24 @@ RR.team = (function () {
   }
   function hasTeam() { return isSetUp(); }
 
+  // The required fields a coach hasn't filled in yet, as human-readable labels
+  // (matching the form's own labels). Mirrors isSetUp's rules exactly so the
+  // "what's left" notice never disagrees with whether a plan can be generated.
+  // Returns [] once the team is fully set up.
+  function missingRequired(t) {
+    t = t || getTeam();
+    var miss = [];
+    if (!t || !t.name || !String(t.name).trim()) miss.push("Team name");
+    if (!t || !t.ageGroup) miss.push("Age group");
+    if (t && t.programType === "camp") {
+      if (!t.campStart) miss.push("Camp start date");
+    } else {
+      if (!t || !t.practiceStart) miss.push("Practice start date");
+      if (!t || !t.seasonStart) miss.push("First game / season start");
+    }
+    return miss;
+  }
+
   // Whole weeks of preparation between the first practice and the opener (season only).
   function prepWeeks(t) {
     t = t || getTeam();
@@ -617,7 +635,10 @@ RR.team = (function () {
     // half-finished or contradictory information.
     function refreshSummary() {
       summaryHost.innerHTML = "";
-      if (!isSetUp(form)) return;
+      if (!isSetUp(form)) {
+        summaryHost.appendChild(setupChecklistCard(form));
+        return;
+      }
 
       var ref = referenceFor(form.ageGroup);
       var isCamp = form.programType === "camp";
@@ -731,6 +752,40 @@ RR.team = (function () {
     }
   }
 
+  // ---- "What's left" checklist on the Team screen ---------------------------
+  // Shown in place of the summary until every required field is filled in, so a
+  // coach is told exactly what to complete before a plan can be generated —
+  // rather than the summary just silently staying hidden.
+  function setupChecklistCard(t) {
+    t = t || getTeam() || DEFAULT_FORM;
+    var miss = missingRequired(t);
+    // Both dates are present but out of order: nothing reads as "missing", yet
+    // the schedule is still invalid. Call it out so the list is never empty.
+    var dateOrderIssue = !miss.length && !scheduleValid(t);
+
+    function item(label) {
+      return h("li", { class: "setup-check__item" }, [
+        h("span", { class: "setup-check__dot", "aria-hidden": "true" }),
+        h("span", { text: label })
+      ]);
+    }
+    var items = miss.map(item);
+    if (dateOrderIssue) items.push(item("A season opener that falls after practices begin"));
+
+    var lead = items.length === 1
+      ? "Finish this to generate your plan:"
+      : "Finish these to generate your plan:";
+
+    return h("section", { class: "card setup-check" }, [
+      h("div", { class: "card-head" }, [
+        h("h2", { text: "Almost ready" }),
+        h("span", { class: "pill setup-check__tag", text: "Plan not ready yet" })
+      ]),
+      h("p", { class: "muted setup-check__lead", text: lead }),
+      h("ul", { class: "setup-check__list" }, items)
+    ]);
+  }
+
   // ---- Reusable empty state for Today / Season ------------------------------
   // A friendly nudge with a button that routes to the Team screen.
   function emptyStateCard(opts) {
@@ -750,6 +805,7 @@ RR.team = (function () {
     emptyStateCard: emptyStateCard,
     hasTeam: hasTeam,
     isSetUp: isSetUp,
+    missingRequired: missingRequired,  // required fields still blank (human labels)
     prepWeeks: prepWeeks,          // season-only; null for camps
     programWindow: programWindow,  // normalized season|camp window for downstream modules
     practiceDaysFor: practiceDaysFor,  // chosen weekdays (0–6), with a safe fallback
