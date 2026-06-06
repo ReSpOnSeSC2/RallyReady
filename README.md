@@ -105,7 +105,10 @@ the app.
 3. **Go to Today.** RallyReady shows you a complete session for today, ready to run:
    the phase, the "skill of the week" (or "skill of the day" at camp), how intense
    it should be, the time, every drill with steps and coaching cues, and the gear
-   you'll need.
+   you'll need. Each drill and game also spells out **how it's organized** — whether
+   everyone goes at once or takes turns, how to group the squad, and **who keeps the
+   score** — and the ones where position matters include a **top-down court diagram**
+   showing where players stand and where the ball goes.
 4. **Make it yours.** Change **Today's focus** to any skill from the picker, or tap
    **Edit plan** to retime blocks (±5 min), reorder them, add or remove a block, **pin**
    a drill you love (so **Regenerate** keeps it), **swap** a drill, or **choose** a
@@ -187,6 +190,8 @@ rallyready/
   css/                  Styles and the light/dark design tokens.
   js/                   The app: team setup, season/camp planning,
                         the practice generator, drills, tips, and screens.
+                        diagram.js + format.js + extras-*.js add the
+                        "how it's organized" read-out and the SVG court diagrams.
   icons/                App icons.
   scripts/verify.js     A developer self-test for the planning engine.
 ```

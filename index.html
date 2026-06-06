@@ -47,6 +47,8 @@
   <link rel="stylesheet" href="css/calendar.css" />
   <!-- In-practice run-mode timer overlay. -->
   <link rel="stylesheet" href="css/run.css" />
+  <!-- Court diagrams + the "how it's organized" read-out. -->
+  <link rel="stylesheet" href="css/diagram.css" />
   <!-- Print-only stylesheet (a coach's carry sheet). -->
   <link rel="stylesheet" href="css/print.css" />
 </head>
@@ -142,6 +144,13 @@
   <script src="js/coaching.js"></script>
   <script src="js/periodization.js"></script>
   <script src="js/generator.js"></script>
+  <!-- Court-diagram engine + "how it's organized" engine + their per-drill data.
+       Load before ui.js, which composes them into the drill cards. -->
+  <script src="js/diagram.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/extras-build.js"></script>
+  <script src="js/extras-data.js"></script>
+  <script src="js/extras-data-2.js"></script>
   <script src="js/ui.js"></script>
   <!-- Install ("Add to Home Screen") helper; loads before today.js, which mounts it. -->
   <script src="js/install.js"></script>

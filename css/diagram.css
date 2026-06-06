@@ -1,0 +1,176 @@
+/* diagram.css — "How it's organized" read-out + the SVG court diagrams.
+ *
+ * Split out for the <800-line-per-file rule. Structural strokes use SEMANTIC
+ * tokens (--text, --surface, --border) so the court re-themes for dark mode;
+ * player discs and target zones use the fixed brand hues so a category always
+ * reads the same colour. Player labels are aria-hidden (the caption carries the
+ * meaning), so their job is to be glanceable, not to gate accessibility. */
+
+/* ============================ How it's organized ======================== */
+.organize {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+.organize__row {
+  display: grid;
+  gap: 2px;
+}
+.organize__row + .organize__row {
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--border);
+}
+.organize__label {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.organize__text {
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+
+/* ================================ Figure ================================ */
+.dgm {
+  margin: var(--sp-2) 0 0;
+}
+.dgm__canvas {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.dgm-svg {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  display: block;
+}
+.dgm__cap {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* A small colour key under diagrams whose hues carry meaning. */
+.dgm__legend {
+  list-style: none;
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+}
+.dgm__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+.dgm__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.dgm__swatch--a { background: var(--coral); }
+.dgm__swatch--b { background: var(--teal); }
+.dgm__swatch--coach { background: var(--i-taper); }
+.dgm__swatch--n { background: var(--slate); }
+.dgm__swatch--target { background: var(--sun); }
+.dgm__swatch--good { background: var(--teal); }
+.dgm__swatch--move { background: var(--text-muted); }
+
+/* ============================ SVG primitives ============================ */
+/* Court + floor lines (re-theme via semantic tokens). */
+.dgm-court {
+  fill: var(--surface);
+  stroke: var(--text);
+  stroke-width: 1.6;
+}
+.dgm-line {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.8;
+}
+.dgm-net {
+  stroke: var(--text);
+  stroke-width: 3;
+  stroke-dasharray: 2 3;
+}
+.dgm-post { fill: var(--text); }
+
+/* Target / good / avoid / neutral zones (brand hues, translucent). */
+.dgm-zone { stroke: none; }
+.dgm-zone--target  { fill: var(--sun);  fill-opacity: 0.40; }
+.dgm-zone--good    { fill: var(--teal); fill-opacity: 0.26; }
+.dgm-zone--avoid   { fill: var(--coral); fill-opacity: 0.24; }
+.dgm-zone--neutral { fill: var(--surface-2); stroke: var(--field-border); stroke-width: 1.2; }
+.dgm-zonelabel {
+  fill: var(--text);
+  font-family: var(--font-stack);
+  font-size: 11px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* Paths: ball flight (solid), movement (dashed), serve/attack (accent). */
+.dgm-path { fill: none; stroke-width: 2.2; }
+.dgm-path--ball  { stroke: var(--text); }
+.dgm-path--move  { stroke: var(--text-muted); stroke-dasharray: 5 4; }
+.dgm-path--serve { stroke: var(--coral); }
+.dgm-arrowhead--ball  { fill: var(--text); }
+.dgm-arrowhead--move  { fill: var(--text-muted); }
+.dgm-arrowhead--serve { fill: var(--coral); }
+.dgm-pathlabel {
+  fill: var(--text-muted);
+  font-family: var(--font-stack);
+  font-size: 10px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* Players: fixed brand hues so a role always reads the same colour. */
+.dgm-player { stroke: var(--surface); stroke-width: 1.5; }
+.dgm-player--a { fill: var(--coral); }
+.dgm-player--b { fill: var(--teal); }
+.dgm-player--coach { fill: var(--i-taper); }
+.dgm-player--n { fill: var(--slate); }
+.dgm-playerlabel {
+  font-family: var(--font-stack);
+  font-size: 12px;
+  font-weight: 800;
+}
+.dgm-playerlabel--a, .dgm-playerlabel--b { fill: var(--navy); }
+.dgm-playerlabel--coach, .dgm-playerlabel--n { fill: #fff; }
+.dgm-playernote {
+  fill: var(--text-muted);
+  font-family: var(--font-stack);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+/* Cones + the volleyball glyph used for loose balls. */
+.dgm-cone { fill: var(--coral); }
+.dgm-ball__face { fill: var(--white); stroke: var(--navy); stroke-width: 1.4; }
+.dgm-ball__seam { fill: none; stroke: var(--navy); stroke-width: 1.1; }
+
+/* Tighten the diagram inside a Today block / run-mode panel. */
+.block__diagram .dgm__canvas,
+.rr-run__detail .dgm__canvas { padding: var(--sp-2); }
