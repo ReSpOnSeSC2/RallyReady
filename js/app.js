@@ -196,8 +196,31 @@ RR.app = (function () {
 
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
+
+    // When a NEW worker takes control (sw.js bumps CACHE_VERSION, then
+    // skipWaiting + clients.claim), reload once so this page swaps to the
+    // freshly cached assets instead of running the old release. On a FIRST
+    // install there's no prior controller, so we skip that initial reload.
+    var hadController = !!navigator.serviceWorker.controller;
+    var reloading = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (!hadController) { hadController = true; return; }
+      if (reloading) return;
+      reloading = true;
+      window.location.reload();
+    });
+
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").catch(function (err) {
+      navigator.serviceWorker.register("sw.js").then(function (reg) {
+        // Re-check sw.js on launch and whenever the app returns to the
+        // foreground, so an installed PWA picks up a new release promptly
+        // rather than waiting for the browser's own periodic poll.
+        function checkForUpdate() { if (reg && reg.update) reg.update(); }
+        checkForUpdate();
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "visible") checkForUpdate();
+        });
+      }).catch(function (err) {
         console.error("RallyReady: service worker registration failed", err);
       });
     });
