@@ -47,6 +47,20 @@ RR.drillsScreen = (function () {
     _key: null         // detects a team change to recompute camp-default
   };
 
+  // The chip filters collapse into a disclosure so they don't fill the screen
+  // before any drills show. Search stays visible; this only hides the chips.
+  // Module-scoped so the open/closed choice survives route changes; starts
+  // collapsed for the smallest footprint.
+  var filtersOpen = false;
+
+  // How many filter facets are currently narrowing the list (search excluded —
+  // it has its own always-visible box). Drives the count badge on the toggle.
+  function activeFilterCount() {
+    return filters.skills.length + filters.tiers.length +
+      (filters.showAllAges ? 1 : 0) + (filters.campOnly ? 1 : 0) +
+      (filters.favoritesOnly ? 1 : 0) + (filters.customOnly ? 1 : 0);
+  }
+
   // Build the ordered, de-duplicated list of skill categories from the data.
   function skillCategories() {
     var seen = {}, present = [];
@@ -156,15 +170,20 @@ RR.drillsScreen = (function () {
         search
       ]));
 
+      // ---- Collapsible filter panel ----------------------------------------
+      // All the chip groups live inside a disclosure so they don't fill the
+      // screen; a "Filters" button toggles them and shows how many are active.
+      var panel = h("div", { class: "drills-filters", id: "drills-filters" });
+
       // Skill-category chips.
-      controlsHost.appendChild(filterGroup("Skill", skillCategories().map(function (skill) {
+      panel.appendChild(filterGroup("Skill", skillCategories().map(function (skill) {
         return chip(skill, filters.skills.indexOf(skill) !== -1, function (on) {
           toggleIn(filters.skills, skill, on); paint();
         }, ui.skillColor(skill));
       })));
 
       // Difficulty chips.
-      controlsHost.appendChild(filterGroup("Difficulty", DIFF_TIERS.map(function (t) {
+      panel.appendChild(filterGroup("Difficulty", DIFF_TIERS.map(function (t) {
         return chip(t.label, filters.tiers.indexOf(t.id) !== -1, function (on) {
           toggleIn(filters.tiers, t.id, on); paint();
         }, t.color);
@@ -187,7 +206,7 @@ RR.drillsScreen = (function () {
       toggles.push(chip("Your drills", filters.customOnly, function (on) {
         filters.customOnly = on; paint();
       }));
-      controlsHost.appendChild(filterGroup("Filters", toggles));
+      panel.appendChild(filterGroup("Show", toggles));
 
       // Add-your-own-drill entry point.
       var addBtn = h("button", { type: "button", class: "btn btn-ghost btn-block drills-add" }, [
@@ -195,7 +214,49 @@ RR.drillsScreen = (function () {
         "Add your own drill"
       ]);
       addBtn.addEventListener("click", function () { editing = "new"; selected = null; paint(); });
+
+      // The disclosure folds away only the chip groups; the search (above) and
+      // the "Add your own drill" action (below) stay visible at all times.
+      panel.hidden = !filtersOpen;
+      controlsHost.appendChild(buildFilterToggle(panel));
+      controlsHost.appendChild(panel);
       controlsHost.appendChild(addBtn);
+    }
+
+    // The disclosure button that shows/hides the filter panel. Carries an
+    // always-present count badge (hidden when zero) so the coach can tell at a
+    // glance that filters are applied even while the panel is collapsed.
+    function buildFilterToggle(panel) {
+      var count = h("span", { class: "drills-filters__count", text: String(activeFilterCount()), "aria-hidden": "true" });
+      var label = h("span", { class: "drills-filters__label", text: "Filters" });
+      var chev = h("span", { class: "drills-filters__chev" + (filtersOpen ? " is-open" : ""),
+        "aria-hidden": "true", html: ui.icon('<path d="M6 9l6 6 6-6"/>', 18) });
+      var btn = h("button", {
+        type: "button", class: "drills-filters__toggle", "aria-expanded": filtersOpen ? "true" : "false",
+        "aria-controls": "drills-filters"
+      }, [
+        h("span", { class: "drills-filters__toggle-icon", "aria-hidden": "true",
+          html: ui.icon('<path d="M4 6h16M7 12h10M10 18h4"/>', 18) }),
+        label, count, chev
+      ]);
+      updateFilterCount(count);
+      btn.addEventListener("click", function () {
+        filtersOpen = !filtersOpen;
+        panel.hidden = !filtersOpen;
+        btn.setAttribute("aria-expanded", filtersOpen ? "true" : "false");
+        chev.classList.toggle("is-open", filtersOpen);
+      });
+      return btn;
+    }
+
+    // Refresh the active-filter badge in place (called from paint so it stays
+    // current as chips toggle without rebuilding the whole control strip).
+    function updateFilterCount(node) {
+      var badge = node || controlsHost.querySelector(".drills-filters__count");
+      if (!badge) return;
+      var n = activeFilterCount();
+      badge.textContent = String(n);
+      badge.hidden = n === 0;
     }
 
     // A titled row of chips.
@@ -242,6 +303,7 @@ RR.drillsScreen = (function () {
       if (editing) { bodyHost.appendChild(editorView()); return; }
       if (selected) { bodyHost.appendChild(detailView(selected)); return; }
 
+      updateFilterCount();   // keep the collapsed-panel badge in step with the chips
       var results = applyFilters(team);
 
       // Results count + a Clear affordance when anything is narrowed.

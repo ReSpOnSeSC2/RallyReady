@@ -194,6 +194,121 @@ RR.dk = (function () {
     };
   }
 
+  // ---- Player(s) working a wall --------------------------------------------
+  function wall(opt) {
+    opt = opt || {};
+    var n = opt.players || 3;
+    var xs = spread(n, 1.6, 7.4);
+    var players = xs.map(function (x) { return { x: x, y: 6.4, label: "", team: "a" }; });
+    var midX = xs[Math.floor(xs.length / 2)];
+    return titleable(opt, {
+      caption: opt.caption,
+      w: 9, h: 8,
+      zones: [{ x: 0, y: 0.2, w: 9, h: 1, tone: "neutral", label: "WALL" }],
+      players: players,
+      paths: [
+        { from: [midX, 5.8], to: [midX, 1.5], kind: "ball", label: "off the wall", curve: 0.12 },
+        { from: [midX + 0.5, 1.6], to: [midX + 0.5, 5.8], kind: "move", curve: 0.12 }
+      ]
+    });
+  }
+
+  // ---- A feed line: a feeder, the active player, a target, and a queue ------
+  // The everyday "lines" drill shape (hitting lines, digging lines, setting
+  // lines): a coach/feeder sends a ball to the player at the front, who plays it
+  // to a target and jogs to the back of the line.
+  function feedLine(opt) {
+    opt = opt || {};
+    var players = [
+      { x: 4.5, y: 1.4, label: opt.feederLabel || "C", team: "coach", note: opt.feederNote || "feeder" },
+      { x: 4.4, y: 6.2, label: opt.activeLabel || "1", team: "a", note: "your turn" }
+    ];
+    if (opt.target !== false) players.push({ x: 7, y: 4.4, label: opt.targetLabel || "T", team: "a", note: "target" });
+    // The waiting queue, stacked at the back corner.
+    var q = opt.queue || 3;
+    for (var i = 0; i < q; i++) players.push({ x: 1.4, y: 9 + (i % 3) * 0.7, label: "", team: "n" });
+    var paths = [{ from: [4.5, 1.8], to: [4.4, 5.8], kind: "ball", label: "feed", curve: 0.12 }];
+    if (opt.target !== false) paths.push({ from: [4.4, 6.2], to: [6.7, 4.6], kind: "ball", label: opt.action || "play it", curve: 0.18 });
+    paths.push({ from: [4, 6.6], to: [1.7, 9], kind: "move", label: "to back of line", curve: 0.3 });
+    return titleable(opt, {
+      caption: opt.caption,
+      w: 9, h: 11, net: opt.net != null ? opt.net : null,
+      court: opt.court || [{ x: 0, y: 0, w: 9, h: 11 }],
+      players: players, paths: paths,
+      legend: [{ tone: "coach", text: "Feeder" }, { tone: "a", text: "Worker + target" }, { tone: "n", text: "Line waits" }]
+    });
+  }
+
+  // ---- Warm-up lanes: players moving baseline to baseline -------------------
+  function lanes(opt) {
+    opt = opt || {};
+    var n = opt.lanes || 4;
+    var xs = spread(n, 1.4, 7.6);
+    var players = xs.map(function (x) { return { x: x, y: 9.4, label: "", team: "a" }; });
+    var paths = xs.map(function (x) { return { from: [x, 9], to: [x, 1.4], kind: "move", curve: 0 }; });
+    if (opt.back) xs.forEach(function (x) { paths.push({ from: [x + 0.35, 1.6], to: [x + 0.35, 9], kind: "move", curve: 0 }); });
+    return titleable(opt, {
+      caption: opt.caption,
+      w: 9, h: 10.4,
+      court: [{ x: 0, y: 0.8, w: 9, h: 9 }],
+      lines: [{ y: 5.2 }],
+      players: players, paths: paths,
+      legend: [{ tone: "move", text: opt.back ? "Down and back" : "Move this way" }]
+    });
+  }
+
+  // ---- One hitter's approach footwork to the net ---------------------------
+  function approachPath(opt) {
+    opt = opt || {};
+    var startX = opt.side === "middle" ? 4.5 : (opt.side === "right" ? 7 : 2);
+    var takeX = opt.side === "middle" ? 4.5 : (opt.side === "right" ? 6.6 : 2.4);
+    var players = [{ x: startX, y: 8.4, label: "H", team: "a", note: "start" }];
+    if (opt.setter !== false) players.push({ x: 5.4, y: 3, label: "St", team: "a", note: "setter" });
+    // Three step segments (slow-slow-quick-quick) up to the takeoff.
+    var paths = [
+      { from: [startX, 8], to: [takeX - 0.4, 6], kind: "move", curve: 0.1 },
+      { from: [takeX - 0.4, 6], to: [takeX, 4.2], kind: "move", curve: -0.1, label: "approach" }
+    ];
+    if (opt.setter !== false) paths.push({ from: [5.4, 3], to: [takeX, 3.6], kind: "ball", label: "set", curve: 0.2 });
+    if (opt.swing) paths.push({ from: [takeX, 3.4], to: [opt.side === "right" ? 2.2 : 6.6, 1.4], kind: "serve", label: "swing", curve: 0.1 });
+    return titleable(opt, {
+      caption: opt.caption,
+      w: 9, h: 9.4, net: 2,
+      court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
+      players: players, paths: paths
+    });
+  }
+
+  // ---- Six base court positions (defense / rotations) ----------------------
+  function basePositions(opt) {
+    opt = opt || {};
+    var L = opt.labels || ["", "", "", "", "", ""];
+    var spots = [
+      [2.6, 3.4], [6.4, 3.4],            // front (net) pair
+      [4.5, 5.8],                         // middle
+      [1.5, 8.4], [4.5, 9.2], [7.5, 8.4]  // back three
+    ];
+    var players = spots.map(function (p, i) { return { x: p[0], y: p[1], label: L[i] || "", team: "a" }; });
+    var legend = [{ tone: "a", text: "Base spots" }];
+    if (opt.feeder !== false) {
+      players.unshift({ x: 4.5, y: 0.9, label: opt.feederLabel || "C", team: "coach", note: opt.feederNote || "coach attacks" });
+      legend.unshift({ tone: "coach", text: "Attack" });
+    }
+    return titleable(opt, {
+      caption: opt.caption,
+      w: 9, h: 10, net: 2, lines: [{ y: 5.2 }],
+      court: [{ x: 0, y: 2, w: 9, h: 7.6 }],
+      players: players, legend: legend
+    });
+  }
+
+  // Copy an optional title onto a spec (so builders can carry a step heading).
+  function titleable(opt, spec) { if (opt && opt.title) spec.title = opt.title; return spec; }
+  // Attach a title to any spec (for hand-built step specs).
+  function titled(spec, title) { spec.title = title; return spec; }
+  // Sugar: collect specs into an ordered multi-step array.
+  function seq() { return Array.prototype.slice.call(arguments).filter(Boolean); }
+
   return {
     spread: spread,
     serveTargets: serveTargets,
@@ -202,6 +317,13 @@ RR.dk = (function () {
     circlePass: circlePass,
     pairsRows: pairsRows,
     stations: stations,
-    coachFeed: coachFeed
+    coachFeed: coachFeed,
+    wall: wall,
+    feedLine: feedLine,
+    lanes: lanes,
+    approachPath: approachPath,
+    basePositions: basePositions,
+    titled: titled,
+    seq: seq
   };
 })();

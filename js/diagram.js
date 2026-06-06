@@ -190,14 +190,25 @@ RR.diagram = (function () {
   }
 
   // ---- Public: build a <figure> node from a spec ----------------------------
-  // The figure carries role="img" + the caption as its accessible name, so a
-  // screen reader gets the same meaning the sighted coach reads in the caption.
-  function figure(spec) {
+  // The figure carries role="img" + (title +) caption as its accessible name, so
+  // a screen reader gets the same meaning the sighted coach reads.
+  //   opts.fallbackTitle — used as the step heading when the spec has no title
+  //   of its own (e.g. auto "Step 2" for a multi-part drill).
+  function figure(spec, opts) {
     if (!spec) return null;
+    opts = opts || {};
+    var title = spec.title || opts.fallbackTitle || null;
     var fig = document.createElement("figure");
     fig.className = "dgm";
     fig.setAttribute("role", "img");
-    if (spec.caption) fig.setAttribute("aria-label", spec.caption);
+    var label = (title ? title + ". " : "") + (spec.caption || "");
+    if (label) fig.setAttribute("aria-label", label);
+    if (title) {
+      var head = document.createElement("p");
+      head.className = "dgm__title";
+      head.textContent = title;
+      fig.appendChild(head);
+    }
     var holder = document.createElement("div");
     holder.className = "dgm__canvas";
     holder.innerHTML = svgMarkup(spec);

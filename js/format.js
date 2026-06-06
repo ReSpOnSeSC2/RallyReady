@@ -96,10 +96,21 @@ RR.format = (function () {
       .map(function (r) { return { label: r.label, text: f[r.key] }; });
   }
 
-  // The court diagram spec for this drill, if one was authored.
+  // The court diagram(s) for this drill, if authored. A drill may carry a single
+  // `diagram` (one spec) or `diagrams` (an ordered array, one per step/phase, so
+  // a multi-part drill shows every stage). Always returns an array.
+  function diagrams(d) {
+    var ex = RR.extras && RR.extras[d.id];
+    if (!ex) return [];
+    if (ex.diagrams && ex.diagrams.length) return ex.diagrams;
+    if (ex.diagram) return [ex.diagram];
+    return [];
+  }
+  // Back-compat: the first (or only) spec, or null.
   function diagram(d) {
-    return (RR.extras && RR.extras[d.id] && RR.extras[d.id].diagram) || null;
+    var list = diagrams(d);
+    return list.length ? list[0] : null;
   }
 
-  return { rows: rows, fields: fields, diagram: diagram };
+  return { rows: rows, fields: fields, diagram: diagram, diagrams: diagrams };
 })();
