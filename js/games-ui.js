@@ -49,17 +49,18 @@ RR.gamesEditor = (function () {
           "No games added yet. Your first-game date above is the opener — add the rest so practices build toward each match." }));
       }
       games.forEach(function (g, i) {
-        var dateIn = h("input", { class: "input games__date", type: "date", value: g.date || "",
-          "aria-label": "Game date" });
+        var dateIn = h("input", { class: "input datefield games__date", type: "date", value: g.date || "",
+          "data-placeholder": "Choose date", "aria-label": "Game date" });
+        // Native empty date fields read as a blank box, so flag the empty state:
+        // CSS shows the "Choose date" prompt inside the box until a date is picked,
+        // matching the season-start field instead of a separate caption above it.
+        function syncEmpty() { dateIn.classList.toggle("is-empty", !dateIn.value); }
+        syncEmpty();
         dateIn.addEventListener("change", function () {
-          form.games[i].date = dateIn.value; form.games = clean(form.games); commit(); repaint();
+          form.games[i].date = dateIn.value; syncEmpty();
+          form.games = clean(form.games); commit(); repaint();
         });
-        // A visible "Choose date" caption — native date inputs give no usable
-        // empty-state prompt, so the label carries the call to action.
-        var dateField = h("label", { class: "games__field games__field--date" }, [
-          h("span", { class: "games__label", text: "Choose date" }),
-          dateIn
-        ]);
+        var dateField = h("label", { class: "games__field games__field--date" }, [dateIn]);
 
         var oppIn = h("input", { class: "input games__opp", type: "text", value: g.opponent || "",
           placeholder: "vs. (optional)", maxlength: "40", "aria-label": "Opponent" });
