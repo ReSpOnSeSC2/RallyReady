@@ -245,6 +245,35 @@ RR.ui = (function () {
     ]);
   }
 
+  // ---- "How it's organized" — grouping / flow / tracking / where / aim ------
+  // Answers the question text alone left open: does everyone go at once or take
+  // turns, and who keeps score? Built by RR.format (derived per drill, with
+  // authored overrides for games). Returns null if the engine isn't present.
+  function organizeList(drill) {
+    if (!RR.format || !drill) return null;
+    var rows = RR.format.rows(drill);
+    if (!rows.length) return null;
+    return h("ul", { class: "organize" }, rows.map(function (r) {
+      return h("li", { class: "organize__row" }, [
+        h("span", { class: "organize__label", text: r.label }),
+        h("span", { class: "organize__text", text: r.text })
+      ]);
+    }));
+  }
+  function organizeSection(drill) {
+    var list = organizeList(drill);
+    return list ? detailSection("How it's organized", list) : null;
+  }
+
+  // ---- Court diagram figure (or null) ---------------------------------------
+  // A top-down SVG of where players stand and where the ball goes, for the
+  // drills/games where position matters. Authored specs live in RR.extras.
+  function diagramFigure(drill) {
+    if (!RR.format || !RR.diagram || !drill) return null;
+    var spec = RR.format.diagram(drill);
+    return spec ? RR.diagram.figure(spec) : null;
+  }
+
   // drillDetail(drill) — the full read-out for one drill: setup, steps, cues,
   // equipment, age range, difficulty dots, easier/harder, and the "Watch how"
   // link. Used by the Drills browser's detail view. No nested cards.
@@ -269,12 +298,22 @@ RR.ui = (function () {
     ]);
 
     var sections = [
-      detailSection("Setup", h("p", { text: drill.setup })),
+      detailSection("Setup", h("p", { text: drill.setup }))
+    ];
+    // The "how it's organized" read-out and the court diagram sit right after
+    // Setup — that's exactly when a coach is picturing how to run it.
+    var org = organizeSection(drill);
+    if (org) sections.push(org);
+    var fig = diagramFigure(drill);
+    if (fig) sections.push(h("div", { class: "drill-detail__section drill-detail__diagram" }, [
+      h("span", { class: "eyebrow", text: "On the court" }), fig
+    ]));
+    sections.push(
       detailSection("Run it", h("ol", { class: "drill-detail__steps" },
         (drill.steps || []).map(function (s) { return h("li", { text: s }); }))),
       detailSection("Say this", h("ul", { class: "drill-detail__cues" },
         (drill.cues || []).map(function (c) { return h("li", { text: c }); })))
-    ];
+    );
 
     if (drill.equipment && drill.equipment.length) {
       sections.push(detailSection("Equipment",
@@ -374,6 +413,17 @@ RR.ui = (function () {
       h("span", { class: "eyebrow", text: "Setup" }),
       h("p", { text: drill.setup })
     ]);
+    // How the squad is organized (who goes when, who keeps score) + the court
+    // diagram, inline so a coach can run the block without expanding anything.
+    var orgList = organizeList(drill);
+    var fig = diagramFigure(drill);
+    var orgBlock = orgList ? h("div", { class: "block__section block__organize" }, [
+      h("span", { class: "eyebrow", text: "How it's organized" }),
+      orgList
+    ]) : null;
+    var figBlock = fig ? h("div", { class: "block__section block__diagram" }, [
+      h("span", { class: "eyebrow", text: "On the court" }), fig
+    ]) : null;
     var runit = h("div", { class: "block__section" }, [
       h("span", { class: "eyebrow", text: "Run it" }),
       h("ol", { class: "block__steps" }, (drill.steps || []).map(function (s) {
@@ -423,6 +473,8 @@ RR.ui = (function () {
       h("h3", { class: "block__title", text: block.title }),
       h("p", { class: "block__why", text: block.why }),
       setup,
+      orgBlock,
+      figBlock,
       runit,
       watchLink(drill.videoSearchUrl, "Watch how"),
       h("div", { class: "block__tools" }, tools),
@@ -481,6 +533,9 @@ RR.ui = (function () {
     favStar: favStar,
     drillCard: drillCard,
     drillDetail: drillDetail,
+    organizeList: organizeList,
+    organizeSection: organizeSection,
+    diagramFigure: diagramFigure,
     kindOf: kindOf,
     blockCard: blockCard,
     // dates + toast

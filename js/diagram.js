@@ -1,0 +1,233 @@
+// diagram.js — tiny declarative court-diagram engine (RR.diagram).
+//
+// Turns a compact, data-only spec into an accessible inline-SVG figure: a
+// top-down volleyball court with player spots, ball/movement arrows, target
+// zones, cones and a net. It exists so a coach can SEE where people stand and
+// where the ball goes, instead of decoding a paragraph — the #1 thing missing
+// from a text-only drill card.
+//
+// OFFLINE-SAFE: pure SVG built from a string, no images, no network. Colours
+// come from CSS classes (styled in css/diagram.css) so the diagram re-themes in
+// dark mode and always meets contrast — never hard-coded hex here.
+//
+// COORDINATES: a stylised grid in "court units", x→right, y→down (near side at
+// the bottom). It is schematic, not to FIVB scale, so each diagram can choose a
+// width/height that reads well on a ~360px phone. The engine keeps the x and y
+// scale equal, so circles stay round and arrows keep their angle.
+window.RR = window.RR || {};
+
+RR.diagram = (function () {
+  "use strict";
+
+  // Target on-screen size budget (px). We fit the spec's unit grid inside this
+  // box at a single shared scale, so tall (full-court) diagrams stay phone-sized.
+  var MAX_W = 300;
+  var MAX_H = 380;
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  // Serialise an attribute map into a string. Numbers are rounded to 0.1px so the
+  // markup stays small and stable.
+  function attrs(map) {
+    var out = "";
+    for (var k in map) {
+      if (!map.hasOwnProperty(k) || map[k] == null) continue;
+      var v = map[k];
+      if (typeof v === "number") v = Math.round(v * 10) / 10;
+      out += " " + k + '="' + esc(v) + '"';
+    }
+    return out;
+  }
+  function el(tag, map, inner) {
+    return "<" + tag + attrs(map) + ">" + (inner || "") + "</" + tag + ">";
+  }
+  function selfEl(tag, map) { return "<" + tag + attrs(map) + "/>"; }
+
+  // ---- The single arrowhead marker set, shared by every path ----------------
+  function defs() {
+    function marker(id, cls) {
+      return el("marker", {
+        id: id, viewBox: "0 0 10 10", refX: 8, refY: 5,
+        markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse"
+      }, selfEl("path", { d: "M0 0L10 5L0 10z", class: cls }));
+    }
+    return el("defs", {},
+      marker("dgm-arrow-ball", "dgm-arrowhead dgm-arrowhead--ball") +
+      marker("dgm-arrow-move", "dgm-arrowhead dgm-arrowhead--move") +
+      marker("dgm-arrow-serve", "dgm-arrowhead dgm-arrowhead--serve"));
+  }
+
+  // ---- A small volleyball glyph (the app motif) for "ball" markers ----------
+  function ballGlyph(cx, cy, r) {
+    return el("g", { class: "dgm-ball", transform: "translate(" + r2(cx) + " " + r2(cy) + ")" }, [
+      selfEl("circle", { r: r, class: "dgm-ball__face" }),
+      selfEl("path", { class: "dgm-ball__seam", d: "M" + (-r) + " " + (-r * 0.2) + "q" + r + " " + (r * 0.6) + " " + (2 * r) + " 0" }),
+      selfEl("path", { class: "dgm-ball__seam", d: "M0 " + (-r) + "q" + (r * 0.5) + " " + r + " 0 " + (2 * r) })
+    ].join(""));
+  }
+  function r2(n) { return Math.round(n * 10) / 10; }
+
+  // ---- Build the SVG markup string from a spec ------------------------------
+  function svgMarkup(spec) {
+    var w = spec.w || 9, hUnits = spec.h || 12;
+    // One shared scale that fits the unit grid inside the screen budget.
+    var scale = Math.min(MAX_W / w, MAX_H / hUnits);
+    var PAD = 16;
+    var pw = w * scale + PAD * 2;
+    var ph = hUnits * scale + PAD * 2;
+    function px(x) { return PAD + x * scale; }
+    function py(y) { return PAD + y * scale; }
+    var pieces = [defs()];
+
+    // Court rectangles (one or many). Default: the whole grid is the court.
+    var courts = spec.court || [{ x: 0, y: 0, w: w, h: hUnits }];
+    if (!Array.isArray(courts)) courts = [courts];
+    courts.forEach(function (c) {
+      pieces.push(selfEl("rect", {
+        x: px(c.x), y: py(c.y), width: c.w * scale, height: c.h * scale,
+        rx: 4, class: "dgm-court"
+      }));
+    });
+
+    // Shaded target / good / avoid zones (carry a label).
+    (spec.zones || []).forEach(function (z) {
+      pieces.push(selfEl("rect", {
+        x: px(z.x), y: py(z.y), width: z.w * scale, height: z.h * scale,
+        rx: 3, class: "dgm-zone dgm-zone--" + (z.tone || "target")
+      }));
+      if (z.label) {
+        pieces.push(el("text", {
+          x: px(z.x + z.w / 2), y: py(z.y + z.h / 2),
+          class: "dgm-zonelabel", "text-anchor": "middle", "dominant-baseline": "central"
+        }, esc(z.label)));
+      }
+    });
+
+    // Net (a thick dashed line with end posts) + 3m / attack lines.
+    if (spec.net != null) {
+      pieces.push(selfEl("line", {
+        x1: px(0), y1: py(spec.net), x2: px(w), y2: py(spec.net), class: "dgm-net"
+      }));
+      pieces.push(selfEl("circle", { cx: px(0), cy: py(spec.net), r: 3.2, class: "dgm-post" }));
+      pieces.push(selfEl("circle", { cx: px(w), cy: py(spec.net), r: 3.2, class: "dgm-post" }));
+    }
+    (spec.lines || []).forEach(function (ln) {
+      if (ln.y != null) pieces.push(selfEl("line", {
+        x1: px(0), y1: py(ln.y), x2: px(w), y2: py(ln.y), class: "dgm-line"
+      }));
+      if (ln.x != null) pieces.push(selfEl("line", {
+        x1: px(ln.x), y1: py(0), x2: px(ln.x), y2: py(hUnits), class: "dgm-line"
+      }));
+    });
+
+    // Paths: ball flight (solid), movement (dashed), serve (solid accent).
+    (spec.paths || []).forEach(function (p) {
+      var k = p.kind || "ball";
+      var a = p.from, b = p.to;
+      var d;
+      if (p.curve) {
+        // A simple quadratic bow so two arrows between the same spots don't overlap.
+        var mx = (a[0] + b[0]) / 2 + (p.curve) * (b[1] - a[1]) * 0.4;
+        var my = (a[1] + b[1]) / 2 - (p.curve) * (b[0] - a[0]) * 0.4;
+        d = "M" + px(a[0]) + " " + py(a[1]) + "Q" + px(mx) + " " + py(my) +
+            " " + px(b[0]) + " " + py(b[1]);
+      } else {
+        d = "M" + px(a[0]) + " " + py(a[1]) + "L" + px(b[0]) + " " + py(b[1]);
+      }
+      pieces.push(selfEl("path", {
+        d: d, class: "dgm-path dgm-path--" + k, "marker-end": "url(#dgm-arrow-" + k + ")"
+      }));
+      if (p.label) {
+        var lx = (a[0] + b[0]) / 2, ly = (a[1] + b[1]) / 2;
+        pieces.push(el("text", {
+          x: px(lx), y: py(ly) - 4, class: "dgm-pathlabel", "text-anchor": "middle"
+        }, esc(p.label)));
+      }
+    });
+
+    // Cones (small triangles).
+    (spec.cones || []).forEach(function (c) {
+      var s = scale * 0.34;
+      var cx = px(c.x), cy = py(c.y);
+      pieces.push(selfEl("path", {
+        d: "M" + cx + " " + (cy - s) + "L" + (cx + s) + " " + (cy + s) +
+           "L" + (cx - s) + " " + (cy + s) + "z", class: "dgm-cone"
+      }));
+    });
+
+    // Loose balls drawn as the volleyball glyph.
+    (spec.balls || []).forEach(function (bl) {
+      pieces.push(ballGlyph(px(bl.x), py(bl.y), Math.max(6, scale * 0.32)));
+    });
+
+    // Players: a coloured disc + short label, optional tiny role note beneath.
+    var r = Math.max(11, scale * 0.42);
+    (spec.players || []).forEach(function (pl) {
+      var cx = px(pl.x), cy = py(pl.y);
+      var team = pl.team || "n";
+      pieces.push(selfEl("circle", { cx: cx, cy: cy, r: r, class: "dgm-player dgm-player--" + team }));
+      if (pl.label != null && pl.label !== "") {
+        pieces.push(el("text", {
+          x: cx, y: cy, class: "dgm-playerlabel dgm-playerlabel--" + team,
+          "text-anchor": "middle", "dominant-baseline": "central"
+        }, esc(pl.label)));
+      }
+      if (pl.note) {
+        pieces.push(el("text", {
+          x: cx, y: cy + r + 9, class: "dgm-playernote", "text-anchor": "middle"
+        }, esc(pl.note)));
+      }
+    });
+
+    return el("svg", {
+      viewBox: "0 0 " + r2(pw) + " " + r2(ph),
+      class: "dgm-svg", "aria-hidden": "true", focusable: "false",
+      preserveAspectRatio: "xMidYMid meet"
+    }, pieces.join(""));
+  }
+
+  // ---- Public: build a <figure> node from a spec ----------------------------
+  // The figure carries role="img" + the caption as its accessible name, so a
+  // screen reader gets the same meaning the sighted coach reads in the caption.
+  function figure(spec) {
+    if (!spec) return null;
+    var fig = document.createElement("figure");
+    fig.className = "dgm";
+    fig.setAttribute("role", "img");
+    if (spec.caption) fig.setAttribute("aria-label", spec.caption);
+    var holder = document.createElement("div");
+    holder.className = "dgm__canvas";
+    holder.innerHTML = svgMarkup(spec);
+    fig.appendChild(holder);
+    if (spec.legend && spec.legend.length) fig.appendChild(legend(spec.legend));
+    if (spec.caption) {
+      var cap = document.createElement("figcaption");
+      cap.className = "dgm__cap";
+      cap.textContent = spec.caption;
+      fig.appendChild(cap);
+    }
+    return fig;
+  }
+
+  // A small key (swatch + word) for diagrams whose colours carry meaning.
+  function legend(items) {
+    var wrap = document.createElement("ul");
+    wrap.className = "dgm__legend";
+    items.forEach(function (it) {
+      var li = document.createElement("li");
+      li.className = "dgm__legend-item";
+      var dot = document.createElement("span");
+      dot.className = "dgm__swatch dgm__swatch--" + (it.tone || "n");
+      dot.setAttribute("aria-hidden", "true");
+      li.appendChild(dot);
+      li.appendChild(document.createTextNode(it.text));
+      wrap.appendChild(li);
+    });
+    return wrap;
+  }
+
+  return { figure: figure, svgMarkup: svgMarkup };
+})();

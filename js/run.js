@@ -230,9 +230,15 @@ RR.run = (function () {
       h("div", { class: "rr-run__adjustrow" }, [minus, plus])
     ]);
 
-    // --- Setup / steps / cues ----------------------------------------------
+    // --- Setup / organization / diagram / steps / cues ---------------------
+    // In the loud gym, the "how it's organized" line and the court diagram are
+    // exactly what a coach needs at a glance, so they sit right under Setup.
+    var orgList = RR.ui.organizeList ? RR.ui.organizeList(drill) : null;
+    var fig = RR.ui.diagramFigure ? RR.ui.diagramFigure(drill) : null;
     var detail = h("div", { class: "rr-run__detail" }, [
       section("Setup", h("p", { class: "rr-run__text", text: drill.setup || "—" })),
+      orgList ? section("How it's organized", orgList) : null,
+      fig ? section("On the court", fig) : null,
       section("Run it", h("ol", { class: "rr-run__steps" },
         (drill.steps || []).map(function (s) { return h("li", { text: s }); }))),
       section("Say this", h("ul", { class: "rr-run__cues" },
