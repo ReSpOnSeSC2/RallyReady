@@ -1,38 +1,69 @@
 /* RallyReady — design system + base styles.
-   "Bright & energetic" youth-sports look, refined with Impeccable's design
-   guidance: a two-layer token system (brand primitives -> semantic tokens),
-   tinted neutrals (no pure gray/black), OKLCH dark-surface scale, accessible
-   contrast in both themes, and hover effects only on hover-capable devices.
+   "Courtside": an athletic-editorial look. A confident grotesque display face
+   (Bricolage Grotesque) over a clean humanist body (Hanken Grotesk), ink
+   outlines, and a tactile HARD offset shadow (no blur) so cards and buttons read
+   as physical playbook stickers — a deliberate point of view, not a default
+   template. Built on a two-layer token system (brand primitives -> semantic
+   tokens), tinted neutrals (no pure gray/black), an OKLCH dark-surface scale,
+   accessible contrast in both themes, and hover effects only on hover devices.
 
    Theming: <html data-theme="light|dark"> is set before paint by a tiny inline
    script (see index.html) and kept in sync by js/app.js. Only the SEMANTIC
    layer is redefined for dark mode; brand primitives never change. */
+
+/* ---------- Type: self-hosted variable fonts (offline-first) ----------------
+   Bricolage Grotesque = a contemporary, crafted grotesque used for the display
+   layer (wordmark, headings, big numbers); Hanken Grotesk = a clean humanist
+   grotesque for body + UI. Both are single variable woff2 files in /fonts, so
+   they're precached by the service worker and the app stays fully offline.
+   font-display:swap means text paints immediately in the system fallback and
+   upgrades when the face arrives — no blank text, no layout dependence. */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("../fonts/bricolage-grotesque.var.woff2") format("woff2");
+  font-weight: 200 800;
+  font-stretch: 75% 100%;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  src: url("../fonts/hanken-grotesk.var.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   /* ---------- Brand primitives (exact values from the brief; never themed) -- */
   --coral: #FF6B35;   /* primary actions / energy */
   --teal:  #00C2A8;   /* secondary / success */
   --sun:   #FFD23F;   /* accent / highlights */
-  --navy:  #1B2A4A;   /* main text */
-  --cloud: #FFF9F4;   /* app background */
+  --navy:  #1B2A4A;   /* legacy ink (kept for fixed-hue badge text that needs AA) */
+  --ink:   #16181D;   /* near-black structural line + tactile shadow colour */
+  --cloud: #F2ECE1;   /* warm newsprint app background */
   --white: #FFFFFF;   /* cards */
-  --slate: #646E7E;   /* muted text — navy-tinted; clears 4.5:1 on bg + both surfaces */
+  --slate: #5E6675;   /* muted text — navy-tinted; clears 4.5:1 on bg + both surfaces */
   --i-easy:  #00C2A8;
   --i-mid:   #FFD23F;
   --i-hard:  #FF6B35;
   --i-taper: #8C7AE6;
 
-  /* ---------- Shape / depth / spacing / type / layout (theme-independent) --- */
-  --radius-card: 16px;
-  --radius-input: 12px;
+  /* ---------- Shape / depth / spacing / type / layout (theme-independent) ---
+     "Courtside": an athletic-editorial system. Confident grotesque display type,
+     ink outlines, and a tactile HARD offset shadow (no blur) so cards/buttons read
+     as physical playbook stickers rather than soft generic SaaS panels. */
+  --radius-card: 14px;
+  --radius-input: 10px;
   --radius-pill: 999px;
+  --border-w: 2px;                 /* structural outline weight (the brutalist line) */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;
   --sp-5: 24px;
   --sp-6: 32px;
-  --fs-title: 30px;   /* modular-ish scale (~1.25 steps) for clear hierarchy */
+  --fs-title: 32px;   /* modular-ish scale (~1.25 steps) for clear hierarchy */
   --fs-h2: 24px;
   --fs-h3: 20px;
   --fs-body: 16px;
@@ -42,42 +73,48 @@
   --appbar-h: 56px;
   --tabbar-h: 64px;
   --tap-min: 48px;
-  --font-stack: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Self-hosted variable fonts (see @font-face above) with a full system fallback,
+     so the app still renders instantly and works fully offline if a face is slow. */
+  --font-stack: "Hanken Grotesk", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Bricolage Grotesque", "Hanken Grotesk", -apple-system, "Segoe UI", Roboto, sans-serif;
   --z-sticky: 200;
   --ease: cubic-bezier(0.2, 0, 0, 1);   /* smooth; deliberately no bounce */
 
   /* ---------- Semantic tokens — LIGHT (default) ---------------------------- */
   --bg: var(--cloud);
   --surface: var(--white);
-  --surface-2: #FFF3EA;            /* warm-tinted raised fill */
-  --text: var(--navy);
+  --surface-2: #F7F0E6;            /* warm-tinted raised fill */
+  --text: var(--ink);
   --text-muted: var(--slate);      /* ≥4.7:1 on bg, white, and surface-2 — passes AA */
-  --border: #EFE7DF;               /* warm hairline, not pure gray */
-  --field-border: #DFD6CC;
+  --line: var(--ink);              /* structural 2px outlines on cards/inputs/buttons */
+  --border: #D9CDBC;               /* warm internal hairline (row dividers, sub-cards) */
+  --field-border: var(--ink);      /* form controls wear the bold outline */
   --primary: var(--coral);
-  --on-primary: var(--navy);       /* navy on coral ≈ 5:1 */
-  --primary-tint: #FFE9DF;         /* solid light coral (avoids alpha) */
+  --on-primary: var(--ink);        /* near-black on coral ≈ 5.6:1 */
+  --primary-tint: #FFE3D5;         /* solid light coral (avoids alpha) */
   --accent: var(--teal);
-  --focus: #E2571C;                /* deepened coral, ≥ 3:1 on light bg (rings/UI) */
+  --focus: #D24E12;                /* deepened coral, ≥ 3:1 on light bg (rings/UI) */
   --link: #B8420C;                 /* deeper coral for TEXT links: ≥ 4.5:1 on every light surface */
-  --shadow: 0 6px 20px rgba(27, 42, 74, 0.08);
-  --shadow-bar: 0 -4px 16px rgba(27, 42, 74, 0.08);
+  --shadow-color: var(--ink);
+  --shadow: 3px 3px 0 var(--shadow-color);   /* hard offset — the signature depth */
+  --shadow-bar: none;
+  --dot: rgba(22, 24, 29, 0.07);   /* desktop backdrop dot-grid ink */
 
-  --appbar-bg: linear-gradient(135deg, #FF7A45, var(--coral));
-  --appbar-fg: var(--navy);
-  --overlay: rgba(27, 42, 74, 0.10);   /* interactive hover wash (alpha ok) */
+  --appbar-bg: var(--coral);       /* solid, flat, branded band (no gradient) */
+  --appbar-fg: var(--ink);
+  --overlay: rgba(22, 24, 29, 0.10);   /* interactive hover wash (alpha ok) */
   --ball-fill: var(--white);
-  --ball-stroke: var(--navy);
+  --ball-stroke: var(--ink);
 
   --tab-surface: var(--white);
   --tab-inactive: var(--slate);
-  --tab-active: #E2571C;           /* deeper coral: clears 3:1 on white */
-  --tab-active-label: var(--navy);
+  --tab-active: var(--ink);        /* active icon is ink on a coral-tint pill marker */
+  --tab-active-label: var(--ink);
 
-  /* Desktop page backdrop behind the centered app column. A small tone step down
-     from --bg (built in OKLCH) so the near-white column reads as elevated; the
-     hairline --border does the rest. Light only differs from --bg on desktop. */
-  --page-bg: oklch(95% 0.013 72);
+  /* Desktop page backdrop behind the centered app column: a warm tone step down
+     from --bg plus a faint ink dot-grid (see the desktop frame block), so the
+     column reads as a framed "playbook" sitting on paper, not floating in a void. */
+  --page-bg: #EBE3D5;
 }
 
 /* ---------- Semantic tokens — DARK ----------------------------------------
@@ -86,31 +123,36 @@
    brand's navy hue, accents are slightly softened, and text is a near-white
    (never pure white). All values are OKLCH for perceptually even steps. */
 :root[data-theme="dark"] {
-  --bg: oklch(16% 0.020 264);
-  --surface: oklch(21% 0.024 264);
-  --surface-2: oklch(26% 0.028 264);
+  --bg: oklch(17% 0.020 264);
+  --surface: oklch(22% 0.024 264);
+  --surface-2: oklch(27% 0.028 264);
   --text: oklch(95% 0.008 264);
   --text-muted: oklch(75% 0.020 264);
-  --border: oklch(33% 0.030 264);
-  --field-border: oklch(40% 0.030 264);
+  --line: oklch(58% 0.030 264);         /* a visible mid line carries the outline in dark */
+  --border: oklch(34% 0.030 264);
+  --field-border: oklch(58% 0.030 264);
   --primary: oklch(74% 0.160 42);       /* softened coral */
-  --on-primary: oklch(20% 0.030 264);
-  --primary-tint: oklch(31% 0.060 42);
+  --on-primary: oklch(18% 0.030 264);
+  --primary-tint: oklch(32% 0.070 42);
   --accent: oklch(78% 0.120 182);
   --focus: oklch(80% 0.150 45);         /* light coral, ≥ 3:1 on dark */
   --link: oklch(80% 0.150 45);          /* same light coral: high-contrast text links on dark surfaces */
-  --shadow: none;
+  /* Neo-brutalist depth survives in dark via a near-black hard offset (darker than
+     every surface) instead of a blurred drop shadow. */
+  --shadow-color: oklch(0% 0 0);
+  --shadow: 3px 3px 0 var(--shadow-color);
   --shadow-bar: none;
+  --dot: rgba(255, 255, 255, 0.05);
 
-  --appbar-bg: oklch(20% 0.025 264);
+  --appbar-bg: oklch(21% 0.025 264);
   --appbar-fg: var(--text);
   --overlay: rgba(255, 255, 255, 0.10);
   --ball-fill: oklch(74% 0.160 42);     /* coral ball pops on the dark header */
-  --ball-stroke: oklch(20% 0.030 264);
+  --ball-stroke: oklch(18% 0.030 264);
 
-  --tab-surface: oklch(19% 0.022 264);
+  --tab-surface: oklch(20% 0.022 264);
   --tab-inactive: oklch(74% 0.020 264);
-  --tab-active: oklch(76% 0.160 42);
+  --tab-active: var(--text);
   --tab-active-label: var(--text);
 
   /* Darker than --bg so the app column floats above the page on desktop (in dark,
@@ -150,9 +192,10 @@ img, svg { display: block; }
 /* --------------------------------------------------------------- Headings -- */
 h1, h2, h3 {
   margin: 0;
+  font-family: var(--font-display);
   font-weight: 800;
-  letter-spacing: -0.015em;
-  line-height: 1.2;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 h1 { font-size: var(--fs-title); }
 h2 { font-size: var(--fs-h2); }
@@ -176,18 +219,20 @@ h3 { font-size: var(--fs-h3); }
   padding: var(--sp-2) var(--sp-4);
   padding-top: calc(var(--sp-2) + env(safe-area-inset-top));
   background: var(--appbar-bg);
-  box-shadow: var(--shadow);
-  transition: background 0.2s var(--ease);
+  border-bottom: var(--border-w) solid var(--line);
+  transition: background 0.2s var(--ease), border-color 0.2s var(--ease);
 }
 
 .brand { display: flex; align-items: center; gap: var(--sp-2); }
-.brand__ball .ball-face { fill: var(--ball-fill); stroke: var(--ball-stroke); stroke-width: 2; }
-.brand__ball .ball-seam { fill: none; stroke: var(--ball-stroke); stroke-width: 2; stroke-linecap: round; }
+.brand__ball { transform: rotate(-8deg); }   /* a touch of athletic motion */
+.brand__ball .ball-face { fill: var(--ball-fill); stroke: var(--ball-stroke); stroke-width: 2.5; }
+.brand__ball .ball-seam { fill: none; stroke: var(--ball-stroke); stroke-width: 2.5; stroke-linecap: round; }
 .brand__name {
-  font-size: var(--fs-h2);
+  font-family: var(--font-display);
+  font-size: 25px;
   font-weight: 800;
   color: var(--appbar-fg);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
 }
 
 /* Theme toggle — sits at the far right of the header. */
@@ -225,14 +270,30 @@ h3 { font-size: var(--fs-h3); }
 }
 
 .screen-head { margin-bottom: var(--sp-4); }
-.screen-title { font-size: var(--fs-title); }
+/* Every screen title wears a coral "spine" — a small editorial brand signature
+   that ties the screens together and reads as deliberate art-direction. */
+.screen-title {
+  position: relative;
+  font-size: var(--fs-title);
+  padding-left: 16px;
+}
+.screen-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.14em;
+  bottom: 0.14em;
+  width: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+}
 .screen-title:focus { outline: none; }   /* programmatic focus, no visible ring */
 .screen-sub { color: var(--text-muted); margin-top: var(--sp-1); }
 
 /* ---------------------------------------------------------------- Cards --- */
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: var(--border-w) solid var(--line);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow);
   padding: var(--sp-5);
@@ -271,26 +332,36 @@ h3 { font-size: var(--fs-h3); }
   gap: var(--sp-2);
   min-height: var(--tap-min);
   padding: 0 var(--sp-5);
-  border: 2px solid transparent;
+  border: var(--border-w) solid transparent;
   border-radius: var(--radius-pill);
+  font-family: var(--font-display);
   font-size: var(--fs-body);
   font-weight: 700;
+  letter-spacing: -0.01em;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 0.06s var(--ease), filter 0.15s var(--ease), background 0.15s var(--ease);
+  transition: transform 0.08s var(--ease), box-shadow 0.08s var(--ease), filter 0.15s var(--ease), background 0.15s var(--ease);
 }
 .btn:active { transform: translateY(1px); }
 
+/* Primary + ghost are the tactile pair: an ink outline and a hard offset shadow
+   that COLLAPSES on press (the button physically pushes into the page). */
 .btn-primary {
   background: var(--primary);
   color: var(--on-primary);
+  border-color: var(--line);
   box-shadow: var(--shadow);
 }
 .btn-ghost {
   background: var(--surface);
   color: var(--text);
-  border-color: var(--field-border);
+  border-color: var(--line);
   box-shadow: var(--shadow);
+}
+.btn-primary:active,
+.btn-ghost:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--shadow-color);
 }
 .btn-block { width: 100%; }
 
@@ -300,6 +371,7 @@ h3 { font-size: var(--fs-h3); }
   align-items: center;
   gap: var(--sp-1);
   padding: var(--sp-1) var(--sp-3);
+  border: 2px solid var(--line);
   border-radius: var(--radius-pill);
   background: var(--primary-tint);
   color: var(--text);
@@ -310,7 +382,8 @@ h3 { font-size: var(--fs-h3); }
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 2px 10px;
+  border: 1.5px solid var(--line);
   border-radius: var(--radius-pill);
   background: var(--surface-2);
   color: var(--text);
@@ -319,16 +392,17 @@ h3 { font-size: var(--fs-h3); }
   line-height: 1.4;
 }
 /* Intensity badges keep their fixed brand hues in both themes (with navy text,
-   which clears AA on each), so a given intensity always reads the same color. */
-.badge--easy  { background: var(--i-easy);  color: var(--navy); }
-.badge--mid   { background: var(--i-mid);   color: var(--navy); }
-.badge--hard  { background: var(--i-hard);  color: var(--navy); }
-.badge--taper { background: #9D8DEA; color: var(--navy); } /* lightened from --i-taper so navy text clears 4.5:1 */
+   which clears AA on each), so a given intensity always reads the same color.
+   The ink hairline gives them a crisp "sticker" edge on any surface. */
+.badge--easy  { background: var(--i-easy);  color: var(--navy); border-color: var(--ink); }
+.badge--mid   { background: var(--i-mid);   color: var(--navy); border-color: var(--ink); }
+.badge--hard  { background: var(--i-hard);  color: var(--navy); border-color: var(--ink); }
+.badge--taper { background: #9D8DEA; color: var(--navy); border-color: var(--ink); } /* lightened from --i-taper so navy text clears 4.5:1 */
 
 /* --------------------------------------------------------------- List rows */
 .list {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: var(--border-w) solid var(--line);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -422,7 +496,7 @@ textarea.input {
   padding-bottom: env(safe-area-inset-bottom);
   display: flex;
   background: var(--tab-surface);
-  border-top: 1px solid var(--border);
+  border-top: var(--border-w) solid var(--line);
   box-shadow: var(--shadow-bar);
   z-index: var(--z-sticky);
 }
@@ -433,7 +507,7 @@ textarea.input {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   min-height: var(--tap-min);
   text-decoration: none;
   color: var(--tab-inactive);
@@ -441,19 +515,30 @@ textarea.input {
   font-weight: 600;
   transition: color 0.18s var(--ease);   /* smooth fade between active/inactive */
 }
-.tabbar a svg { width: 24px; height: 24px; }
+/* The icon sits inside a rounded "key" that fills with a coral-tint, ink-outlined
+   pill only when the tab is active — a clear, tactile bottom-nav selection. */
+.tabbar a svg {
+  width: 24px;
+  height: 24px;
+  padding: 5px 14px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  box-sizing: content-box;
+  transition: background 0.18s var(--ease), border-color 0.18s var(--ease);
+}
 .tab-label { line-height: 1; }
 
 .tabbar a.is-active { color: var(--tab-active); }
+.tabbar a.is-active svg { background: var(--primary-tint); border-color: var(--line); }
 .tabbar a.is-active .tab-label { color: var(--tab-active-label); font-weight: 800; }
 .tabbar a.is-active::before {
   content: "";
   position: absolute;
-  top: 0;
-  width: 28px;
-  height: 3px;
-  border-radius: var(--radius-pill);
-  background: var(--tab-active);
+  top: -2px;
+  width: 36px;
+  height: 4px;
+  border-radius: 0 0 var(--radius-pill) var(--radius-pill);
+  background: var(--primary);
 }
 
 /* ------------------------------------------------- Hover (pointer devices) -
@@ -608,12 +693,19 @@ textarea.input {
    and tab bar (fixed) already share the same max-width + centering, so the whole
    column lines up. */
 @media (min-width: 600px) {
-  body { background: var(--page-bg); }
+  /* Paper backdrop + a faint ink dot-grid: the column now sits ON something
+     (a coach's grid pad) instead of floating in an empty void. */
+  body {
+    background-color: var(--page-bg);
+    background-image: radial-gradient(var(--dot) 1.6px, transparent 1.6px);
+    background-size: 24px 24px;
+    background-position: 12px 12px;
+  }
   .appbar,
   #screen,
   .tabbar {
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
+    border-left: var(--border-w) solid var(--line);
+    border-right: var(--border-w) solid var(--line);
   }
   .appbar {
     border-top-left-radius: var(--radius-card);
