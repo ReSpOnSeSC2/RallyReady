@@ -14,6 +14,12 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
+  <!-- Self-hosted variable display + body fonts. Preloaded so the brand type paints
+       fast; both are same-origin and precached by the service worker (offline-first).
+       crossorigin is required because font fetches are always CORS-mode. -->
+  <link rel="preload" href="fonts/bricolage-grotesque.var.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="fonts/hanken-grotesk.var.woff2" as="font" type="font/woff2" crossorigin />
+
   <!-- Pre-paint theme bootstrap: set the effective theme on <html> before the
        stylesheet applies, so there is no flash of the wrong theme on load.
        Reads the saved preference from the same localStorage key as RR.state. -->
