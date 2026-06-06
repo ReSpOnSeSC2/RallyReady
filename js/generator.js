@@ -297,6 +297,28 @@ RR.generator = (function () {
     return pick;
   }
 
+  // Gently pace the session to the group's age — a soft tilt, never a hard rule.
+  // Younger groups (FUNdamentals first) get shorter skill blocks and a little
+  // more warm-up and play, so nobody stands still and no single drill drags;
+  // older groups get longer skill blocks for the focused, refine-the-rep work
+  // that rewards their longer attention span. The coach still owns the total
+  // session length — this only nudges how it's divided. Weights are relative, so
+  // allocateMinutes re-normalises and the total is unchanged.
+  function applyAgeTilt(reqs, band) {
+    if (!band || typeof band.min !== "number") return reqs;
+    // Anchor on the youngest in the group (pace for them): ~8 -> -1 (youngest),
+    // ~13 -> 0 (neutral), ~18 -> +1 (oldest). Clamped and deliberately coarse.
+    var t = Math.max(-1, Math.min(1, (band.min - 13) / 5));
+    if (!t) return reqs;
+    reqs.forEach(function (r) {
+      if (r.kind === "skill") r.weight *= (1 + 0.30 * t);
+      else if (r.kind === "game") r.weight *= (1 - 0.30 * t);
+      else if (r.kind === "warmup") r.weight *= (1 - 0.15 * t);
+      // Cool-down / recap time doesn't really scale with age — leave it be.
+    });
+    return reqs;
+  }
+
   // Build the ordered list of block REQUESTS (role, kind, skill, difficulty
   // window, relative weight, flags) for a session. Minutes are assigned later.
   function buildBlockRequests(ctx) {
@@ -385,7 +407,7 @@ RR.generator = (function () {
       }
       reqs.push(cooldown);
     }
-    return reqs;
+    return applyAgeTilt(reqs, ctx.band);
   }
 
   // ======================================================================= //
