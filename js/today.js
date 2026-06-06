@@ -277,12 +277,14 @@ RR.today = (function () {
       var planned = getPlanned(team.name, iso, slot);
       if (!isCamp && !currentCompleted && !planned && !P.isPracticeDay(plan, iso)) {
         currentSession = null; editMode = false;
+        if (RR.share && RR.share.setPrintable) RR.share.setPrintable(null);
         bodyHost.appendChild(buildRestDay(iso));
         return;
       }
 
       currentSession = currentCompleted ? completion.session : resolveSession(iso, slot);
       if (!currentSession) {
+        if (RR.share && RR.share.setPrintable) RR.share.setPrintable(null);
         bodyHost.appendChild(h("section", { class: "card empty" }, [
           h("p", { class: "muted", text: "No practice could be generated for this date." })
         ]));
@@ -308,6 +310,10 @@ RR.today = (function () {
       gearNode = buildGear(currentSession);
       bodyHost.appendChild(gearNode);
       bodyHost.appendChild(buildActions(currentCompleted, completion));
+
+      // Keep a print-ready carry sheet resident so any print path (the button,
+      // Ctrl/Cmd+P, or a phone's "Save as PDF") produces this practice.
+      if (RR.share && RR.share.setPrintable) RR.share.setPrintable(currentSession, team);
     }
 
     // Game-schedule banner (season).

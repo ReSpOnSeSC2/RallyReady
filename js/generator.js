@@ -228,11 +228,24 @@ RR.generator = (function () {
     });
   }
 
-  // Weight a single drill for the seeded weighted pick. Lightly boosts the team's
-  // emphasis skills, the campFriendly drills on camp blocks, the game framing the
-  // phase wants (cooperative vs. competitive), and staples on anchor blocks.
+  // A global prior for how proven/popular and high-transfer a drill is. A drill
+  // may carry an explicit `value` (1 = niche … 5 = a core drill every coach runs);
+  // otherwise the curated `isStaple` flag stands in, since staples ARE the popular,
+  // foundational drills. Centred at 3 so it gently favours the high-value, high-
+  // improvement drills everywhere (not just warm-ups) without crowding out variety
+  // — the weighted shuffle still rotates the rest in over successive sessions.
+  function valueWeight(drill) {
+    var v = (typeof drill.value === "number") ? drill.value : (drill.isStaple ? 4 : 3);
+    if (v < 1) v = 1; else if (v > 5) v = 5;
+    return 1 + 0.22 * (v - 3);   // 2->0.78  3->1.0  4->1.22  5->1.44
+  }
+
+  // Weight a single drill for the seeded weighted pick. Starts from how popular /
+  // helpful-for-improvement the drill is (valueWeight), then lightly boosts the
+  // team's emphasis skills, the campFriendly drills on camp blocks, the game
+  // framing the phase wants (cooperative vs. competitive), and staples on anchors.
   function weightFor(drill, req, ctx) {
-    var w = 1;
+    var w = valueWeight(drill);
     if (ctx.emphasis[drill.skill]) w *= 2.2;                 // coach emphasis (weighted strongly)
     if (ctx.favorites && ctx.favorites[drill.id]) w *= 1.5;  // a starred favorite
     if (req.campPrefer && drill.campFriendly) w *= 2.0;      // camp blocks
@@ -289,12 +302,39 @@ RR.generator = (function () {
   // Partner Passing family) recurs in MOST non-taper sessions for consistency,
   // otherwise a rotating complementary skill keeps things fresh.
   function complementarySkill(primary, phase, planRng) {
-    var wantAnchor = !phase.eases;                 // taper drops the anchor
-    if (wantAnchor && primary !== BALL_CONTROL && planRng() < 0.7) return BALL_CONTROL;
+    var working = !phase.eases;                    // taper drops the anchor (caller)
+    // Serve nearly every practice, like a real program: when serving isn't already
+    // the week's focus, make the complementary block a serving (serve & receive)
+    // block a good share of the time. Otherwise lean on the recurring ball-control
+    // anchor (pepper / partner passing) that pairs with almost any focus.
+    if (working && primary !== "Serving" && planRng() < 0.4) return "Serving";
+    if (working && primary !== BALL_CONTROL && planRng() < 0.7) return BALL_CONTROL;
     var opts = COMPLEMENTS[primary] || ["Passing", "Defense", "Setting"];
     var pick = opts[Math.floor(planRng() * opts.length) % opts.length];
     if (pick === primary) pick = opts[(opts.indexOf(pick) + 1) % opts.length];
     return pick;
+  }
+
+  // Gently pace the session to the group's age — a soft tilt, never a hard rule.
+  // Younger groups (FUNdamentals first) get shorter skill blocks and a little
+  // more warm-up and play, so nobody stands still and no single drill drags;
+  // older groups get longer skill blocks for the focused, refine-the-rep work
+  // that rewards their longer attention span. The coach still owns the total
+  // session length — this only nudges how it's divided. Weights are relative, so
+  // allocateMinutes re-normalises and the total is unchanged.
+  function applyAgeTilt(reqs, band) {
+    if (!band || typeof band.min !== "number") return reqs;
+    // Anchor on the youngest in the group (pace for them): ~8 -> -1 (youngest),
+    // ~13 -> 0 (neutral), ~18 -> +1 (oldest). Clamped and deliberately coarse.
+    var t = Math.max(-1, Math.min(1, (band.min - 13) / 5));
+    if (!t) return reqs;
+    reqs.forEach(function (r) {
+      if (r.kind === "skill") r.weight *= (1 + 0.30 * t);
+      else if (r.kind === "game") r.weight *= (1 - 0.30 * t);
+      else if (r.kind === "warmup") r.weight *= (1 - 0.15 * t);
+      // Cool-down / recap time doesn't really scale with age — leave it be.
+    });
+    return reqs;
   }
 
   // Build the ordered list of block REQUESTS (role, kind, skill, difficulty
@@ -372,7 +412,9 @@ RR.generator = (function () {
           dMin: dMin, dMax: dMax, weight: 0.20,
           why: bSkill === BALL_CONTROL
             ? "A ball-control anchor (Pepper / partner passing) that recurs each week — rotated for freshness."
-            : "A complementary " + bSkill + " block that rounds out the session."
+            : bSkill === "Serving"
+              ? "Serving reps — like a real program, get serves and serve-receive in nearly every practice."
+              : "A complementary " + bSkill + " block that rounds out the session."
         });
         var competitive = phase.key === "peak" || phase.key === "inseason";
         reqs.push({
@@ -385,7 +427,7 @@ RR.generator = (function () {
       }
       reqs.push(cooldown);
     }
-    return reqs;
+    return applyAgeTilt(reqs, ctx.band);
   }
 
   // ======================================================================= //

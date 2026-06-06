@@ -41,35 +41,45 @@
 .games-editor { margin-top: var(--sp-2); }
 .games__empty { font-size: var(--fs-sm); margin: 0 0 var(--sp-3); }
 
-/* Each row is a self-contained card: a hairline divider and generous gaps keep
-   the date, the opponent, and the delete control clearly apart — never touching. */
+/* Each row is a self-contained block separated by a hairline divider. A grid —
+   not a wrapping flex row — guarantees the three controls never collide on
+   narrow phones: the date and the delete share the top line, the opponent gets
+   its own full-width line (so "vs. (optional)" always reads in full), and the
+   resolved date sits below. The .games__row-fields wrapper is display:contents
+   so its children place directly onto this grid. */
 .games__row {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--sp-3);
+  display: grid;
+  grid-template-columns: 1fr var(--tap-min);
+  grid-template-areas:
+    "date del"
+    "opp  opp"
+    "when when";
+  column-gap: var(--sp-3);
+  row-gap: var(--sp-3);
+  align-items: end;
   padding: var(--sp-3) 0;
   border-top: 1px solid var(--border);
-  flex-wrap: wrap;
 }
 .games__row:first-child { border-top: 0; padding-top: 0; }
 
-.games__row-fields { display: flex; gap: var(--sp-3); flex: 1; min-width: 0; }
+.games__row-fields { display: contents; }
 
 /* A labelled field: a small caption sits above each input. */
 .games__field { display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
-.games__field--date { flex: 0 0 auto; }
-.games__field--opp { flex: 1; min-width: 8rem; }
+.games__field--date { grid-area: date; }
+.games__field--opp { grid-area: opp; min-width: 0; }
 .games__label { font-size: var(--fs-xs); font-weight: 600; color: var(--text-muted); }
-.games__date { max-width: 10rem; }
-.games__opp { width: 100%; min-width: 8rem; }
+.games__date { width: 100%; min-width: 0; }
+.games__opp { width: 100%; min-width: 0; }
 
-/* Confirmed date drops to its own full-width line so it never crowds the row. */
-.games__when { font-size: var(--fs-sm); flex-basis: 100%; margin: 0; }
+/* Confirmed date sits on its own line so it never crowds the row. */
+.games__when { grid-area: when; font-size: var(--fs-sm); margin: 0; }
 
 /* A prominent delete: tinted fill + deep-coral glyph so it reads as a clear,
    destructive action rather than a muted afterthought. */
 .games__del {
-  flex: none; width: var(--tap-min); height: var(--tap-min);
+  grid-area: del; justify-self: end;
+  width: var(--tap-min); height: var(--tap-min);
   display: inline-flex; align-items: center; justify-content: center;
   border: 1px solid transparent; border-radius: var(--radius-input);
   background: var(--primary-tint); color: var(--link); cursor: pointer;
