@@ -134,7 +134,137 @@
 /* ======================================================================= */
 .lineup-body { display: flex; flex-direction: column; gap: var(--sp-4); }
 .lineup-court__fig { display: flex; justify-content: center; margin-top: var(--sp-2); }
+.lineup-court__hint { margin: var(--sp-1) 0 0; font-size: var(--fs-sm); }
+.lineup-slots__hint { margin: 0 0 var(--sp-3); font-size: var(--fs-sm); }
 .lineup-slot { margin-bottom: var(--sp-3); }
 .lineup-slot:last-child { margin-bottom: 0; }
 .lineup-tips .muted { margin: var(--sp-1) 0 0; }
 .lineup-clear { margin-top: 0; }
+
+/* Transparent hit-disc laid over each court zone — the tap target. */
+.lineup-zone {
+  fill: transparent;
+  pointer-events: all;
+  cursor: pointer;
+  stroke: transparent;
+  stroke-width: 2.5;
+  transition: stroke 120ms ease;
+}
+@media (hover: hover) {
+  .lineup-zone:hover { stroke: var(--coral); }
+}
+.lineup-zone:focus { outline: none; stroke: var(--coral); }
+.lineup-zone:focus-visible { outline: none; stroke: var(--coral); }
+@media (prefers-reduced-motion: reduce) { .lineup-zone { transition: none; } }
+
+/* ---- Zone player picker (modal) ---------------------------------------- */
+.lineup-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--sp-3);
+  background: rgba(0, 0, 0, 0.55);
+  animation: lineup-picker-fade 140ms ease;
+}
+.lineup-picker__panel {
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  animation: lineup-picker-rise 160ms ease;
+}
+@media (min-width: 560px) {
+  .lineup-picker { align-items: center; }
+}
+.lineup-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+.lineup-picker__title { margin: 0; font-size: var(--fs-h3); }
+.lineup-picker__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+@media (hover: hover) { .lineup-picker__close:hover { background: var(--surface-2); } }
+.lineup-picker__list {
+  overflow-y: auto;
+  padding: var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.lineup-picker__opt {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+@media (hover: hover) { .lineup-picker__opt:hover { background: var(--surface-2); } }
+.lineup-picker__opt:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.lineup-picker__opt.is-selected {
+  border-color: var(--coral);
+  background: var(--surface-2);
+}
+.lineup-picker__num {
+  flex: none;
+  min-width: 2.6em;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.lineup-picker__num--empty { min-width: 2.6em; }
+.lineup-picker__main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.lineup-picker__name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lineup-picker__sub { font-size: var(--fs-sm); color: var(--text-muted); }
+.lineup-picker__where {
+  flex: none;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.lineup-picker__check { flex: none; display: inline-flex; color: var(--coral); }
+body.lineup-picker-open { overflow: hidden; }
+
+@keyframes lineup-picker-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lineup-picker-rise { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .lineup-picker, .lineup-picker__panel { animation: none; }
+}

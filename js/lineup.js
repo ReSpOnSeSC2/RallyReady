@@ -125,16 +125,149 @@ RR.lineup = (function () {
         caption: "Net at the top. Discs show each zone’s player (number or initials)."
       };
       var card = h("section", { class: "card lineup-court" }, [ui.sectionTitle("On the court", null, "h2")]);
+      card.appendChild(h("p", { class: "lineup-court__hint muted",
+        text: "Tap any zone to assign or change its player." }));
       if (RR.diagram && RR.diagram.figure) {
         var fig = RR.diagram.figure(spec);
-        if (fig) card.appendChild(h("div", { class: "lineup-court__fig" }, [fig]));
+        if (fig) {
+          makeZonesClickable(fig, lineup);
+          card.appendChild(h("div", { class: "lineup-court__fig" }, [fig]));
+        }
       }
       return card;
     }
 
+    // Lay a transparent, keyboard-operable "hit disc" over each rendered zone so
+    // the court doubles as a control: tap (or Enter/Space) opens the player
+    // picker for that zone. The decorative figure becomes an interactive group,
+    // so we shed its role="img" name and let the hit discs carry the labels.
+    function makeZonesClickable(fig, lineup) {
+      var svg = fig.querySelector("svg");
+      if (!svg) return;
+      fig.removeAttribute("role");
+      fig.removeAttribute("aria-label");
+      svg.removeAttribute("aria-hidden");
+      var SVGNS = "http://www.w3.org/2000/svg";
+      // Player discs render in ZONES order, so discs[i] is ZONES[i].
+      var discs = svg.querySelectorAll("circle.dgm-player");
+      ZONES.forEach(function (def, i) {
+        var disc = discs[i];
+        if (!disc) return;
+        var cx = parseFloat(disc.getAttribute("cx"));
+        var cy = parseFloat(disc.getAttribute("cy"));
+        var r = parseFloat(disc.getAttribute("r")) || 14;
+        var id = lineup[def.z];
+        var p = id && playerById(roster, id);
+        var hit = document.createElementNS(SVGNS, "circle");
+        hit.setAttribute("cx", cx);
+        hit.setAttribute("cy", cy);
+        // Pad the disc out to a comfortable ~44px tap target.
+        hit.setAttribute("r", Math.max(r + 9, 22));
+        hit.setAttribute("class", "lineup-zone");
+        hit.setAttribute("role", "button");
+        hit.setAttribute("tabindex", "0");
+        hit.setAttribute("aria-label", def.label + (p
+          ? " — " + p.name + ". Tap to change."
+          : " — empty. Tap to assign a player."));
+        hit.addEventListener("click", function () { openPicker(def.z); });
+        hit.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+            e.preventDefault();
+            openPicker(def.z);
+          }
+        });
+        svg.appendChild(hit);
+      });
+    }
+
+    // A lightweight modal: pick a player (or clear) for one zone. Assigning reuses
+    // setZone, which already moves a player out of any zone they were standing in.
+    function openPicker(zone) {
+      var def = zoneFor(zone);
+      var lineup = getLineup();
+      var prevFocus = document.activeElement;
+      var titleId = "lineup-picker-title";
+
+      var list = h("div", { class: "lineup-picker__list", role: "listbox", "aria-label": "Players" });
+      list.appendChild(optionRow({
+        label: "— Empty —", sub: "Leave this zone open",
+        selected: !lineup[zone], pick: function () { choose(null); }
+      }));
+      roster.forEach(function (p) {
+        var here = lineup[zone] === p.id;
+        var elsewhere = null;
+        Object.keys(lineup).forEach(function (z) {
+          if (lineup[z] === p.id && String(z) !== String(zone)) elsewhere = z;
+        });
+        list.appendChild(optionRow({
+          num: p.number, label: p.name,
+          sub: p.position ? RR.positions.abbr(p.position) : "",
+          where: elsewhere ? "In Zone " + elsewhere : "",
+          selected: here, pick: function () { choose(p.id); }
+        }));
+      });
+
+      var closeBtn = h("button", { type: "button", class: "lineup-picker__close", "aria-label": "Close" });
+      closeBtn.innerHTML = ui.icon('<path d="M18 6 6 18"/><path d="M6 6l12 12"/>', 20);
+      closeBtn.addEventListener("click", close);
+
+      var panel = h("div", {
+        class: "lineup-picker__panel", role: "dialog", "aria-modal": "true", "aria-labelledby": titleId
+      }, [
+        h("div", { class: "lineup-picker__head" }, [
+          h("h3", { id: titleId, class: "lineup-picker__title", text: "Assign " + def.label }),
+          closeBtn
+        ]),
+        list
+      ]);
+      var backdrop = h("div", { class: "lineup-picker" }, [panel]);
+      backdrop.addEventListener("click", function (e) { if (e.target === backdrop) close(); });
+      document.addEventListener("keydown", onKey, true);
+      document.body.appendChild(backdrop);
+      document.body.classList.add("lineup-picker-open");
+
+      var sel = list.querySelector('[aria-selected="true"]') || list.querySelector(".lineup-picker__opt");
+      if (sel) sel.focus();
+
+      function choose(id) { close(); setZone(zone, id || null); paint(); }
+      function onKey(e) { if (e.key === "Escape") { e.preventDefault(); close(); } }
+      function close() {
+        document.removeEventListener("keydown", onKey, true);
+        document.body.classList.remove("lineup-picker-open");
+        if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+        if (prevFocus && prevFocus.focus) prevFocus.focus();
+      }
+
+      function optionRow(o) {
+        var kids = [h("span", {
+          class: "lineup-picker__num" + (o.num ? "" : " lineup-picker__num--empty"),
+          text: o.num ? "#" + o.num : ""
+        })];
+        var main = h("span", { class: "lineup-picker__main" }, [
+          h("span", { class: "lineup-picker__name", text: o.label })
+        ]);
+        if (o.sub) main.appendChild(h("span", { class: "lineup-picker__sub", text: o.sub }));
+        kids.push(main);
+        if (o.where) kids.push(h("span", { class: "lineup-picker__where", text: o.where }));
+        if (o.selected) kids.push(h("span", {
+          class: "lineup-picker__check", "aria-hidden": "true",
+          html: ui.icon('<path d="M20 6 9 17l-5-5"/>', 18)
+        }));
+        var btn = h("button", {
+          type: "button",
+          class: "lineup-picker__opt" + (o.selected ? " is-selected" : ""),
+          role: "option", "aria-selected": o.selected ? "true" : "false"
+        }, kids);
+        btn.addEventListener("click", o.pick);
+        return btn;
+      }
+    }
+
     function slotsCard() {
       var lineup = getLineup();
-      var card = h("section", { class: "card lineup-slots" }, [ui.sectionTitle("Assign zones", null, "h2")]);
+      var card = h("section", { class: "card lineup-slots" }, [ui.sectionTitle("Assign from a list", null, "h2")]);
+      card.appendChild(h("p", { class: "lineup-slots__hint muted",
+        text: "Prefer dropdowns? Set each zone here — it stays in sync with the court above." }));
       SELECT_ORDER.forEach(function (zoneNum) {
         var def = zoneFor(zoneNum);
         var sel = h("select", { class: "input", "aria-label": def.label });
