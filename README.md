@@ -91,9 +91,9 @@ the app.
 2. **Set up your Team** (you only do this once). Tap the **Team** tab and fill in:
    - Your team **name** and **age group** (this sets the drills, net height, and ball).
    - **Program type** — pick **Season** or **Summer camp**:
-     - **Season:** your practice start date, your first-game date, how many
-       practices per week and on which weekdays, and your **game schedule** (add
-       every match — practices then ramp toward the next game and ease the day before).
+     - **Season:** your practice start date, your first-game date, which weekdays
+       you practise on, and your **game schedule** (add every match — practices
+       then ramp toward the next game and ease the day before).
      - **Summer camp:** the camp start date, how many days (1–30), and how many
        sessions per day.
    - **Session length**, your **squad size** and the **equipment you have**
@@ -101,7 +101,7 @@ the app.
 
    It saves as you type — there's no Save button to forget. Coach more than one team?
    Use **Your teams** at the top of the screen to add and switch between them, and
-   **Backup & restore** to export everything to a file (or move it to a new phone).
+   **Backup & restore** at the bottom to export everything to a file (or move it to a new phone).
 3. **Go to Today.** RallyReady shows you a complete session for today, ready to run:
    the phase, the "skill of the week" (or "skill of the day" at camp), how intense
    it should be, the time, every drill with steps and coaching cues, and the gear

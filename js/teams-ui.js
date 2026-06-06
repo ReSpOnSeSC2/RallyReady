@@ -1,5 +1,6 @@
-// teams-ui.js — the multi-team switcher and the Backup & restore card, both
-// mounted at the top of the Team screen (RR.teamsUI.render).
+// teams-ui.js — the multi-team switcher (top of the Team screen,
+// RR.teamsUI.render) and the Backup & restore card (bottom of the screen,
+// RR.teamsUI.renderBackup).
 //
 // A coach often runs more than one team (a 12s AND a 14s, club + school). This
 // surfaces every saved team, lets the coach switch the one the whole app plans
@@ -99,8 +100,15 @@ RR.teamsUI = (function () {
         addBtn
       ]));
     }
+  }
 
-    // ---- Backup & restore ---------------------------------------------------
+  // ---- Backup & restore -----------------------------------------------------
+  // Its own card so the Team screen can mount it at the very bottom, below the
+  // setup form, rather than competing with the form for the top of the page.
+  function renderBackup(host, opts) {
+    opts = opts || {};
+    var onChange = typeof opts.onChange === "function" ? opts.onChange : function () {};
+
     var exportBtn = h("button", { type: "button", class: "btn btn-ghost backup__btn" }, [
       h("span", { "aria-hidden": "true", class: "btn__icon", html: ui.icon('<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>', 18) }),
       "Export backup"
@@ -141,5 +149,5 @@ RR.teamsUI = (function () {
     ]));
   }
 
-  return { render: render };
+  return { render: render, renderBackup: renderBackup };
 })();

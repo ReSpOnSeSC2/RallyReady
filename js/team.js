@@ -24,7 +24,6 @@ RR.team = (function () {
     "17-18 (Advanced)"
   ];
   var SESSION_LENGTHS = [30, 45, 60, 75, 90, 120];   // minutes
-  var PRACTICES = [1, 2, 3, 4, 5];                    // season: practices per week
   var SESSIONS_PER_DAY = [1, 2, 3, 4];               // camp: sessions in a day
 
   // Weekdays for the season "which days?" picker. The index matches JS
@@ -38,12 +37,14 @@ RR.team = (function () {
     { i: 5, short: "Fri", label: "Friday" },
     { i: 6, short: "Sat", label: "Saturday" }
   ];
-  // Sensible default day spreads per "practices per week" count — they avoid
-  // back-to-back days where possible and mirror common youth-club schedules.
+  // Sensible default day spreads per practice-count — they avoid back-to-back
+  // days where possible and mirror common youth-club schedules. Used as a
+  // fallback for teams saved before the day picker existed.
   var DEFAULT_PRACTICE_DAYS = {
-    1: [2], 2: [2, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 4, 5]
+    1: [2], 2: [2, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5], 5: [1, 2, 3, 4, 5],
+    6: [1, 2, 3, 4, 5, 6], 7: [0, 1, 2, 3, 4, 5, 6]
   };
-  var MAX_PRACTICE_DAYS = 5;                          // matches the 1–5 PRACTICES range
+  var MAX_PRACTICE_DAYS = 7;                          // a coach can practise any/every day of the week
   var CAMP_MAX_DAYS = 30;                             // camps run 1–30 days
   var SKILLS = ["Passing", "Setting", "Serving", "Hitting", "Blocking", "Defense", "Teamwork"];
 
@@ -275,12 +276,14 @@ RR.team = (function () {
 
   // ---- The screen -----------------------------------------------------------
   function renderTeam(host) {
-    // The multi-team switcher + backup/restore sit above the form. Switching or
-    // restoring re-renders the whole screen so the form reflects the new team.
+    // The multi-team switcher sits above the form; backup/restore goes at the
+    // very bottom (see below). Switching or restoring re-renders the whole
+    // screen so the form reflects the new team.
+    var rerender = function () {
+      if (RR.app && RR.app.route) RR.app.route();   // re-render the whole screen
+    };
     if (RR.teamsUI) {
-      RR.teamsUI.render(host, { onChange: function () {
-        if (RR.app && RR.app.route) RR.app.route();   // re-render the whole screen
-      } });
+      RR.teamsUI.render(host, { onChange: rerender });
     }
 
     // Working copy of the team. The DOM inputs are the source of truth while
@@ -377,6 +380,12 @@ RR.team = (function () {
     summaryHost = h("div", { class: "summary-host" });
 
     append(host, [intro, formCard, summaryHost]);
+
+    // Backup & restore lives at the foot of the screen, below the form.
+    if (RR.teamsUI && RR.teamsUI.renderBackup) {
+      RR.teamsUI.renderBackup(host, { onChange: rerender });
+    }
+
     refreshSummary();
     validate();
 
@@ -489,18 +498,6 @@ RR.team = (function () {
         append(scheduleHost, [
           field("Practice start date", dateInput("practiceStart"), "When your practices begin."),
           seasonField(),
-          field("Practices per week", segmented({
-            options: PRACTICES.map(function (n) { return { value: n, label: String(n) }; }),
-            value: form.practiceDays.length,
-            onSelect: function (v) {
-              // Picking a count lays down a sensible default set of days; the day
-              // picker below lets the coach fine-tune exactly which ones.
-              form.practicesPerWeek = v;
-              form.practiceDays = (DEFAULT_PRACTICE_DAYS[v] || DEFAULT_PRACTICE_DAYS[2]).slice();
-              commit();
-              renderSchedule();
-            }
-          }), null, true),
           field("Which days?", weekdayPicker(),
             "Tap the days you practice — your plan only fills these.", true),
           field("Game schedule", RR.gamesEditor
@@ -511,8 +508,8 @@ RR.team = (function () {
       }
     }
 
-    // Season weekday picker. Toggling a day keeps practicesPerWeek in step (the
-    // count == the days chosen), then re-renders so the segmented control agrees.
+    // Season weekday picker — the single source of practice cadence. Toggling a
+    // day keeps practicesPerWeek in step (the count == the days chosen).
     function weekdayPicker() {
       var current = practiceDaysFor(form);
       var row = h("div", { class: "chips weekdays", role: "group" });
@@ -536,7 +533,7 @@ RR.team = (function () {
         if (days.length <= 1) return;                       // keep at least one day
         days.splice(at, 1);
       } else {
-        if (days.length >= MAX_PRACTICE_DAYS) days.shift();  // cap at 5; drop the earliest
+        if (days.length >= MAX_PRACTICE_DAYS) days.shift();  // cap at 7; drop the earliest
         days.push(i);
       }
       days.sort(function (a, b) { return a - b; });
