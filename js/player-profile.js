@@ -3,6 +3,7 @@
 // The deep view for ONE player, reached from the Players grid (#player). It's the
 // coach's 1-on-1 hub:
 //   • header — photo/avatar (change/remove), name, number, position(s)
+//   • position — assign / switch the primary + optional secondary position
 //   • play details — dominant hand, height, birthday/age (volleyball context)
 //   • skill tracker — 0–5 per core skill, with a season trend
 //   • focus goals — coach-set targets the player can tick off
@@ -47,6 +48,7 @@ RR.playerProfile = (function () {
     }
 
     host.appendChild(headerCard(player, host));
+    host.appendChild(positionCard(player, host));
     host.appendChild(detailsCard(player, host));
     host.appendChild(skillsCard(player, host));
     host.appendChild(goalsCard(player, host));
@@ -116,6 +118,91 @@ RR.playerProfile = (function () {
       class: "btn btn-ghost pp-photo__btn" + (danger ? " btn-danger" : "") }, [label]);
     b.addEventListener("click", fn);
     return b;
+  }
+
+  // ---- Position (primary + optional secondary) ------------------------------
+  // Lets a coach assign or switch a player's position after they've been added —
+  // the add form's position is optional, so this is where "No position yet" gets
+  // fixed. Writes straight to RR.roster, so the squad's "By position" grouping,
+  // the header chips and position-based drill picks all update on save.
+  function positionCard(player, host) {
+    var card = h("section", { class: "card pp-position" });
+    var editing = false;
+
+    function paint() {
+      card.innerHTML = "";
+      var editBtn = h("button", { type: "button", class: "btn-ghost pp-iconbtn",
+        "aria-label": editing ? "Stop editing position" : "Edit position" },
+        [h("span", { "aria-hidden": "true", html: ui.icon(editing
+          ? '<path d="M18 6 6 18M6 6l12 12"/>'
+          : '<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', 18) })]);
+      editBtn.addEventListener("click", function () { editing = !editing; paint(); });
+      card.appendChild(ui.sectionTitle("Position", editBtn, "h2"));
+      card.appendChild(editing ? positionEditor() : positionView());
+    }
+
+    function positionView() {
+      if (!player.position) {
+        return h("p", { class: "muted",
+          text: "No position set yet — assign one so this player shows up in the right group and gets role-specific drills. Tap edit to choose." });
+      }
+      var chips = [posChip(player.position, false)];
+      if (player.position2) chips.push(posChip(player.position2, true));
+      return h("div", { class: "pp-position__chips" }, chips);
+    }
+
+    // A position pill; the primary one links into Position coaching when the role
+    // is coachable (mirrors the header chip), so the card is also a jump-off point.
+    function posChip(pos, secondary) {
+      var label = secondary ? [h("span", { class: "pp-position__tag muted", text: "2nd" }), pos] : [pos];
+      if (!secondary && RR.positions && RR.positions.isCoachable(pos)) {
+        var link = h("a", { class: "pp-position__chip pp-position__chip--link", href: "#positions",
+          "aria-label": "Coaching for " + pos }, [pos, " →"]);
+        link.addEventListener("click", function () {
+          if (RR.positionsScreen && RR.positionsScreen.focus) RR.positionsScreen.focus(pos);
+        });
+        return link;
+      }
+      return h("span", { class: "pp-position__chip" + (secondary ? " pp-position__chip--2nd" : "") }, label);
+    }
+
+    function positionEditor() {
+      var primary = RR.roster.positionSelect(player.position || "", "Primary position");
+      var secondary = secondarySelect(player.position2 || "");
+
+      var saveBtn = h("button", { type: "button", class: "btn btn-primary pp-position__save" }, ["Save position"]);
+      saveBtn.addEventListener("click", function () {
+        var pos = primary.value || "";
+        var pos2 = secondary.value || "";
+        // A secondary only makes sense alongside a (different) primary.
+        if (!pos || pos2 === pos) pos2 = "";
+        save(player.id, { position: pos, position2: pos2 }, host);
+      });
+
+      return h("div", { class: "pp-position__form" }, [
+        h("div", { class: "field" }, [
+          h("label", { class: "field-label", text: "Primary position" }), primary
+        ]),
+        h("div", { class: "field" }, [
+          h("label", { class: "field-label", text: "Secondary position (optional)" }), secondary
+        ]),
+        saveBtn
+      ]);
+    }
+
+    paint();
+    return card;
+  }
+
+  // A secondary-position <select>: a "None" blank plus the real coachable roles
+  // (no "Not sure yet" — a backup spot should be a concrete position).
+  function secondarySelect(value) {
+    var sel = h("select", { class: "input", "aria-label": "Secondary position (optional)" });
+    sel.appendChild(h("option", { value: "", text: "None", selected: !value }));
+    ((RR.positions && RR.positions.LIST) || []).forEach(function (pos) {
+      sel.appendChild(h("option", { value: pos, text: pos, selected: pos === value }));
+    });
+    return sel;
   }
 
   // ---- Play details (hand / height / birthday) ------------------------------
