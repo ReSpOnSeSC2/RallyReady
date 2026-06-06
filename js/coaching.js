@@ -26,7 +26,7 @@ RR.coaching = (function () {
       title: "Run a great practice",
       icon: "practice",
       points: [
-        "Plan in blocks and bring a simple timeline on paper: warm-up, two skill blocks, a game, cool-down. A written plan keeps practice moving.",
+        "Run practice in clear blocks — warm-up, a couple of skill blocks, a game, then a cool-down — and keep each one moving so the energy never dips and nobody stands around waiting.",
         "Maximise contacts — more balls, smaller groups, short lines. Every player should be touching the ball constantly, never waiting in a line of eight.",
         "Keep instructions under 30 seconds, then play. Show the skill instead of lecturing about it.",
         "Use game-like reps: have players read a real ball over the net rather than a perfect toss, so what they practise transfers to matches.",
