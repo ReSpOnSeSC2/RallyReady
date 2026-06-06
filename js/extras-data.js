@@ -279,7 +279,34 @@ RR.extras = RR.extras || {};
       tracking: "Teams self-score; coach decides which side gets the free ball and keeps score.",
       aim: "Games to 11; alternate which side receives the free ball."
     },
-    diagram: dk.acrossNet({ teamSize: 3, caption: "Coach tosses a free ball in; that team runs pass–set–hit, then it's live 3v3." })
+    // A purpose-built picture (not the generic across-net standoff): the coach
+    // tosses a free ball to ONE side, which runs a clean pass→set→hit while the
+    // other side defends — the whole point of the drill, at a glance.
+    diagram: {
+      caption: "The coach tosses an easy free ball to one side; that team runs a clean pass→set→hit, then plays it out live 3v3.",
+      w: 9, h: 12, net: 6, lines: [{ y: 3 }, { y: 9 }],
+      court: [{ x: 0, y: 0, w: 9, h: 12 }],
+      players: [
+        { x: 2.3, y: 4.3, label: "", team: "b" },
+        { x: 6.7, y: 4.3, label: "", team: "b" },
+        { x: 4.5, y: 2.5, label: "", team: "b" },
+        { x: 4.5, y: 9.3, label: "P", team: "a" },
+        { x: 6.6, y: 7.0, label: "S", team: "a" },
+        { x: 2.6, y: 7.1, label: "H", team: "a" },
+        { x: 8.0, y: 1.0, label: "C", team: "coach", note: "tosses" }
+      ],
+      paths: [
+        { from: [7.7, 1.3], to: [4.7, 8.9], kind: "serve", label: "free ball", curve: 0.3 },
+        { from: [4.6, 9.0], to: [6.3, 7.2], kind: "ball", label: "pass", curve: 0.25 },
+        { from: [6.4, 6.8], to: [3.0, 7.0], kind: "ball", label: "set", curve: 0.3 },
+        { from: [2.8, 6.8], to: [5.0, 3.4], kind: "serve", label: "attack", curve: 0.12 }
+      ],
+      legend: [
+        { tone: "a", text: "Your side (P→S→H)" },
+        { tone: "b", text: "Other side" },
+        { tone: "coach", text: "Coach (free ball)" }
+      ]
+    }
   };
 
   E["beat-the-number-team-challenge"] = {
