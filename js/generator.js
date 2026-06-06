@@ -302,8 +302,13 @@ RR.generator = (function () {
   // Partner Passing family) recurs in MOST non-taper sessions for consistency,
   // otherwise a rotating complementary skill keeps things fresh.
   function complementarySkill(primary, phase, planRng) {
-    var wantAnchor = !phase.eases;                 // taper drops the anchor
-    if (wantAnchor && primary !== BALL_CONTROL && planRng() < 0.7) return BALL_CONTROL;
+    var working = !phase.eases;                    // taper drops the anchor (caller)
+    // Serve nearly every practice, like a real program: when serving isn't already
+    // the week's focus, make the complementary block a serving (serve & receive)
+    // block a good share of the time. Otherwise lean on the recurring ball-control
+    // anchor (pepper / partner passing) that pairs with almost any focus.
+    if (working && primary !== "Serving" && planRng() < 0.4) return "Serving";
+    if (working && primary !== BALL_CONTROL && planRng() < 0.7) return BALL_CONTROL;
     var opts = COMPLEMENTS[primary] || ["Passing", "Defense", "Setting"];
     var pick = opts[Math.floor(planRng() * opts.length) % opts.length];
     if (pick === primary) pick = opts[(opts.indexOf(pick) + 1) % opts.length];
@@ -407,7 +412,9 @@ RR.generator = (function () {
           dMin: dMin, dMax: dMax, weight: 0.20,
           why: bSkill === BALL_CONTROL
             ? "A ball-control anchor (Pepper / partner passing) that recurs each week — rotated for freshness."
-            : "A complementary " + bSkill + " block that rounds out the session."
+            : bSkill === "Serving"
+              ? "Serving reps — like a real program, get serves and serve-receive in nearly every practice."
+              : "A complementary " + bSkill + " block that rounds out the session."
         });
         var competitive = phase.key === "peak" || phase.key === "inseason";
         reqs.push({
