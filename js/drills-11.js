@@ -370,7 +370,7 @@ window.RR = window.RR || {};
     // ===================== HOOPS / TARGETS =====================
     {
       id: "serve-into-the-hoops",
-      name: "Serve into the Hoops",
+      name: "Serving Accuracy to Targets",
       skill: "Serving",
       ageMin: 9, ageMax: 18,
       difficulty: 2,
@@ -394,11 +394,11 @@ window.RR = window.RR || {};
       ],
       easier: "Use bigger targets or count any serve in the right third of the court as a make.",
       harder: "Shrink the hoops, move them to tougher spots, or require three straight makes to 'clear' a hoop.",
-      videoSearchUrl: v("Serve into the Hoops")
+      videoSearchUrl: v("Serving Accuracy to Targets")
     },
     {
       id: "pass-to-the-hoop-target",
-      name: "Pass to the Hoop Target",
+      name: "Passing Accuracy to a Target",
       skill: "Passing",
       ageMin: 9, ageMax: 18,
       difficulty: 2,
@@ -422,11 +422,11 @@ window.RR = window.RR || {};
       ],
       easier: "Use a bigger hoop or move the passer closer; count balls that land near the hoop.",
       harder: "Pass from a real serve, add movement before the pass, or require the ball to peak at a set height.",
-      videoSearchUrl: v("Pass to the Hoop Target")
+      videoSearchUrl: v("Passing Accuracy to a Target")
     },
     {
       id: "setter-hoop-stations",
-      name: "Setter Target Stations",
+      name: "Setting Accuracy to Targets",
       skill: "Setting",
       ageMin: 11, ageMax: 18,
       difficulty: 3,
@@ -450,11 +450,11 @@ window.RR = window.RR || {};
       ],
       easier: "Use one closer, larger target and let the setter catch-and-set to groove the path.",
       harder: "Add a real pass to set off of, shrink the hoops, or call the target late so they adjust.",
-      videoSearchUrl: v("Setter Target Stations")
+      videoSearchUrl: v("Setting Accuracy to Targets")
     },
     {
       id: "hit-the-target-zones",
-      name: "Hit the Target Zones",
+      name: "Hitting to Target Zones",
       skill: "Hitting",
       ageMin: 11, ageMax: 18,
       difficulty: 3,
@@ -478,7 +478,7 @@ window.RR = window.RR || {};
       ],
       easier: "Hit off a toss or off a box, use bigger targets, and let players swing at controlled speed.",
       harder: "Add a blocker so the hitter must read and pick the open hoop, or shrink the targets.",
-      videoSearchUrl: v("Hit the Target Zones")
+      videoSearchUrl: v("Hitting to Target Zones")
     },
     {
       id: "target-serve-challenge",
