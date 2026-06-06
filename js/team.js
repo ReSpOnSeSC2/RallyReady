@@ -138,6 +138,12 @@ RR.team = (function () {
     else { node.appendChild(document.createTextNode(String(kids))); }
   }
 
+  // Lay short controls (dates, selects) side by side so they don't each eat a
+  // full row; CSS collapses them back to one column on very narrow phones.
+  function fieldRow() {
+    return h("div", { class: "field-row" }, Array.prototype.slice.call(arguments).filter(Boolean));
+  }
+
   // Parse "YYYY-MM-DD" as a LOCAL date (avoids the UTC off-by-one of new Date(str)).
   function parseDate(s) {
     if (!s) return NaN;
@@ -504,8 +510,10 @@ RR.team = (function () {
         seasonInput = null;            // no season date-order validation in camp mode
         seasonError = null;
         append(scheduleHost, [
-          field("Camp start date", dateInput("campStart"), "Day one of camp."),
-          field("Camp length", campDaysSelect(), "How many days it runs (1–30)."),
+          fieldRow(
+            field("Camp start date", dateInput("campStart"), "Day one of camp."),
+            field("Camp length", campDaysSelect(), "How many days it runs (1–30).")
+          ),
           field("Sessions per day", segmented({
             options: SESSIONS_PER_DAY.map(function (n) { return { value: n, label: String(n) }; }),
             value: form.sessionsPerDay,
@@ -514,8 +522,10 @@ RR.team = (function () {
         ]);
       } else {
         append(scheduleHost, [
-          field("Practice start date", dateInput("practiceStart"), "When your practices begin."),
-          seasonField(),
+          fieldRow(
+            field("Practice start date", dateInput("practiceStart"), "When your practices begin."),
+            seasonField()
+          ),
           field("Which days?", weekdayPicker(),
             "Tap the days you practice — your plan only fills these.", true),
           field("Game schedule", RR.gamesEditor

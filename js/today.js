@@ -428,16 +428,18 @@ RR.today = (function () {
       ]);
     }
 
-    function renderBlock(i) {
+    function renderBlock(i, openState) {
       var block = currentSession.blocks[i];
       var swappable = !!(block._pool && block._pool.length > 1 && !currentCompleted);
       var holder = {};
       holder.card = ui.blockCard(block, {
-        index: i, swappable: swappable,
+        index: i, swappable: swappable, open: !!openState,
         onSwap: function () {
           currentSession = RR.generator.swapBlock(currentSession, i, team);
           savePlanned(team.name, nav.date, nav.slot, currentSession);
-          var fresh = renderBlock(i); holder.card.replaceWith(fresh);
+          // Re-open the freshly swapped block so the new drill is visible and the
+          // Swap button keeps focus for repeated swaps.
+          var fresh = renderBlock(i, true); holder.card.replaceWith(fresh);
           var newGear = buildGear(currentSession); gearNode.replaceWith(newGear); gearNode = newGear;
           var b = fresh.querySelector(".js-swap"); if (b) b.focus();
         }

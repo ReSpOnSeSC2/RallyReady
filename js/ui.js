@@ -402,94 +402,99 @@ RR.ui = (function () {
     return KIND[k] || KIND.skill;
   }
 
-  // blockCard(block, opts) — one practice block as a card. Collapsed by default to
-  // Setup + steps (+ Watch how); a real toggle button reveals the "Say this" cues
-  // and equipment. The expand/collapse is self-contained presentation.
+  // blockCard(block, opts) — one practice block as a COLLAPSIBLE card. The whole
+  // card reads as a compact summary (role, title, time, why) and is a single
+  // toggle button; tapping it reveals the full detail (setup, "how it's
+  // organized", the court diagram, the steps, the cues and the gear). Keeping the
+  // details folded away turns the Today screen from one long scroll into a short,
+  // scannable list of blocks — open only the one you're setting up.
   //   opts.index      — used to build a unique id for the collapsible region.
+  //   opts.open       — start expanded (used when a block was just swapped in).
   //   opts.swappable  — when true, adds a "Swap" button that calls opts.onSwap().
   //   opts.onSwap()   — app-level handler (the owner re-renders + replaces).
   function blockCard(block, opts) {
     opts = opts || {};
     var drill = block.drill;
     var kd = kindOf(block);
-    var moreId = "block-more-" + (opts.index || 0);
+    var open = !!opts.open;
+    var detailId = "block-detail-" + (opts.index || 0);
 
-    var head = h("header", { class: "block__head" }, [
-      badge(kd.label, kd.color),
-      h("span", { class: "block__min", text: block.minutes + " min" })
+    // ---- Folded summary: the whole header is one toggle button --------------
+    var chev = h("span", { class: "block__chev", "aria-hidden": "true",
+      html: icon('<path d="M6 9l6 6 6-6"/>', 20) });
+    var summary = h("button", {
+      type: "button", class: "block__summary", "aria-expanded": open ? "true" : "false",
+      "aria-controls": detailId,
+      "aria-label": block.title + " — " + kd.label + ", " + block.minutes + " minutes"
+    }, [
+      h("div", { class: "block__head" }, [
+        badge(kd.label, kd.color),
+        h("span", { class: "block__min", text: block.minutes + " min" }),
+        chev
+      ]),
+      h("span", { class: "block__role", text: block.role }),
+      h("span", { class: "block__title", text: block.title }),
+      h("span", { class: "block__why", text: block.why })
     ]);
 
-    var setup = h("div", { class: "block__section" }, [
-      h("span", { class: "eyebrow", text: "Setup" }),
-      h("p", { text: drill.setup })
-    ]);
-    // How the squad is organized (who goes when, who keeps score) + the court
-    // diagram, inline so a coach can run the block without expanding anything.
+    // ---- Detail: everything a coach needs to run the block ------------------
+    var sections = [
+      h("div", { class: "block__section" }, [
+        h("span", { class: "eyebrow", text: "Setup" }),
+        h("p", { text: drill.setup })
+      ])
+    ];
     var orgList = organizeList(drill);
+    if (orgList) sections.push(h("div", { class: "block__section block__organize" }, [
+      h("span", { class: "eyebrow", text: "How it's organized" }), orgList
+    ]));
     var fig = diagramFigure(drill);
-    var orgBlock = orgList ? h("div", { class: "block__section block__organize" }, [
-      h("span", { class: "eyebrow", text: "How it's organized" }),
-      orgList
-    ]) : null;
-    var figBlock = fig ? h("div", { class: "block__section block__diagram" }, [
+    if (fig) sections.push(h("div", { class: "block__section block__diagram" }, [
       h("span", { class: "eyebrow", text: "On the court" }), fig
-    ]) : null;
-    var runit = h("div", { class: "block__section" }, [
+    ]));
+    sections.push(h("div", { class: "block__section" }, [
       h("span", { class: "eyebrow", text: "Run it" }),
       h("ol", { class: "block__steps" }, (drill.steps || []).map(function (s) {
         return h("li", { text: s });
       }))
-    ]);
+    ]));
+    sections.push(h("div", { class: "block__section" }, [
+      h("span", { class: "eyebrow", text: "Say this" }),
+      h("ul", { class: "block__cues" }, (drill.cues || []).map(function (c) {
+        return h("li", { text: c });
+      }))
+    ]));
+    if (drill.equipment && drill.equipment.length) {
+      sections.push(h("div", { class: "block__section" }, [
+        h("span", { class: "eyebrow", text: "Equipment" }),
+        h("p", { text: drill.equipment.map(equipLabel).join(", ") })
+      ]));
+    }
+    sections.push(watchLink(drill.videoSearchUrl, "Watch how"));
 
-    var more = h("div", { class: "block__more", id: moreId, hidden: true }, [
-      h("div", { class: "block__section" }, [
-        h("span", { class: "eyebrow", text: "Say this" }),
-        h("ul", { class: "block__cues" }, (drill.cues || []).map(function (c) {
-          return h("li", { text: c });
-        }))
-      ]),
-      (drill.equipment && drill.equipment.length)
-        ? h("div", { class: "block__section" }, [
-            h("span", { class: "eyebrow", text: "Equipment" }),
-            h("p", { text: drill.equipment.map(equipLabel).join(", ") })
-          ])
-        : null
-    ]);
-
-    var toggle = h("button", {
-      type: "button", class: "block__toggle", "aria-expanded": "false", "aria-controls": moreId
-    }, [h("span", { class: "block__toggle-label", text: "Coaching cues" })]);
-    toggle.addEventListener("click", function () {
-      var open = toggle.getAttribute("aria-expanded") === "true";
-      toggle.setAttribute("aria-expanded", open ? "false" : "true");
-      more.hidden = open;
-      toggle.querySelector(".block__toggle-label").textContent = open ? "Coaching cues" : "Hide cues";
-    });
-
-    var tools = [toggle];
+    // The Swap control lives in the detail's action row so it never nests inside
+    // the summary toggle button.
     if (opts.swappable && typeof opts.onSwap === "function") {
       var swap = h("button", { type: "button", class: "block__swap js-swap" }, [
         h("span", { "aria-hidden": "true", class: "block__swap-icon",
           html: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h13l-3-3"/><path d="M21 17H8l3 3"/></svg>' }),
-        "Swap"
+        "Swap drill"
       ]);
       swap.addEventListener("click", function () { opts.onSwap(); });
-      tools.push(swap);
+      sections.push(h("div", { class: "block__tools" }, [swap]));
     }
 
-    return h("article", { class: "card block" }, [
-      head,
-      h("p", { class: "block__role", text: block.role }),
-      h("h3", { class: "block__title", text: block.title }),
-      h("p", { class: "block__why", text: block.why }),
-      setup,
-      orgBlock,
-      figBlock,
-      runit,
-      watchLink(drill.videoSearchUrl, "Watch how"),
-      h("div", { class: "block__tools" }, tools),
-      more
-    ]);
+    var detail = h("div", { class: "block__detail", id: detailId }, sections);
+    if (!open) detail.hidden = true;
+
+    var card = h("article", { class: "card block" + (open ? " is-open" : "") }, [summary, detail]);
+    summary.addEventListener("click", function () {
+      var nowOpen = summary.getAttribute("aria-expanded") !== "true";
+      summary.setAttribute("aria-expanded", nowOpen ? "true" : "false");
+      detail.hidden = !nowOpen;
+      card.classList.toggle("is-open", nowOpen);
+    });
+    return card;
   }
 
   // ---- Date formatting (display only) ---------------------------------------
