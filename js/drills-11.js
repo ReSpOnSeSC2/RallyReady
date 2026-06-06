@@ -46,7 +46,7 @@ window.RR = window.RR || {};
       ],
       easier: "Choke up on the band or use a lighter one so 12 clean reps feel easy.",
       harder: "Add a second set, or pause for two seconds at the fully-pulled position on each rep.",
-      videoSearchUrl: v("resistance band pull aparts shoulder warmup")
+      videoSearchUrl: v("Band Pull-Aparts and Rows")
     },
     {
       id: "band-arm-speed",
@@ -74,7 +74,7 @@ window.RR = window.RR || {};
       ],
       easier: "Use a lighter band and slow the swing down to learn the high-elbow path first.",
       harder: "Add a short approach step before each swing so the whole hitting motion fires in sequence.",
-      videoSearchUrl: v("band resisted arm swing hitting volleyball")
+      videoSearchUrl: v("Band-Resisted Hitting Arm Swings")
     },
 
     // ===================== MINI BANDS (Warmup) =====================
@@ -104,7 +104,7 @@ window.RR = window.RR || {};
       ],
       easier: "Drop the band and just do bodyweight bridges to feel the glutes switch on.",
       harder: "Do single-leg bridges, or add a slow three-count lower on each rep.",
-      videoSearchUrl: v("mini band glute bridge activation")
+      videoSearchUrl: v("Mini-Band Glute Bridges")
     },
     {
       id: "mini-band-defensive-shuffle",
@@ -132,7 +132,7 @@ window.RR = window.RR || {};
       ],
       easier: "Use a lighter band or shorter shuffles, and slow the tempo to hold a clean stance.",
       harder: "On a coach's point, change direction instantly — read and react while the band fights you.",
-      videoSearchUrl: v("mini band defensive shuffle footwork")
+      videoSearchUrl: v("Mini-Band Defensive Shuffle")
     },
 
     // ===================== AGILITY LADDER (Warmup) =====================
@@ -162,7 +162,7 @@ window.RR = window.RR || {};
       ],
       easier: "Walk the pattern slowly first, and just use the in-in-out-out step for younger players.",
       harder: "Add a partner toss to pass at the end of the ladder, so quick feet flow straight into a contact.",
-      videoSearchUrl: v("agility ladder lateral footwork drill")
+      videoSearchUrl: v("Agility Ladder Lateral Quicksteps")
     },
     {
       id: "ladder-to-dig-reaction",
@@ -190,7 +190,7 @@ window.RR = window.RR || {};
       ],
       easier: "Toss straight to the player every time and slow the ladder pattern down.",
       harder: "Make the toss harder to read — short, deep, or wide — so they truly react, not anticipate.",
-      videoSearchUrl: v("agility ladder into dig reaction drill")
+      videoSearchUrl: v("Ladder-to-Dig Reaction")
     },
 
     // ===================== JUMP ROPES (Warmup) =====================
@@ -220,7 +220,7 @@ window.RR = window.RR || {};
       ],
       easier: "Slow the turns down, or step over the rope one foot at a time instead of hopping.",
       harder: "Add faster rounds or mix in a 10-second burst of double-unders or high-knee skips.",
-      videoSearchUrl: v("jump rope intervals footwork conditioning")
+      videoSearchUrl: v("Jump Rope Speed Intervals")
     },
     {
       id: "jump-rope-single-leg",
@@ -248,7 +248,7 @@ window.RR = window.RR || {};
       ],
       easier: "Stick to two-foot jumps, or do single-leg hops without the rope first to build balance.",
       harder: "Increase the reps per leg, or hop forward and back over a line while you skip.",
-      videoSearchUrl: v("single leg jump rope ankle stiffness")
+      videoSearchUrl: v("Single-Leg Jump Rope")
     },
 
     // ===================== MEDICINE BALL (Warmup) =====================
@@ -278,7 +278,7 @@ window.RR = window.RR || {};
       ],
       easier: "Use a lighter ball and a half-effort throw to learn the timing, or do a kneeling slam.",
       harder: "Step into each slam, or add a rotational slam to one side to mirror the serve.",
-      videoSearchUrl: v("medicine ball overhead slam power")
+      videoSearchUrl: v("Medicine Ball Overhead Slams")
     },
     {
       id: "med-ball-chest-pass-wall",
@@ -306,7 +306,7 @@ window.RR = window.RR || {};
       ],
       easier: "Stand closer and use a lighter ball so 10 clean reps feel smooth.",
       harder: "Step back for a longer, harder pass, or do them off one foot to add balance demand.",
-      videoSearchUrl: v("medicine ball chest pass wall power")
+      videoSearchUrl: v("Medicine Ball Chest Pass")
     },
 
     // ===================== REACTION BALL (Warmup / Defense) =====================
@@ -336,7 +336,7 @@ window.RR = window.RR || {};
       ],
       easier: "Bounce the ball softer and more directly so the bounce is easier to read.",
       harder: "Feed faster, add a second ball, or have the defender start facing away and turn on a call.",
-      videoSearchUrl: v("reaction ball defensive scramble quickness")
+      videoSearchUrl: v("Reaction Ball Defensive Scramble")
     },
     {
       id: "reaction-ball-wall-singles",
@@ -364,7 +364,7 @@ window.RR = window.RR || {};
       ],
       easier: "Throw softer and let it bounce on the floor first so the path is easier to follow.",
       harder: "Throw harder and closer to the wall, or catch with only your dominant hand.",
-      videoSearchUrl: v("reaction ball wall catch quickness")
+      videoSearchUrl: v("Reaction Ball Wall Singles")
     },
 
     // ===================== HOOPS / TARGETS =====================
@@ -394,7 +394,7 @@ window.RR = window.RR || {};
       ],
       easier: "Use bigger targets or count any serve in the right third of the court as a make.",
       harder: "Shrink the hoops, move them to tougher spots, or require three straight makes to 'clear' a hoop.",
-      videoSearchUrl: v("serving accuracy target zones drill")
+      videoSearchUrl: v("Serve into the Hoops")
     },
     {
       id: "pass-to-the-hoop-target",
@@ -422,7 +422,7 @@ window.RR = window.RR || {};
       ],
       easier: "Use a bigger hoop or move the passer closer; count balls that land near the hoop.",
       harder: "Pass from a real serve, add movement before the pass, or require the ball to peak at a set height.",
-      videoSearchUrl: v("passing to setter target hoop drill")
+      videoSearchUrl: v("Pass to the Hoop Target")
     },
     {
       id: "setter-hoop-stations",
@@ -450,7 +450,7 @@ window.RR = window.RR || {};
       ],
       easier: "Use one closer, larger target and let the setter catch-and-set to groove the path.",
       harder: "Add a real pass to set off of, shrink the hoops, or call the target late so they adjust.",
-      videoSearchUrl: v("setter accuracy target drill")
+      videoSearchUrl: v("Setter Target Stations")
     },
     {
       id: "hit-the-target-zones",
@@ -478,7 +478,7 @@ window.RR = window.RR || {};
       ],
       easier: "Hit off a toss or off a box, use bigger targets, and let players swing at controlled speed.",
       harder: "Add a blocker so the hitter must read and pick the open hoop, or shrink the targets.",
-      videoSearchUrl: v("hitting target zones spiking accuracy")
+      videoSearchUrl: v("Hit the Target Zones")
     },
     {
       id: "target-serve-challenge",
@@ -506,7 +506,7 @@ window.RR = window.RR || {};
       ],
       easier: "Use bigger targets and give every in-court serve a point so it stays encouraging.",
       harder: "Make a missed serve hand a point to the other team, raising the cost of an error.",
-      videoSearchUrl: v("serving target game competition")
+      videoSearchUrl: v("Target Serve Challenge")
     },
 
     // ===================== FOAM ROLLER (Cooldown) =====================
@@ -536,7 +536,7 @@ window.RR = window.RR || {};
       ],
       easier: "Put less weight on the roller (keep more on your hands and feet) so the pressure is gentle.",
       harder: "Pause longer on tight spots and add small ankle pumps while the roller sits on the calf.",
-      videoSearchUrl: v("foam rolling legs recovery routine")
+      videoSearchUrl: v("Foam Roller Leg Reset")
     },
     {
       id: "foam-roller-upper-back",
@@ -564,7 +564,7 @@ window.RR = window.RR || {};
       ],
       easier: "Skip the arch and just roll slowly and lightly between the shoulder blades.",
       harder: "Hold the gentle arch a little longer on each tight spot, reaching your arms overhead.",
-      videoSearchUrl: v("foam roller upper back thoracic release")
+      videoSearchUrl: v("Foam Roller Upper-Back Release")
     },
 
     // ===================== PLYO BOX / STEP =====================
@@ -594,7 +594,7 @@ window.RR = window.RR || {};
       ],
       easier: "Use a lower step and skip the knee drive, just stepping up and down under control.",
       harder: "Add a hop at the top (drive the up-knee into a small jump) once the strength is solid.",
-      videoSearchUrl: v("box step up leg strength jump")
+      videoSearchUrl: v("Box Step-Ups for Approach Power")
     },
     {
       id: "box-depth-jump-landings",
@@ -622,7 +622,7 @@ window.RR = window.RR || {};
       ],
       easier: "Lower the box, or skip it and practice squat-jump-and-stick landings on the floor first.",
       harder: "Once landings are rock-solid, add an immediate jump straight up out of the stick (a true depth jump).",
-      videoSearchUrl: v("depth drop landing mechanics jump training")
+      videoSearchUrl: v("Box Depth Drops and Stick")
     },
     {
       id: "box-block-reach",
@@ -650,7 +650,7 @@ window.RR = window.RR || {};
       ],
       easier: "Stand on the floor and just practice the hand press and shape without the height.",
       harder: "Add a coach holding a ball over the net to block, or a small jump off the floor next to the net.",
-      videoSearchUrl: v("blocking hand penetration over net technique")
+      videoSearchUrl: v("Step-Up Block Reach")
     },
 
     // ===================== TUMBLING MATS (Defense / recovery) =====================
@@ -680,7 +680,7 @@ window.RR = window.RR || {};
       ],
       easier: "Stay on the knees and just learn the shoulder roll slowly until it feels natural.",
       harder: "Add a soft toss to chase before the roll or sprawl, then move it off the mat onto the court.",
-      videoSearchUrl: v("safe rolling sprawling floor defense progression")
+      videoSearchUrl: v("Mat Floor-Defense Progression")
     },
     {
       id: "mat-sprawl-and-pursuit",
@@ -708,7 +708,7 @@ window.RR = window.RR || {};
       ],
       easier: "Toss the ball higher and closer so players can get there before sprawling.",
       harder: "Toss shorter and to either side so they truly sprint and read, then move it onto the court.",
-      videoSearchUrl: v("sprawl pursuit short ball defense drill")
+      videoSearchUrl: v("Sprawl and Pursuit on the Mat")
     },
     {
       id: "mat-diving-extension",
@@ -736,7 +736,7 @@ window.RR = window.RR || {};
       ],
       easier: "Stay with the sprawl and pancake from a low position; build the dive over several sessions.",
       harder: "Extend the reach and add genuine pursuit before the dive — then progress it onto the court.",
-      videoSearchUrl: v("pancake dive defense technique volleyball")
+      videoSearchUrl: v("Diving Extension on Mats")
     },
     {
       id: "mat-mobility-flow",
@@ -764,7 +764,7 @@ window.RR = window.RR || {};
       ],
       easier: "Shorten the range on each move and stay with the cat-camel and child's pose.",
       harder: "Add a slow downward-dog to cobra flow, and hold the open lunge rotation a beat longer.",
-      videoSearchUrl: v("dynamic mobility flow warmup floor")
+      videoSearchUrl: v("Tumbling Mat Mobility Flow")
     }
 
   ];
