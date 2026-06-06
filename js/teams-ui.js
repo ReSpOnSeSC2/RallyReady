@@ -88,7 +88,7 @@ RR.teamsUI = (function () {
       addBtn.addEventListener("click", function () {
         RR.state.addTeam({ name: "", ageGroup: "", programType: "season",
           practicesPerWeek: 2, practiceDays: [2, 4], sessionsPerDay: 2,
-          campDays: 5, sessionMinutes: 75, emphasis: [] });
+          campDays: 5, sessionMinutes: 60, emphasis: [] });
         onChange();
       });
 
@@ -174,9 +174,13 @@ RR.teamsUI = (function () {
       ? "Finish this to generate your plan:"
       : "Finish these to generate your plan:";
 
-    return h("section", { class: "card setup-check" }, [
+    return h("section", { class: "card setup-check", role: "status" }, [
       h("div", { class: "card-head" }, [
-        h("h2", { text: "Almost ready" }),
+        h("div", { class: "setup-check__head" }, [
+          h("span", { class: "setup-check__icon", "aria-hidden": "true",
+            html: ui.icon('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>', 20) }),
+          h("h2", { text: "Almost ready" })
+        ]),
         h("span", { class: "pill setup-check__tag", text: "Plan not ready yet" })
       ]),
       h("p", { class: "muted setup-check__lead", text: lead }),

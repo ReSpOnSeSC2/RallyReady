@@ -102,7 +102,7 @@ RR.team = (function () {
     sessionsPerDay: 2,
     games: [],               // season match schedule: [{date, opponent}]
     // Shared:
-    sessionMinutes: 75,      // length of one practice/session
+    sessionMinutes: 60,      // length of one practice/session
     rosterSize: 12,          // how many players, so drills suit the group size
     equipment: [],           // EXTRA gear on hand (tokens from EQUIPMENT_EXTRAS)
     emphasis: []             // subset of SKILLS, lightly weights drill selection
@@ -314,7 +314,7 @@ RR.team = (function () {
     // editing; we mirror their values here and persist the whole object on change.
     var form = getTeam() || clone(DEFAULT_FORM);
 
-    var savedCue, seasonInput, seasonError, summaryHost, scheduleHost, nameTimer;
+    var savedCue, seasonInput, seasonError, noticeHost, summaryHost, scheduleHost, nameTimer;
 
     // Persist the current form through RR.state, then re-validate, confirm, and
     // refresh the summary. This is the single auto-save path for every field.
@@ -401,9 +401,13 @@ RR.team = (function () {
       formEl
     ]);
 
+    // "What's left to fill in" lives ABOVE the form so a coach sees up front what
+    // still blocks plan generation — not buried at the foot of a long screen. The
+    // at-a-glance summary stays below the form, where it reads as a result.
+    noticeHost = h("div", { class: "notice-host" });
     summaryHost = h("div", { class: "summary-host" });
 
-    append(host, [intro, formCard, summaryHost]);
+    append(host, [intro, noticeHost, formCard, summaryHost]);
 
     // Backup & restore lives at the foot of the screen, below the form.
     if (RR.teamsUI && RR.teamsUI.renderBackup) {
@@ -644,12 +648,14 @@ RR.team = (function () {
     // Only shown once the team is fully set up and valid, so it never displays
     // half-finished or contradictory information.
     function refreshSummary() {
+      noticeHost.innerHTML = "";
       summaryHost.innerHTML = "";
       if (!isSetUp(form)) {
-        // Tell the coach exactly which required fields are still blank, rather
-        // than leaving the summary silently hidden. The card lives in teamsUI.
+        // Tell the coach up front exactly which required fields are still blank,
+        // rather than leaving the summary silently hidden. The prominent notice
+        // sits above the form (noticeHost); the card lives in teamsUI.
         if (RR.teamsUI && RR.teamsUI.setupChecklistCard) {
-          summaryHost.appendChild(RR.teamsUI.setupChecklistCard(form));
+          noticeHost.appendChild(RR.teamsUI.setupChecklistCard(form));
         }
         return;
       }
