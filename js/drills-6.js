@@ -248,7 +248,7 @@ window.RR = window.RR || {};
     },
     {
       id: "setting-accuracy-hoops",
-      name: "Setting Accuracy to Hoops",
+      name: "Setting to a Target",
       skill: "Setting",
       ageMin: 10, ageMax: 16,
       difficulty: 2,
@@ -272,7 +272,7 @@ window.RR = window.RR || {};
       ],
       easier: "Use big targets close to the setter and let them catch and set to groove the aim.",
       harder: "Make the targets smaller, add back sets to the right-side hoop, and feed off-target passes.",
-      videoSearchUrl: v("Setting Accuracy to Hoops")
+      videoSearchUrl: v("Setting to a Target")
     },
     {
       id: "transition-setting-back-row",

@@ -193,6 +193,17 @@ RR.generator = (function () {
     return true;
   }
 
+  // True when a drill needs at least one EXTRA (non-basic) piece of gear that the
+  // coach has ticked as on hand. Used to gently favour owned-equipment drills so
+  // ticking gear on the Team screen actually changes the plan.
+  function usesOwnedExtra(drill, owned) {
+    var eq = drill.equipment || [];
+    for (var i = 0; i < eq.length; i++) {
+      if (!BASIC_EQUIP[eq[i]] && owned[eq[i]]) return true;
+    }
+    return false;
+  }
+
   // Filter the library to the drills eligible for one block, given how strict we
   // are being. `relax` widens the net per the required ladder:
   //   0: full rules; 1: ignore recent-used; 2: widen difficulty + drop the
@@ -248,6 +259,11 @@ RR.generator = (function () {
     var w = valueWeight(drill);
     if (ctx.emphasis[drill.skill]) w *= 2.2;                 // coach emphasis (weighted strongly)
     if (ctx.favorites && ctx.favorites[drill.id]) w *= 1.5;  // a starred favorite
+    // Owned extra gear the coach ticked: lean toward the drills that actually use
+    // it, so ticking "agility ladder" or "hoops" visibly shows up in plans instead
+    // of being one rare name in a big pool. Only kicks in when the drill needs an
+    // extra the coach owns (basics — balls/net/cones/wall — never trigger it).
+    if (usesOwnedExtra(drill, ctx.owned)) w *= 1.9;
     if (req.campPrefer && drill.campFriendly) w *= 2.0;      // camp blocks
     if ((req.kind === "warmup" || req.kind === "cooldown") && drill.isStaple) w *= 1.6;
     if (req.favorite && drill.campFriendly) w *= 1.8;        // confidence/showcase

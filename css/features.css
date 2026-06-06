@@ -214,8 +214,21 @@
 /* ---------------------------------------------------- Today action bar ------ */
 .today-actions__row { display: flex; gap: var(--sp-2); }
 .today-actions__row > .btn { flex: 1; }
-.util-btn { flex-direction: column; gap: 2px; font-size: var(--fs-xs); padding: var(--sp-2); min-height: var(--tap-min); }
+.util-btn { flex-direction: column; gap: 4px; font-size: var(--fs-xs); padding: var(--sp-2); min-height: var(--tap-min); text-align: center; line-height: 1.15; }
 .util-btn .btn__icon { margin: 0; }
+
+/* Top toolbar: the plan's utility actions, evenly spaced. The grid keeps the
+   buttons the same size and wraps gracefully (5-across on wide screens, a tidy
+   3+2 on phones) so nothing is ever cramped or touching. */
+.today-toolbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 var(--sp-5);
+}
+.today-toolbar .util-btn { width: 100%; }
+/* Bottom primary CTA gets clear breathing room above it. */
+.today-actions--cta { margin-top: var(--sp-5); }
 
 /* ---------------------------------------------------- Complete flow --------- */
 .complete__att { margin-bottom: var(--sp-3); }

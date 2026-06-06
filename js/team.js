@@ -636,7 +636,11 @@ RR.team = (function () {
     function refreshSummary() {
       summaryHost.innerHTML = "";
       if (!isSetUp(form)) {
-        summaryHost.appendChild(setupChecklistCard(form));
+        // Tell the coach exactly which required fields are still blank, rather
+        // than leaving the summary silently hidden. The card lives in teamsUI.
+        if (RR.teamsUI && RR.teamsUI.setupChecklistCard) {
+          summaryHost.appendChild(RR.teamsUI.setupChecklistCard(form));
+        }
         return;
       }
 
@@ -750,40 +754,6 @@ RR.team = (function () {
       }
       return group;
     }
-  }
-
-  // ---- "What's left" checklist on the Team screen ---------------------------
-  // Shown in place of the summary until every required field is filled in, so a
-  // coach is told exactly what to complete before a plan can be generated —
-  // rather than the summary just silently staying hidden.
-  function setupChecklistCard(t) {
-    t = t || getTeam() || DEFAULT_FORM;
-    var miss = missingRequired(t);
-    // Both dates are present but out of order: nothing reads as "missing", yet
-    // the schedule is still invalid. Call it out so the list is never empty.
-    var dateOrderIssue = !miss.length && !scheduleValid(t);
-
-    function item(label) {
-      return h("li", { class: "setup-check__item" }, [
-        h("span", { class: "setup-check__dot", "aria-hidden": "true" }),
-        h("span", { text: label })
-      ]);
-    }
-    var items = miss.map(item);
-    if (dateOrderIssue) items.push(item("A season opener that falls after practices begin"));
-
-    var lead = items.length === 1
-      ? "Finish this to generate your plan:"
-      : "Finish these to generate your plan:";
-
-    return h("section", { class: "card setup-check" }, [
-      h("div", { class: "card-head" }, [
-        h("h2", { text: "Almost ready" }),
-        h("span", { class: "pill setup-check__tag", text: "Plan not ready yet" })
-      ]),
-      h("p", { class: "muted setup-check__lead", text: lead }),
-      h("ul", { class: "setup-check__list" }, items)
-    ]);
   }
 
   // ---- Reusable empty state for Today / Season ------------------------------
