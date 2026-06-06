@@ -15,6 +15,9 @@ RR.gamesEditor = (function () {
 
   var h = RR.ui.h;
 
+  // A trash-can glyph reads as "delete" far more clearly than a bare minus.
+  var ICON_TRASH = '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/>';
+
   function parseISO(s) {
     if (!s) return NaN;
     var p = String(s).split("-");
@@ -51,22 +54,35 @@ RR.gamesEditor = (function () {
         dateIn.addEventListener("change", function () {
           form.games[i].date = dateIn.value; form.games = clean(form.games); commit(); repaint();
         });
+        // A visible "Choose date" caption — native date inputs give no usable
+        // empty-state prompt, so the label carries the call to action.
+        var dateField = h("label", { class: "games__field games__field--date" }, [
+          h("span", { class: "games__label", text: "Choose date" }),
+          dateIn
+        ]);
+
         var oppIn = h("input", { class: "input games__opp", type: "text", value: g.opponent || "",
           placeholder: "vs. (optional)", maxlength: "40", "aria-label": "Opponent" });
         oppIn.addEventListener("input", function () { form.games[i].opponent = oppIn.value; });
         oppIn.addEventListener("blur", function () { commit(); });
+        var oppField = h("label", { class: "games__field games__field--opp" }, [
+          h("span", { class: "games__label", text: "Opponent" }),
+          oppIn
+        ]);
 
         var rm = h("button", { type: "button", class: "games__del", "aria-label": "Remove game" },
           [h("span", { "aria-hidden": "true",
-            html: RR.ui.icon('<path d="M5 12h14"/>', 18) })]);
+            html: RR.ui.icon(ICON_TRASH, 18) })]);
         rm.addEventListener("click", function () {
           form.games.splice(i, 1); commit(); repaint();
         });
 
+        // Fields and the delete button share the top line; the resolved date
+        // (when set) confirms below on its own line so nothing crowds.
         listHost.appendChild(h("div", { class: "games__row" }, [
-          h("div", { class: "games__row-fields" }, [dateIn, oppIn]),
-          g.date ? h("span", { class: "games__when muted", text: pretty(g.date) }) : null,
-          rm
+          h("div", { class: "games__row-fields" }, [dateField, oppField]),
+          rm,
+          g.date ? h("span", { class: "games__when muted", text: pretty(g.date) }) : null
         ]));
       });
     }
