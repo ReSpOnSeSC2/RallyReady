@@ -510,30 +510,29 @@ RR.share = (function () {
     return h("div", { id: "rr-print-area" }, kids);
   }
 
-  // PUBLIC: print just one practice.
+  // PUBLIC: register (or clear) the practice that printing should produce.
+  // The Today screen calls this whenever it paints, so a clean #rr-print-area is
+  // always resident (kept invisible on screen by print.css) while a practice is
+  // shown. Keeping it in the DOM — rather than injecting it for a split second
+  // around the in-app button — means EVERY way of printing produces the carry
+  // sheet: the button, Ctrl/Cmd+P, and a phone's browser "Save as PDF". Pass a
+  // falsy session to remove it (e.g. on a rest day or when leaving the screen).
+  function setPrintable(session, team) {
+    var stale = document.getElementById("rr-print-area");
+    if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
+    if (!session) return;
+    document.body.appendChild(buildPrintArea(session, team));
+  }
+
+  // PUBLIC: drop any registered sheet (the router calls this on navigation so a
+  // stale sheet never prints from another screen).
+  function clearPrintable() { setPrintable(null); }
+
+  // PUBLIC: print just one practice (the in-app Print button). Ensures the sheet
+  // is current, then opens the browser print dialog.
   function printSession(session, team) {
     try {
-      // Remove any stale print area from a previous run.
-      var stale = document.getElementById("rr-print-area");
-      if (stale && stale.parentNode) stale.parentNode.removeChild(stale);
-
-      var area = buildPrintArea(session, team);
-      document.body.appendChild(area);
-
-      // Clean up after printing — prefer onafterprint, with a timeout backstop
-      // for browsers that don't fire it.
-      var cleaned = false;
-      function cleanup() {
-        if (cleaned) return;
-        cleaned = true;
-        try {
-          window.onafterprint = null;
-          if (area && area.parentNode) area.parentNode.removeChild(area);
-        } catch (e) { /* ignore */ }
-      }
-      window.onafterprint = cleanup;
-      setTimeout(cleanup, 60000);   // backstop if onafterprint never fires
-
+      setPrintable(session, team);
       window.print();
     } catch (e) {
       toast("Couldn't open the print view");
@@ -543,6 +542,8 @@ RR.share = (function () {
   return {
     session: shareSession,
     season: shareSeason,
-    printSession: printSession
+    printSession: printSession,
+    setPrintable: setPrintable,
+    clearPrintable: clearPrintable
   };
 })();

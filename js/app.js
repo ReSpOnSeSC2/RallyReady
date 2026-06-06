@@ -102,6 +102,10 @@ RR.app = (function () {
     var data = SCREENS[routeId];
     host.innerHTML = "";
 
+    // Drop any print-ready carry sheet from the previous screen; the Today
+    // screen re-registers its own when it paints.
+    if (RR.share && RR.share.clearPrintable) RR.share.clearPrintable();
+
     var head = document.createElement("div");
     head.className = "screen-head";
     var h1 = document.createElement("h1");
