@@ -783,7 +783,6 @@ textarea.input {
    column lines up. */
 @media (min-width: 600px) {
   body { background: var(--page-bg); }
-
   .appbar,
   #screen,
   .tabbar {

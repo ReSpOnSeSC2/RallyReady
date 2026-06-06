@@ -170,15 +170,47 @@ RR.ui = (function () {
     ]);
   }
 
+  // A star toggle that marks a drill as a coach favorite. It's its OWN button
+  // (never nested inside another button), self-updates on click, and persists via
+  // RR.state. opts.onToggle(isFav) lets a screen react (e.g. re-filter).
+  function favStar(drill, opts) {
+    opts = opts || {};
+    var fav = !!(RR.state && RR.state.isFavorite && RR.state.isFavorite(drill.id));
+    var btn = h("button", {
+      type: "button", class: "favstar" + (fav ? " is-on" : ""),
+      "aria-pressed": fav ? "true" : "false",
+      "aria-label": fav ? "Remove “" + drill.name + "” from favorites" : "Add “" + drill.name + "” to favorites"
+    });
+    function paint() {
+      btn.innerHTML = icon(fav
+        ? '<path d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8L12 17.9 6.7 20l1-5.8L3.5 9.7l5.9-.9z" fill="currentColor" stroke="none"/>'
+        : '<path d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8L12 17.9 6.7 20l1-5.8L3.5 9.7l5.9-.9z"/>', 20);
+    }
+    paint();
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!(RR.state && RR.state.toggleFavorite)) return;
+      fav = RR.state.toggleFavorite(drill.id);
+      btn.classList.toggle("is-on", fav);
+      btn.setAttribute("aria-pressed", fav ? "true" : "false");
+      paint();
+      if (opts.onToggle) opts.onToggle(fav);
+    });
+    return btn;
+  }
+
   // drillCard(drill, opts) — a tappable SUMMARY card for the Drills browser.
-  //   opts.onOpen(drill)  — called when the card is activated.
-  // The whole card is one <button> so it's keyboard-operable with a focus ring.
+  //   opts.onOpen(drill)   — called when the card is activated.
+  //   opts.onFav(isFav)    — called when the star is toggled.
+  // The card body is a <button>; the favorite star is a sibling overlay so we
+  // never nest one interactive control inside another.
   function drillCard(drill, opts) {
     opts = opts || {};
     var meta = [
       badge(drill.skill, skillColor(drill.skill)),
       h("span", { class: "drill-card__age", text: ageRangeText(drill) })
     ];
+    if (drill.custom) meta.push(h("span", { class: "drill-tag drill-tag--custom", text: "Your drill" }));
     if (drill.campFriendly) meta.push(campTag());
 
     var card = h("button", {
@@ -198,7 +230,10 @@ RR.ui = (function () {
       ])
     ]);
     if (opts.onOpen) card.addEventListener("click", function () { opts.onOpen(drill); });
-    return card;
+    return h("div", { class: "drill-card-wrap" }, [
+      card,
+      favStar(drill, { onToggle: opts.onFav })
+    ]);
   }
 
   // A labelled detail block: an eyebrow + content node, reused across the detail
@@ -213,7 +248,8 @@ RR.ui = (function () {
   // drillDetail(drill) — the full read-out for one drill: setup, steps, cues,
   // equipment, age range, difficulty dots, easier/harder, and the "Watch how"
   // link. Used by the Drills browser's detail view. No nested cards.
-  function drillDetail(drill) {
+  function drillDetail(drill, opts) {
+    opts = opts || {};
     var stats = h("div", { class: "drill-detail__stats" }, [
       h("div", { class: "drill-detail__stat" }, [
         h("span", { class: "eyebrow", text: "Difficulty" }),
@@ -261,19 +297,42 @@ RR.ui = (function () {
     ]));
 
     var head = [
-      h("div", { class: "drill-detail__badges" }, (function () {
-        var b = [badge(drill.skill, skillColor(drill.skill))];
-        if (drill.campFriendly) b.push(campTag());
-        return b;
-      })()),
+      h("div", { class: "drill-detail__headrow" }, [
+        h("div", { class: "drill-detail__badges" }, (function () {
+          var b = [badge(drill.skill, skillColor(drill.skill))];
+          if (drill.custom) b.push(h("span", { class: "drill-tag drill-tag--custom", text: "Your drill" }));
+          if (drill.campFriendly) b.push(campTag());
+          return b;
+        })()),
+        favStar(drill)
+      ]),
       h("h2", { class: "drill-detail__name", text: drill.name })
     ];
+
+    var footer = [watchLink(drill.videoSearchUrl, "Watch how")];
+    // Coach-authored drills can be edited or removed right from the detail view.
+    if (drill.custom && (opts.onEdit || opts.onDelete)) {
+      var ctl = [];
+      if (opts.onEdit) {
+        var ed = h("button", { type: "button", class: "btn btn-ghost" }, [
+          h("span", { "aria-hidden": "true", class: "btn__icon", html: icon('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', 18) }), "Edit drill"]);
+        ed.addEventListener("click", function () { opts.onEdit(drill); });
+        ctl.push(ed);
+      }
+      if (opts.onDelete) {
+        var del = h("button", { type: "button", class: "btn btn-ghost btn-danger" }, [
+          h("span", { "aria-hidden": "true", class: "btn__icon", html: icon('<path d="M4 7h16"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M7 7l1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12"/>', 18) }), "Delete"]);
+        del.addEventListener("click", function () { opts.onDelete(drill); });
+        ctl.push(del);
+      }
+      footer.push(h("div", { class: "drill-detail__custom-ctl" }, ctl));
+    }
 
     return h("section", { class: "card drill-detail" }, [
       h("div", { class: "drill-detail__head" }, head),
       stats,
       h("div", { class: "drill-detail__body" }, sections),
-      watchLink(drill.videoSearchUrl, "Watch how")
+      footer
     ]);
   }
 
@@ -419,6 +478,7 @@ RR.ui = (function () {
     difficultyWord: difficultyWord,
     ageRangeText: ageRangeText,
     equipLabel: equipLabel,
+    favStar: favStar,
     drillCard: drillCard,
     drillDetail: drillDetail,
     kindOf: kindOf,

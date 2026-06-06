@@ -287,6 +287,18 @@ RR.season = (function () {
     var today = computeToday(plan);
     host.appendChild(h("p", { class: "screen-sub season-status", text: today.statusText }));
     host.appendChild(buildOverview(plan, today));
+
+    // Share / export the whole plan (no backend — share sheet or .txt download).
+    if (RR.share) {
+      var shareBtn = h("button", { class: "btn btn-ghost btn-block season-share" }, [
+        h("span", { "aria-hidden": "true", class: "btn__icon",
+          html: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>' }),
+        team && team.programType === "camp" ? "Share camp plan" : "Share season plan"
+      ]);
+      shareBtn.addEventListener("click", function () { RR.share.season(plan, team); });
+      host.appendChild(shareBtn);
+    }
+
     plan.phases.forEach(function (ph) {
       host.appendChild(phaseCard(plan, ph, ph.key === today.currentKey));
     });

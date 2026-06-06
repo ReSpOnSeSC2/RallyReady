@@ -12,9 +12,11 @@ RR.app = (function () {
     drills:  { title: "Drills",  blurb: "Browse the drill library and find the right activity for any skill." },
     tips:    { title: "Tips",    blurb: "Quick coaching tips and what to expect at each age group." },
     team:    { title: "Team",    blurb: "Set up your team's name and age group to tailor every practice." },
-    // History isn't a tab — it's reached from the Today header — but it's a real
-    // route so it gets a title, a focus target, and back/forward support.
-    history: { title: "History", blurb: "Your completed practices." }
+    // These three aren't tabs — they're reached from in-screen links — but each is
+    // a real route so it gets a title, a focus target, and back/forward support.
+    history:  { title: "History",  blurb: "Your completed practices." },
+    calendar: { title: "Schedule", blurb: "The next few weeks of practices and games at a glance." },
+    roster:   { title: "Roster",   blurb: "Your players and practice attendance." }
   };
 
   var DEFAULT_ROUTE = "today";
@@ -119,9 +121,15 @@ RR.app = (function () {
     } else if (routeId === "today" && RR.today) {
       // The Today screen owns its body: practice plan + program-aware controls.
       RR.today.renderToday(host);
-    } else if (routeId === "history" && RR.today) {
-      // The History log lives alongside Today (RR.today).
-      RR.today.renderHistory(host);
+    } else if (routeId === "history" && RR.history) {
+      // The History log (its own module; reuses RR.today helpers).
+      RR.history.render(host);
+    } else if (routeId === "calendar" && RR.calendar) {
+      // The Schedule / agenda view.
+      RR.calendar.render(host);
+    } else if (routeId === "roster" && RR.roster) {
+      // Roster & attendance.
+      RR.roster.render(host);
     } else if (routeId === "season" && RR.season) {
       // The Season/Camp screen owns its body and sets its own program-aware title.
       RR.season.renderSeason(host);
@@ -139,8 +147,9 @@ RR.app = (function () {
   }
 
   function updateTabs(routeId) {
-    // History has no tab of its own; show it as living under the Today tab.
-    var activeTab = routeId === "history" ? "today" : routeId;
+    // Sub-screens with no tab of their own light up their nearest parent tab.
+    var PARENT = { history: "today", calendar: "today", roster: "team" };
+    var activeTab = PARENT[routeId] || routeId;
     var tabs = document.querySelectorAll(".tabbar a");
     for (var i = 0; i < tabs.length; i++) {
       var a = tabs[i];
@@ -169,6 +178,8 @@ RR.app = (function () {
   }
 
   function init() {
+    // Merge any coach-authored drills into the live library before the first paint.
+    if (RR.state && RR.state.syncCustomDrills) RR.state.syncCustomDrills();
     applyTheme();
     var toggle = document.getElementById("themeToggle");
     if (toggle) toggle.addEventListener("click", toggleTheme);

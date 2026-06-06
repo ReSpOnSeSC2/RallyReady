@@ -1,0 +1,188 @@
+/* calendar.css — the Schedule screen (RR.calendar): an agenda / list view of the
+   next ~3 weeks. Built entirely on the design-system tokens and the shared
+   .card / .list / .badge / .dots / .pill / .muted / .eyebrow primitives, so it
+   inherits correct contrast in BOTH light and dark themes automatically.
+
+   Layout: semantic week headings (<h2>) each owning one .list of tappable rows.
+   Rows are real <button>s, ≥48px tall, with a clear focus ring (the global
+   :focus-visible). Game rows get a distinct, on-palette treatment — an accent
+   left edge + a "Game" pill — without nesting a card inside the list card.
+   Classes are namespaced `cal-`. Motion animates transform/opacity only. */
+
+/* ---- Agenda + week headings ----------------------------------------------- */
+.cal-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+/* Semantic heading above each week's list. Sized down from the screen title so
+   the hierarchy reads (screen title > week > rows) without shouting. */
+.cal-week-head {
+  font-size: var(--fs-h3);
+  margin: var(--sp-3) 0 0;
+}
+.cal-agenda > .cal-week-head:first-child { margin-top: 0; }
+
+/* The list inherits .list (surface, border, radius, shadow, overflow:hidden). */
+.cal-list { margin-top: var(--sp-1); }
+
+/* ---- Rows ----------------------------------------------------------------- */
+/* One tappable row = one practice / camp day / game. A flex container with the
+   content body on the left and a chevron affordance on the right. */
+.cal-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--sp-3) var(--sp-4);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: var(--fs-body);
+  cursor: pointer;
+  transition: background-color 0.15s var(--ease);
+}
+.cal-row:last-child { border-bottom: none; }
+
+.cal-row__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+/* Top line: date (+ optional camp day number) + a "Done" pill. */
+.cal-row__top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.cal-row__date {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.cal-row__dayno {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+/* "Done" pill — dark text on bright teal clears AA in both themes (teal as text
+   would not). Sits at the far end of the top line. */
+.cal-row__done {
+  margin-left: auto;
+  background: var(--accent);
+  color: var(--on-primary);
+  font-weight: 800;
+}
+
+/* Meta line: phase badge + skill focus, wrapping gracefully on narrow screens. */
+.cal-row__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.cal-row__focus {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);          /* full contrast: it sits next to a coloured badge */
+  min-width: 0;
+}
+
+/* Foot line: intensity dots + "n/10", plus an optional taper hint. */
+.cal-row__foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-3);
+}
+.cal-row__intensity {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.cal-row__intensity-num {
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* "Light — game tomorrow" hint — a tinted chip so it reads as guidance, not an
+   error. Full --text on the tint clears AA. */
+.cal-row__hint {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.cal-row__chev {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+/* ---- Game rows (distinct, on-palette) ------------------------------------- */
+/* A teal accent left edge marks a match day apart from practice rows, while the
+   row stays inside the same list (no nested cards). */
+.cal-row--game {
+  position: relative;
+  padding-left: calc(var(--sp-4) + 4px);
+  background: var(--surface-2);
+}
+.cal-row--game::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent);
+}
+
+/* The "Game" pill — accent-filled with dark text (AA in both themes). */
+.cal-row__game-pill {
+  margin-left: auto;
+  background: var(--accent);
+  color: var(--on-primary);
+  font-weight: 800;
+}
+.cal-row__game-icon {
+  display: inline-flex;
+  align-items: center;
+}
+.cal-row__opp {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ---- "Nothing here" note --------------------------------------------------- */
+.cal-note { text-align: center; }
+.cal-note__title { margin-bottom: var(--sp-2); }
+.cal-note__blurb { margin: 0 auto; max-width: 40ch; }
+
+/* ---- Hover (pointer devices only) ----------------------------------------- */
+@media (hover: hover) {
+  .cal-row:hover { background: var(--surface-2); }
+  /* Keep the game row's distinction on hover by stepping to the primary tint. */
+  .cal-row--game:hover { background: var(--primary-tint); }
+}
+
+/* ---- Reduced motion -------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
