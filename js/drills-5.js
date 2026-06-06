@@ -186,6 +186,34 @@ window.RR = window.RR || {};
       harder: "Walk around while you bump and set, or set a high number to reach without a drop.",
       videoSearchUrl: v("Bump and Set to Yourself")
     },
+    {
+      id: "set-and-sit",
+      name: "Set and Sit",
+      skill: "Ball Control",
+      ageMin: 12, ageMax: 18,
+      difficulty: 3,
+      minPlayers: 1,
+      durationMin: 6,
+      isStaple: false,
+      isGame: false,
+      campFriendly: true,
+      equipment: ["balls"],
+      setup: "A solo setting challenge that mixes ball control with leg and core strength. Players keep a continuous set going above the forehead while sitting all the way down to the floor and standing back up on every contact. A whole group can do it at once with a ball each.",
+      steps: [
+        "Set the ball straight up above your forehead to a steady, comfortable height.",
+        "On each set, lower all the way down to sit on the floor, then stand right back up — keeping the ball going the whole time.",
+        "Stay under the ball, shuffling your feet so it stays in front of your forehead.",
+        "Count how many sets you string together, sit to stand, before the ball drops."
+      ],
+      cues: [
+        "Set it high enough to give yourself time to get down and up.",
+        "Soft finger pads, quiet hands — control the ball, don't slap it.",
+        "Push the floor away to stand; don't reach up for the ball with your back."
+      ],
+      easier: "Catch the ball each time you sit and again when you stand, or only drop to a squat instead of all the way to the floor.",
+      harder: "Speed up the sit-to-stand, go all the way down to lying on your back and up, or set to a higher target each rep.",
+      videoSearchUrl: v("Set and Sit")
+    },
 
     // ===================== DEFENSE (age-8 entry points) =====================
     {

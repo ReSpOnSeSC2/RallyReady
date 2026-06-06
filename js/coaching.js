@@ -74,7 +74,7 @@ RR.coaching = (function () {
       title: "Keep it FUN",
       icon: "fun",
       points: [
-        "Win players over with fun first — kids who enjoy practice come back and try harder. Fun IS the FUNdamentals philosophy, not a reward for finishing work.",
+        "Win players over with fun first — kids who enjoy practice come back and try harder. Treat fun as part of the learning, not a reward for getting through the drills.",
         "Finish every session with a favourite game so they leave wanting more.",
         "Add light competition and a scoreboard; small stakes make ordinary drills exciting.",
         "Mix volleyball-themed tag and relay games into warm-ups, especially with younger players.",
