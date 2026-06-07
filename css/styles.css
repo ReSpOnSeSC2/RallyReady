@@ -255,6 +255,51 @@ h3 { font-size: var(--fs-h3); }
 :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
 
+/* Language flag toggle — a two-flag pill (US / RO) at the right of the header,
+   just before the theme toggle. Pushes the toggle group to the right; the theme
+   toggle then only needs a small gap from it. */
+.lang-toggle {
+  margin-left: auto;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.18);
+}
+.lang-toggle ~ .theme-toggle { margin-left: var(--sp-1); }
+.lang-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  cursor: pointer;
+  padding: 5px 9px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--appbar-fg);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  opacity: 0.62;
+  transition: opacity 0.15s var(--ease), background 0.15s var(--ease);
+}
+.lang-opt:hover { opacity: 0.85; }
+.lang-opt.is-on {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.95);
+  color: #141e33;
+}
+.lang-opt .flag {
+  display: block;
+  width: 22px;
+  height: 15px;
+  border-radius: 2px;
+}
+
 /* ----------------------------------------------------------- Screen area -- */
 #screen {
   width: 100%;

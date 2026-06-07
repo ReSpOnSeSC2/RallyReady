@@ -35,6 +35,25 @@ RR.coaching = (function () {
       ]
     },
     {
+      // Written for a coach who learned and played the game in Romania and is now
+      // coaching in the US — what actually differs, beyond the language.
+      title: "US vs. Romania: what's different",
+      icon: "usro",
+      points: [
+        "Measurements: back home everything is metric — the women's net is 2.24 m, the court is 9×18 m. Here you'll see feet and inches instead: 2.00 m ≈ 6'6\", 2.13 m ≈ 7'0\", and the full 2.24 m ≈ 7'4⅛\". Same game, different ruler.",
+        "The words change too: net = fileu, pass/dig = preluare, set = ridicare, setter = ridicător, hitter = atacant, block = blocaj, and the positions are extremă, central, opus and libero. The \"Volleyball terms\" section below maps Romanian to English both ways.",
+        "Fun comes first here. US youth coaching follows \"athletes first, winning second\" and \"the game teaches the game\" — lots of small-sided games and ball contacts, where the Romanian school you grew up in usually leads with technique and disciplined repetition. Both work; this app leans games-first, so trust the play.",
+        "Feedback is relentlessly positive. The US norm is to praise something specific (\"great platform angle\"), say what TO do, and catch players being right — gentler than the blunt, correction-first style that's common back home. Be warm and save the tough love.",
+        "Practice is game-like, not lines. Expect random, slightly messy, over-the-net reps with a real ball and a score, rather than long blocked drills and conditioning laps. Short lines, many balls, everyone busy.",
+        "The coach–player relationship is more formal. US coaches keep a clear professional distance and don't socialise with players; in Romania the bond is often warmer and more personal. Stay friendly but keep boundaries — especially with other people's kids.",
+        "Parents are very involved. American club culture runs on parent volunteers — carpool, snacks, scorekeeping — and parents watching from the sideline, probably more than you're used to. Set expectations early, use a 24-hour rule for hot topics, and give each parent a job.",
+        "The pathway is different. Many US kids chase a college scholarship, so they play school ball in the fall and club (\"travel\") ball in winter and spring, plus summer camps — instead of one year-round club like the European system. Real selection comes later; the early years lean toward including everyone.",
+        "Rules can differ by league. US club (USA Volleyball) is basically FIVB, like home, but US high-school (NFHS) rules vary — substitution counts, when the libero can serve, let serves, and some net and line calls. Always confirm the net height and rules with your specific league.",
+        "Age groups are named differently. Here teams are grouped like 12-and-under or by the bands in this app (8–10, 11–12, …), not the minivolei / speranțe / cadeți / juniori categories of the Romanian federation. Pick the band that matches your players.",
+        "Keep what made you good. That technical, hard-working Romanian foundation is an asset — blend your eye for clean technique with the American fun-and-games energy and you'll give these kids the best of both worlds."
+      ]
+    },
+    {
       title: "Teach the six core skills",
       icon: "skills",
       points: [
@@ -404,6 +423,7 @@ RR.coaching = (function () {
     include:    "<circle cx='9' cy='9' r='2.5'/><circle cx='16.5' cy='10' r='2'/><path d='M4 19c0-2.8 2.2-5 5-5s5 2.2 5 5'/><path d='M15 14c2.5 0 4.5 2 4.5 4.5'/>",
     athlete:    "<path d='M3 12h4l2-5 4 11 2-6h6'/>",
     rules:      "<path d='M5 3v18'/><path d='M5 4h12l-2.5 3.5L17 11H5'/>",
+    usro:       "<path d='M3 9h15l-3-3'/><path d='M21 15H6l3 3'/>",
     terms:      "<path d='M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z'/><path d='M9 8h6M9 12h5'/>",
     equip:      "<path d='M3 8l9-4 9 4-9 4-9-4z'/><path d='M3 8v8l9 4 9-4V8'/><path d='M12 12v8'/>"
   };
@@ -627,6 +647,10 @@ RR.coaching = (function () {
 
     // Reference sections, collapsed by default to keep the page scannable.
     host.appendChild(discloseCard("Volleyball terms, explained", "terms", buildTerms(), false));
+    // Romanian <-> English terms (for a coach who learned the game in Romania).
+    if (RR.terms && RR.terms.content) {
+      host.appendChild(discloseCard("Romanian ↔ English terms", "usro", RR.terms.content(), false));
+    }
     host.appendChild(discloseCard("Gear & equipment for drills", "equip", buildEquipment(), false));
   }
 
