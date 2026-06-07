@@ -191,6 +191,16 @@
   gap: var(--sp-3);
 }
 
+/* The age card pairs a long title ("For your age group") with a wide right
+   cluster (the band pill + the Listen speaker). On a narrow phone the two can't
+   share one row: the title gets crushed to a sliver and the Listen pill spills
+   off the card edge. Let the head wrap so the right cluster drops onto its own
+   row beneath the title when space is tight, while staying side-by-side on
+   wider screens. The right cluster never shrinks, so its contents stay legible. */
+.card-head--age { flex-wrap: wrap; }
+.card-head--age > h2 { flex: 1 1 auto; }
+.card-head--age .card-head__end { margin-left: auto; }
+
 /* The Listen control is a positioning context for its speed popup, so the popup
    can anchor to the speaker (right-aligned, so it can't spill off the screen). */
 .tip__listen {

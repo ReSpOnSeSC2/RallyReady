@@ -306,7 +306,7 @@ h3 { font-size: var(--fs-h3); }
   max-width: var(--app-max);
   margin: 0 auto;
   padding: var(--sp-5) var(--sp-4) 0;
-  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + var(--sp-5));
+  padding-bottom: calc(var(--tabbar-h) + max(env(safe-area-inset-bottom), var(--sp-2)) + var(--sp-5));
   min-height: calc(100vh - var(--appbar-h));
   /* The content column carries the app background so that, on desktop, the area
      OUTSIDE the column (--page-bg) frames it. On mobile this equals --bg, so it's
@@ -537,8 +537,12 @@ textarea.input {
   margin: 0 auto;
   width: 100%;
   max-width: var(--app-max);
-  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
+  /* Reserve at least a little bottom inset even when the device reports no
+     safe-area (most Android phones): it lifts the icon+label cluster off the very
+     bottom edge so the labels stay visible as Chrome's URL bar shows/hides and
+     nudges the fixed bar — keeping the nice movement without clipping the text. */
+  height: calc(var(--tabbar-h) + max(env(safe-area-inset-bottom), var(--sp-2)));
+  padding-bottom: max(env(safe-area-inset-bottom), var(--sp-2));
   display: flex;
   background: var(--tab-surface);
   border-top: var(--border-w) solid var(--line);
