@@ -229,6 +229,9 @@ RR.app = (function () {
   function init() {
     // Merge any coach-authored drills into the live library before the first paint.
     if (RR.state && RR.state.syncCustomDrills) RR.state.syncCustomDrills();
+    // Bring up localization (flag toggle + DOM translator) before the first render
+    // so the opening screen paints in the chosen language.
+    if (RR.i18n && RR.i18n.init) RR.i18n.init();
     applyTheme();
     var toggle = document.getElementById("themeToggle");
     if (toggle) toggle.addEventListener("click", toggleTheme);

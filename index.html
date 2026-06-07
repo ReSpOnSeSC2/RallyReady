@@ -153,6 +153,13 @@
     each drills-N.js concatenates its drills onto RR.drills, so they load in order after drills.js.
   -->
   <script src="js/state.js"></script>
+  <!-- Localization engine + Romanian dictionary (loads early so every module's
+       output can be translated at render time; the flag toggle lives in the header). -->
+  <script src="js/i18n.js"></script>
+  <script src="js/i18n-ui.js"></script>
+  <script src="js/i18n-content.js"></script>
+  <script src="js/i18n-content2.js"></script>
+  <script src="js/i18n-positions.js"></script>
   <script src="js/drills.js"></script>
   <script src="js/drills-2.js"></script>
   <script src="js/drills-3.js"></script>
@@ -165,6 +172,8 @@
   <script src="js/drills-10.js"></script>
   <script src="js/drills-11.js"></script>
   <script src="js/coaching.js"></script>
+  <!-- Romanian <-> English volleyball-terms reference (composed into the Tips screen). -->
+  <script src="js/terms.js"></script>
   <!-- Tips "show, don't just tell" visuals (animated SVG diagrams + video links).
        Standalone; the Tips screen (coaching.js) composes it in at render time. -->
   <script src="js/tips-visuals.js"></script>

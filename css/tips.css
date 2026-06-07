@@ -149,3 +149,28 @@
     to   { opacity: 1; transform: none; }
   }
 }
+
+/* Romanian <-> English terms reference (Tips screen). The pair list itself is
+   marked data-no-i18n so the translator leaves the English column intact. */
+.rr-terms__intro { margin: 0 0 var(--sp-3); }
+.rr-bi { list-style: none; margin: 0; padding: 0; }
+.rr-bi__row {
+  padding: var(--sp-2) 0;
+  border-bottom: var(--border-w) solid var(--line);
+}
+.rr-bi__row:last-child { border-bottom: none; }
+.rr-bi__pair {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.rr-bi__ro { font-weight: 700; color: var(--text); }
+.rr-bi__arrow { color: var(--text-muted); opacity: 0.7; }
+.rr-bi__en { color: var(--text-muted); }
+.rr-bi__note {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-muted);
+}

@@ -84,6 +84,17 @@ the app.
 
 ---
 
+## English & Romanian
+
+RallyReady speaks **English and Romanian**. Tap the **EN / RO flag toggle** in the
+top-right corner (next to the sun/moon button) to switch the whole app instantly —
+no reload. On a Romanian-language phone it opens in Romanian automatically; either
+way your choice is **remembered** next time. The Romanian is natural, spoken
+coaching language, with volleyball terms as they're used in Romania (fileu, preluare,
+ridicare, atac, blocaj, extremă/central/opus/libero). The **Tips** tab also includes
+a **"US vs. Romania: what's different"** section and a **Romanian ↔ English terms**
+reference, for a coach who learned the game in Romania and is now coaching here.
+
 ## Using it day to day
 
 1. **Open the app.** The bottom of the screen has five tabs: **Today, Season,
