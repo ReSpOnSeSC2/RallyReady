@@ -105,6 +105,7 @@ RR.run = (function () {
       blocks: blocks,
       index: 0,
       remaining: blocks[0].minutes * 60, // seconds left on the current block
+      endAt: 0,    // wall-clock ms when the running block hits 0 (0 = not running)
       paused: false,
       finished: false,
       timer: null,
@@ -118,6 +119,9 @@ RR.run = (function () {
     buildShell();
     document.body.classList.add("rr-run-open");
     document.addEventListener("keydown", onKey, true);
+    // Phones throttle/freeze background timers, so re-sync the clock from the
+    // wall clock whenever we return to the foreground (see syncFromClock).
+    document.addEventListener("visibilitychange", onVisibility);
     renderBlock();
     startTicking();
   }
@@ -319,9 +323,16 @@ RR.run = (function () {
   // ======================================================================= //
   //  TIMER                                                                   //
   // ======================================================================= //
+  // We DON'T count down by decrementing a counter each tick — backgrounded tabs
+  // get their timers throttled or frozen on phones, so those ticks can't be
+  // trusted to fire once a second. Instead we anchor an absolute deadline
+  // (S.endAt) and always derive `remaining` from the real wall clock. The
+  // interval just drives repaints; syncFromClock() does the actual arithmetic,
+  // so drift while off-screen is corrected the instant we tick or come back.
   function startTicking() {
     stopTicking();
-    if (S.paused || S.finished) return;
+    if (!S || S.paused || S.finished) return;
+    S.endAt = Date.now() + S.remaining * 1000;
     S.timer = setInterval(tick, 1000);
   }
   function stopTicking() {
@@ -330,28 +341,52 @@ RR.run = (function () {
 
   function tick() {
     if (!S || S.paused || S.finished) return;
-    S.remaining -= 1;
-    if (S.remaining <= 0) {
-      S.remaining = 0;
-      updateClockUI();
-      cueEnd();
-      advanceFromTimer();
-      return;
-    }
-    updateClockUI();
+    syncFromClock();
   }
 
-  // When the running clock hits zero: either roll to the next block, or — on the
-  // last block — land on the "complete" state.
-  function advanceFromTimer() {
-    if (S.index < S.blocks.length - 1) {
-      S.index += 1;
-      S.remaining = S.blocks[S.index].minutes * 60;
-      renderBlock();
-      startTicking();
-    } else {
-      enterFinished();
+  // Recompute `remaining` from S.endAt. If the deadline has passed (which it may
+  // have by a lot, if we were off-screen for a while), roll forward through as
+  // many whole blocks as elapsed so we land on the block we'd actually be on —
+  // the timer "kept running" while the app was away.
+  function syncFromClock() {
+    if (!S || S.paused || S.finished || !S.endAt) return;
+    var now = Date.now();
+    var secsLeft = Math.round((S.endAt - now) / 1000);
+    if (secsLeft > 0) {
+      S.remaining = secsLeft;
+      updateClockUI();
+      return;
     }
+
+    // This block's time is up. Cue once, then consume any overflow (the time
+    // that elapsed past the deadline) across the following blocks.
+    S.remaining = 0;
+    updateClockUI();
+    cueEnd();
+
+    var overflow = -secsLeft; // whole seconds elapsed beyond the deadline (>= 0)
+    while (S.index < S.blocks.length - 1) {
+      S.index += 1;
+      var blockSecs = S.blocks[S.index].minutes * 60;
+      if (overflow < blockSecs) {
+        S.remaining = blockSecs - overflow;
+        renderBlock();
+        startTicking();
+        return;
+      }
+      overflow -= blockSecs;
+    }
+    // Ran past the end of the last block while away — practice is complete.
+    enterFinished();
+  }
+
+  // Returning to the foreground: phones suspend the audio context and throttle
+  // timers in the background, so wake the chime and force an immediate re-sync
+  // instead of waiting up to a second for the next (possibly stale) tick.
+  function onVisibility() {
+    if (!S || document.visibilityState !== "visible") return;
+    try { if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); } catch (e) {}
+    if (!S.paused && !S.finished) syncFromClock();
   }
 
   function enterFinished() {
@@ -419,6 +454,9 @@ RR.run = (function () {
   function resetBlock() {
     if (!S || S.finished) return;
     S.remaining = S.blocks[S.index].minutes * 60;
+    // Re-anchor the wall-clock deadline so the running timer counts from the
+    // full duration again rather than the now-stale previous endAt.
+    if (!S.paused) startTicking();
     updateClockUI();
   }
 
@@ -451,6 +489,7 @@ RR.run = (function () {
   function close() {
     stopTicking();
     document.removeEventListener("keydown", onKey, true);
+    document.removeEventListener("visibilitychange", onVisibility);
     document.body.classList.remove("rr-run-open");
     if (S && S.root && S.root.parentNode) {
       S.root.parentNode.removeChild(S.root);
