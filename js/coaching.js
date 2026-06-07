@@ -580,12 +580,21 @@ RR.coaching = (function () {
   function buildAgeCard(team) {
     var band = team.ageGroup;
     var guidance = byAge[band] || "Set your team's age group to see tailored guidance.";
+    var title = h("h2", { text: "For your age group" });
+    var body = h("p", { class: "age-guide__text", text: guidance });
+
+    // Title + band pill on the right, plus a Listen speaker (where supported). The
+    // speaker reads the rendered DOM text, so it follows the current UI language.
+    var end = [h("span", { class: "pill", text: band })];
+    if (RR.tipsTTS && RR.tipsTTS.supported()) {
+      end.push(RR.tipsTTS.listenButton(function () {
+        return title.textContent + ". " + body.textContent;
+      }));
+    }
+
     return h("section", { class: "card" }, [
-      h("div", { class: "card-head" }, [
-        h("h2", { text: "For your age group" }),
-        h("span", { class: "pill", text: band })
-      ]),
-      h("p", { class: "age-guide__text", text: guidance }),
+      h("div", { class: "card-head" }, [title, h("div", { class: "card-head__end" }, end)]),
+      body,
       refItems(band),
       h("p", { class: "muted ref-note", text: referenceNote })
     ]);
@@ -658,12 +667,6 @@ RR.coaching = (function () {
 
     host.appendChild(h("p", { class: "screen-sub tips-intro",
       text: "Real, practical coaching help — tuned to your team's age and program." }));
-
-    // Read-aloud controls (only where the browser supports speech synthesis).
-    if (RR.tipsTTS && RR.tipsTTS.supported()) {
-      host.classList.toggle("tts-off", !RR.tts.isEnabled());
-      host.appendChild(RR.tipsTTS.bar(host));
-    }
 
     // Top: age guidance + reference (or the all-bands table until a team exists).
     host.appendChild(setUp ? buildAgeCard(team) : buildAllBandsCard());

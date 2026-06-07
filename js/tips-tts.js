@@ -1,8 +1,11 @@
 // tips-tts.js — the Tips-screen UI for read-aloud (RR.tipsTTS).
 //
 // The speech ENGINE is RR.tts (js/tts.js); this module is only the on-screen glue:
-//   • listenButton(getContent) — the per-card "Listen / Stop" pill;
-//   • bar(host)                — the top-of-screen on/off switch + speed selector.
+//   • listenButton(getContent) — the per-card "Listen / Stop" pill, which reveals
+//     a small Slow / Normal / Fast speed popup beside it WHILE it is reading.
+// There is no global on/off switch: tapping a card's speaker is all it takes to
+// hear it, and the speed control lives on the speaker itself (not at the top of
+// the screen), so adjusting pace never means scrolling away from the card.
 // Kept in its own file so coaching.js stays well under the project's 800-line
 // ceiling, and so the speech engine and its Tips UI stay cleanly separated.
 //
@@ -40,16 +43,39 @@ RR.tipsTTS = (function () {
     if (stopCurrentUI) { stopCurrentUI(); stopCurrentUI = null; }
   }
 
+  // A speed popup (Slow / Normal / Fast) built fresh each time it opens, so it
+  // always reflects the current persisted rate. Rate changes apply live: the
+  // engine reads getRate() per chunk, so the rest of the read-aloud speeds up or
+  // slows down from the next sentence on — no need to restart the card.
+  function buildSpeed(into) {
+    var rates = RR.tts.RATES;
+    into.innerHTML = "";
+    into.appendChild(h("span", { class: "tip__speed-label", text: "Speed" }));
+    into.appendChild(RR.ui.segmented({
+      options: [
+        { value: rates.slow, label: "Slow" },
+        { value: rates.normal, label: "Normal" },
+        { value: rates.fast, label: "Fast" }
+      ],
+      value: RR.tts.getRate(),
+      onSelect: function (v) { RR.tts.setRate(v); }
+    }));
+  }
+
   // A pill button that reads its card aloud. `getContent` is called lazily on
   // click, so it always reflects the current language/state — it returns either a
-  // string or an array of {text, lang} segments (the bilingual terms card).
+  // string or an array of {text, lang} segments (the bilingual terms card). While
+  // it is reading, a Slow/Normal/Fast popup sits beside it for on-the-fly pacing.
   function listenButton(getContent) {
     var btn = h("button", {
-      type: "button", class: "tip__listen", "aria-pressed": "false", "aria-label": tt("Listen")
+      type: "button", class: "tip__listen-btn", "aria-pressed": "false", "aria-label": tt("Listen")
     }, [
       h("span", { class: "tip__listen-ic", "aria-hidden": "true", html: speakerSvg() }),
       h("span", { class: "tip__listen-txt", text: "Listen" })
     ]);
+    var pop = h("div", { class: "tip__speed", role: "group", "aria-label": tt("Speed") });
+    pop.hidden = true;
+    var wrap = h("span", { class: "tip__listen" }, [btn, pop]);
 
     function setPlaying(on) {
       btn.classList.toggle("is-playing", on);
@@ -57,6 +83,8 @@ RR.tipsTTS = (function () {
       btn.setAttribute("aria-label", tt(on ? "Stop" : "Listen"));
       btn.querySelector(".tip__listen-ic").innerHTML = on ? stopSvg() : speakerSvg();
       btn.querySelector(".tip__listen-txt").textContent = on ? "Stop" : "Listen";
+      if (on) { buildSpeed(pop); pop.hidden = false; }
+      else { pop.hidden = true; pop.innerHTML = ""; }
     }
 
     btn.addEventListener("click", function () {
@@ -75,56 +103,13 @@ RR.tipsTTS = (function () {
       if (!started) { setPlaying(false); stopCurrentUI = null; }
     });
 
-    return btn;
-  }
-
-  // The read-aloud controls at the top of the screen: an on/off switch (which
-  // shows/hides every per-card Listen button via `host`) and a speed selector.
-  function bar(host) {
-    var rates = RR.tts.RATES;
-    var enabled = RR.tts.isEnabled();
-
-    var sw = h("button", {
-      type: "button", class: "tts-switch" + (enabled ? " is-on" : ""),
-      role: "switch", "aria-checked": enabled ? "true" : "false"
-    }, [
-      h("span", { class: "tts-switch__track", "aria-hidden": "true" }, [h("span", { class: "tts-switch__thumb" })]),
-      h("span", { class: "tts-switch__label", text: "Read aloud" })
-    ]);
-    sw.addEventListener("click", function () {
-      var on = sw.getAttribute("aria-checked") !== "true";
-      sw.setAttribute("aria-checked", on ? "true" : "false");
-      sw.classList.toggle("is-on", on);
-      RR.tts.setEnabled(on);
-      host.classList.toggle("tts-off", !on);
-      if (!on) { RR.tts.cancel(); resetCurrent(); }
-    });
-
-    var speed = RR.ui.segmented({
-      options: [
-        { value: rates.slow, label: "Slow" },
-        { value: rates.normal, label: "Normal" },
-        { value: rates.fast, label: "Fast" }
-      ],
-      value: RR.tts.getRate(),
-      onSelect: function (v) { RR.tts.setRate(v); }
-    });
-
-    return h("section", { class: "card tts-bar" }, [
-      h("div", { class: "tts-bar__row" }, [
-        h("span", { class: "tts-bar__icon", "aria-hidden": "true", html: speakerSvg() }), sw
-      ]),
-      h("div", { class: "tts-bar__row tts-bar__speed" }, [
-        h("span", { class: "tts-bar__label", text: "Speed" }), speed
-      ])
-    ]);
+    return wrap;
   }
 
   // Romanian for the read-aloud UI. The i18n DOM walker translates the visible
   // text nodes once these are registered; aria-labels go through tt() at set-time.
   if (RR.i18n) {
     RR.i18n.add({
-      "Read aloud": "Citește cu voce tare",
       "Speed": "Viteză",
       "Slow": "Lent",
       "Normal": "Normal",
@@ -134,5 +119,5 @@ RR.tipsTTS = (function () {
     });
   }
 
-  return { supported: supported, listenButton: listenButton, bar: bar };
+  return { supported: supported, listenButton: listenButton };
 })();

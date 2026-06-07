@@ -152,7 +152,6 @@ RR.tts = (function () {
     if (!segments.length) return false;
 
     var my = ++token;
-    var rate = getRate();
     active = true;
     startKeepAlive();
 
@@ -169,7 +168,7 @@ RR.tts = (function () {
       if (i >= segments.length) { finish(); return; }
       var seg = segments[i++];
       var u = new window.SpeechSynthesisUtterance(seg.text);
-      u.rate = rate;
+      u.rate = getRate();              // read live, so a speed change mid-read takes effect on the next chunk
       u.lang = TAG[seg.lang] || TAG.en;
       var v = pickVoice(seg.lang);
       if (v) u.voice = v;
