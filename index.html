@@ -171,7 +171,12 @@
   <script src="js/drills-9.js"></script>
   <script src="js/drills-10.js"></script>
   <script src="js/drills-11.js"></script>
+  <!-- Read-aloud (text-to-speech) for the Tips screen. tts.js is the speech engine
+       (Web Speech API); tips-tts.js is the on-screen UI that coaching.js composes
+       in at render time. Both degrade gracefully where speechSynthesis is absent. -->
+  <script src="js/tts.js"></script>
   <script src="js/coaching.js"></script>
+  <script src="js/tips-tts.js"></script>
   <!-- Romanian <-> English volleyball-terms reference (composed into the Tips screen). -->
   <script src="js/terms.js"></script>
   <!-- Tips "show, don't just tell" visuals (animated SVG diagrams + video links).
