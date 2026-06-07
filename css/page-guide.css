@@ -1,0 +1,73 @@
+/* page-guide.css — the per-page "what is this page for?" helper (RR.pageGuide).
+   Sits under the screen title: an "i" button that opens a plain-English
+   explanation and a speaker button that reads it aloud. Uses ONLY the semantic
+   tokens from styles.css, so it renders correctly in both light and dark themes,
+   reuses the app's :focus-visible ring, and respects prefers-reduced-motion. */
+
+.page-guide { margin-top: var(--sp-3); }
+
+.page-guide__row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+/* Both controls share a quiet, outlined pill look so they read as helpers, not
+   primary actions competing with the screen's own buttons. */
+.page-guide__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--tap-min);
+  padding: 0 var(--sp-3);
+  border: var(--border-w) solid var(--line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.page-guide__btn:hover { color: var(--text); border-color: var(--border); }
+
+/* The speaker is icon-only; keep it square so it reads as a round-ish control. */
+.page-guide__listen { padding: 0 var(--sp-3); }
+.page-guide__ic { display: inline-flex; }
+
+/* Active states: the info pill while its panel is open, the speaker while talking. */
+.page-guide__info[aria-expanded="true"],
+.page-guide__listen.is-playing {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--primary-tint);
+}
+
+/* The explanation itself — a soft, readable block of normal prose. */
+.page-guide__panel {
+  margin-top: var(--sp-3);
+  padding: var(--sp-4);
+  border: var(--border-w) solid var(--line);
+  border-radius: var(--radius-md, 14px);
+  background: var(--surface);
+}
+.page-guide__panel[hidden] { display: none; }
+.page-guide__panel p {
+  margin: 0 0 var(--sp-3);
+  color: var(--text);
+  line-height: 1.55;
+}
+.page-guide__panel p:last-child { margin-bottom: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .page-guide__panel:not([hidden]) { animation: page-guide-open 0.2s var(--ease) both; }
+  @keyframes page-guide-open {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-guide__btn { transition: none; }
+}
