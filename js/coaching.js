@@ -216,7 +216,7 @@ RR.coaching = (function () {
       points: [
         "Set expectations early: share your schedule, goals, and how you'll communicate at a short start-of-season meeting.",
         "Be positive and specific about their child, and lead with something the kid is doing well.",
-        "Use a 24-hour rule for heated topics — invite parents to talk the next day, not during or right after a match.",
+        "Use the \"24-hour rule\" for heated topics — the simplest tool for keeping parent conversations sane. The rule: nothing about playing time, a tough loss, or a bad call gets hashed out in the raw minutes right after a match, when emotions run hottest and no one wins the sideline argument. Instead, ask upset parents to sleep on it and reach out the next day to set up a calm chat. Overnight the small stuff tends to evaporate, and the concerns that still matter in the morning get the level-headed conversation they deserve. Spell it out at your first parent meeting so the door always feels open — just not at 9 p.m. courtside.",
         "Give parents a simple job: cheer effort, get players to practice on time, and reinforce a growth mindset at home.",
         "Be clear and consistent about playing time and roles so there are no surprises.",
         "Recruit volunteers for scorekeeping, snacks, and setup — involved parents become your best support."
