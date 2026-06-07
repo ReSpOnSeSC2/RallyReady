@@ -33,16 +33,11 @@ RR.tipsTTS = (function () {
   // changes but not attribute changes, so aria-labels are localized here instead.
   function tt(s) { return (RR.i18n && RR.i18n.t) ? RR.i18n.t(s) : s; }
 
-  // Only one card plays at a time. When a new card starts, this resets the
-  // previously-playing button's UI so it can never get stuck on "Stop".
-  var stopCurrentUI = null;
-  function resetCurrent() {
-    if (stopCurrentUI) { stopCurrentUI(); stopCurrentUI = null; }
-  }
-
   // A pill button that reads its card aloud. `getContent` is called lazily on
   // click, so it always reflects the current language/state — it returns either a
   // string or an array of {text, lang} segments (the bilingual terms card).
+  // Only one job plays at a time; the engine fires onEnd on the previous button
+  // whenever a new one starts, so the UI never gets stuck on "Stop".
   function listenButton(getContent) {
     var btn = h("button", {
       type: "button", class: "tip__listen", "aria-pressed": "false", "aria-label": tt("Listen")
@@ -60,19 +55,11 @@ RR.tipsTTS = (function () {
     }
 
     btn.addEventListener("click", function () {
-      if (btn.classList.contains("is-playing")) {   // tap again to stop
-        RR.tts.cancel();
-        setPlaying(false);
-        stopCurrentUI = null;
-        return;
-      }
-      resetCurrent();                               // stop whatever else was playing
-      stopCurrentUI = function () { setPlaying(false); };
-      var started = RR.tts.speak(getContent(), {
+      if (btn.classList.contains("is-playing")) { RR.tts.cancel(); return; }  // onEnd resets UI
+      RR.tts.speak(getContent(), {
         onStart: function () { setPlaying(true); },
-        onEnd: function () { setPlaying(false); stopCurrentUI = null; }
+        onEnd: function () { setPlaying(false); }
       });
-      if (!started) { setPlaying(false); stopCurrentUI = null; }
     });
 
     return btn;
@@ -97,7 +84,7 @@ RR.tipsTTS = (function () {
       sw.classList.toggle("is-on", on);
       RR.tts.setEnabled(on);
       host.classList.toggle("tts-off", !on);
-      if (!on) { RR.tts.cancel(); resetCurrent(); }
+      if (!on) RR.tts.cancel();   // engine fires onEnd, resetting any playing button
     });
 
     var speed = RR.ui.segmented({

@@ -118,15 +118,20 @@ RR.tts = (function () {
   // ---- playback -------------------------------------------------------------
   // One job at a time. `token` lets a superseded queue (after a new speak/cancel)
   // recognise it is stale, so a late utterance event never fires the wrong onEnd.
+  // `current` holds the running job so EVERY way a job stops — natural end, an
+  // error, cancel(), or being superseded by a new speak() — funnels through
+  // endActive() and fires that job's onEnd exactly once. That single guarantee is
+  // what lets each Listen button reset its own UI without any cross-module
+  // bookkeeping: whoever was playing always hears "you stopped".
   var token = 0;
-  var active = null;          // truthy while a job is running
+  var current = null;         // { onEnd } of the running job, or null when idle
 
   // Chrome can pause long synthesis; a gentle periodic resume keeps chunks flowing.
   var keepAlive = null;
   function startKeepAlive() {
     stopKeepAlive();
     keepAlive = setInterval(function () {
-      if (!active) { stopKeepAlive(); return; }
+      if (!current) { stopKeepAlive(); return; }
       try { if (synth.paused) synth.resume(); } catch (e) {}
     }, 5000);
   }
@@ -134,33 +139,40 @@ RR.tts = (function () {
     if (keepAlive) { clearInterval(keepAlive); keepAlive = null; }
   }
 
-  function stopInternal() {
-    token++;
-    active = null;
+  // Clear the running job and notify it (once) that it is no longer playing.
+  function endActive() {
+    var job = current;
+    current = null;
     stopKeepAlive();
-    try { synth.cancel(); } catch (e) {}
+    if (job && typeof job.onEnd === "function") {
+      try { job.onEnd(); } catch (e) {}
+    }
   }
 
-  function cancel() { var had = !!active; stopInternal(); return had; }
-  function speaking() { return !!active; }
+  function stopInternal() {
+    token++;
+    try { synth.cancel(); } catch (e) {}
+    endActive();
+  }
+
+  function cancel() { var had = !!current; stopInternal(); return had; }
+  function speaking() { return !!current; }
 
   function speak(content, opts) {
     if (!supported()) return false;
     opts = opts || {};
-    stopInternal();                       // interrupt whatever was playing
+    stopInternal();                       // interrupt + reset whatever was playing
     var segments = toSegments(content);
     if (!segments.length) return false;
 
     var my = ++token;
     var rate = getRate();
-    active = true;
+    current = { onEnd: opts.onEnd };
     startKeepAlive();
 
     function finish() {
-      if (my !== token) return;           // superseded — stay silent
-      active = null;
-      stopKeepAlive();
-      if (typeof opts.onEnd === "function") opts.onEnd();
+      if (my !== token) return;           // superseded — its onEnd already fired
+      endActive();                        // natural completion fires onEnd once
     }
 
     var i = 0;
