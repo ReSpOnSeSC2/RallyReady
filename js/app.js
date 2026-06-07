@@ -120,6 +120,14 @@ RR.app = (function () {
     h1.setAttribute("tabindex", "-1");   // focus target for SPA navigation (a11y)
     h1.textContent = data.title;
     head.appendChild(h1);
+
+    // A friendly "what is this page for?" helper under every title: an "i" button
+    // that opens a plain-English explanation and a speaker that reads it aloud.
+    if (RR.pageGuide && RR.pageGuide.control) {
+      var guide = RR.pageGuide.control(routeId);
+      if (guide) head.appendChild(guide);
+    }
+
     host.appendChild(head);
 
     var team = RR.team;
