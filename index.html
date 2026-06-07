@@ -1,7 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no">
 <head>
   <meta charset="UTF-8" />
+  <!-- RallyReady ships its own in-app EN/RO toggle (RR.i18n). Tell browser
+       translators (e.g. Chrome's "Translate page") to stay out of it, so they
+       can't re-translate the already-localized UI into garbage — which turned
+       "Tips" into "patella" and rewrote our copy on top of our own strings. -->
+  <meta name="google" content="notranslate" />
   <!-- viewport-fit=cover lets the app extend under Android system bars when installed -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#FF6B35" />

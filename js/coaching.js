@@ -593,7 +593,7 @@ RR.coaching = (function () {
     }
 
     return h("section", { class: "card" }, [
-      h("div", { class: "card-head" }, [title, h("div", { class: "card-head__end" }, end)]),
+      h("div", { class: "card-head card-head--age" }, [title, h("div", { class: "card-head__end" }, end)]),
       body,
       refItems(band),
       h("p", { class: "muted ref-note", text: referenceNote })
