@@ -473,7 +473,10 @@ RR.coaching = (function () {
   //  :focus-visible, and aria-expanded/aria-controls wired for screen       //
   //  readers. Never nests a card inside a card — the panel is a plain div.  //
   // ======================================================================= //
-  function discloseCard(title, iconKey, panelContent, open) {
+  // `speech` (optional) controls what the Listen button reads: a string/segment
+  // array, or a function returning either. Omit it to read the card's own text
+  // (title + panel) in the current UI language — right for almost every card.
+  function discloseCard(title, iconKey, panelContent, open, speech) {
     var pid = nextId();
     var toggle = h("button", {
       type: "button", class: "tip__toggle", "aria-expanded": open ? "true" : "false", "aria-controls": pid
@@ -492,7 +495,17 @@ RR.coaching = (function () {
       toggle.querySelector(".tip__chev").classList.toggle("is-open", nowOpen);
     });
 
-    return h("section", { class: "card tip" }, [toggle, panel]);
+    // The Listen button sits at the TOP of the card, beside the toggle. (HTML
+    // forbids nesting it inside the toggle button, so they share a flex header.)
+    var head = [toggle];
+    if (RR.tipsTTS && RR.tipsTTS.supported()) {
+      head.push(RR.tipsTTS.listenButton(function () {
+        if (typeof speech === "function") return speech();
+        if (speech != null) return speech;
+        return title + ". " + panel.textContent;   // read the card in the display language
+      }));
+    }
+    return h("section", { class: "card tip" }, [h("div", { class: "tip__head" }, head), panel]);
   }
 
   // Panel bodies ---------------------------------------------------------------
@@ -625,12 +638,32 @@ RR.coaching = (function () {
     ]);
   }
 
+  // The bilingual terms card reads each side in its own voice: the Romanian word
+  // (and any Romanian note) in Romanian, the English equivalent in English.
+  function termsSpeech() {
+    var lang = (RR.i18n && RR.i18n.getLang) ? RR.i18n.getLang() : "en";
+    var title = (RR.i18n && RR.i18n.t) ? RR.i18n.t("Romanian ↔ English terms") : "Romanian and English terms";
+    var segs = [{ text: title, lang: lang }];
+    (RR.terms.PAIRS || []).forEach(function (p) {
+      segs.push({ text: p.ro, lang: "ro" });
+      segs.push({ text: p.en, lang: "en" });
+      if (p.note) segs.push({ text: p.note, lang: "ro" });
+    });
+    return segs;
+  }
+
   function renderTips(host) {
     var team = (RR.state && RR.state.getState().team) || null;
     var setUp = !!(RR.team && RR.team.isSetUp && RR.team.isSetUp(team));
 
     host.appendChild(h("p", { class: "screen-sub tips-intro",
       text: "Real, practical coaching help — tuned to your team's age and program." }));
+
+    // Read-aloud controls (only where the browser supports speech synthesis).
+    if (RR.tipsTTS && RR.tipsTTS.supported()) {
+      host.classList.toggle("tts-off", !RR.tts.isEnabled());
+      host.appendChild(RR.tipsTTS.bar(host));
+    }
 
     // Top: age guidance + reference (or the all-bands table until a team exists).
     host.appendChild(setUp ? buildAgeCard(team) : buildAllBandsCard());
@@ -649,7 +682,7 @@ RR.coaching = (function () {
     host.appendChild(discloseCard("Volleyball terms, explained", "terms", buildTerms(), false));
     // Romanian <-> English terms (for a coach who learned the game in Romania).
     if (RR.terms && RR.terms.content) {
-      host.appendChild(discloseCard("Romanian ↔ English terms", "usro", RR.terms.content(), false));
+      host.appendChild(discloseCard("Romanian ↔ English terms", "usro", RR.terms.content(), false, termsSpeech));
     }
     host.appendChild(discloseCard("Gear & equipment for drills", "equip", buildEquipment(), false));
   }

@@ -174,3 +174,85 @@
   font-size: 13px;
   color: var(--text-muted);
 }
+
+/* ---- Read-aloud (TTS): top-of-screen controls + per-card Listen buttons --- */
+/* Top bar: an on/off switch and a speed selector. Uses only semantic tokens. */
+.tts-bar { display: flex; flex-direction: column; gap: var(--sp-3); }
+.tts-bar__row { display: flex; align-items: center; gap: var(--sp-3); }
+.tts-bar__icon { display: inline-flex; flex: none; color: var(--primary); }
+.tts-bar__label { color: var(--text-muted); font-size: var(--fs-sm); font-weight: 700; }
+.tts-bar__speed { flex-wrap: wrap; }
+
+/* On/off switch — a labelled track + thumb (a real role="switch" button). */
+.tts-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--tap-min);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tts-switch__track {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+  transition: background 0.2s var(--ease);
+}
+.tts-switch.is-on .tts-switch__track { background: var(--primary); }
+.tts-switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s var(--ease);
+}
+.tts-switch.is-on .tts-switch__thumb { transform: translateX(20px); }
+
+/* Per-card Listen button — sits at the top of the card, beside the toggle. */
+.tip__head { display: flex; align-items: stretch; }
+.tip__head .tip__toggle { flex: 1 1 auto; }
+.tip__listen {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-right: var(--sp-4);
+  padding: 0 var(--sp-4);
+  min-height: var(--tap-min);
+  border: var(--border-w) solid var(--line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.tip__listen:hover { color: var(--text); border-color: var(--border); }
+.tip__listen.is-playing {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: var(--primary-tint);
+}
+.tip__listen-ic { display: inline-flex; }
+
+/* With read-aloud switched off, every per-card Listen button is hidden. */
+.tts-off .tip__listen { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tts-switch__track, .tts-switch__thumb, .tip__listen { transition: none; }
+}
