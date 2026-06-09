@@ -196,3 +196,45 @@
 /* Tighten the diagram inside a Today block / run-mode panel. */
 .block__diagram .dgm__canvas,
 .rr-run__detail .dgm__canvas { padding: var(--sp-2); }
+
+/* ==================== AI illustration (replaces the SVG) ================= */
+/* A vetted illustration stands in for the schematic SVG. The picture carries
+ * its own baked-in legend, so only the figure title + caption sit around it. */
+.dgm__canvas--img {
+  padding: 0;
+  overflow: hidden;
+  background: var(--surface);
+}
+.dgm__img {
+  width: 100%;
+  max-width: 440px;
+  height: auto;
+  display: block;
+  border-radius: var(--radius-card);
+}
+
+/* Placeholder: this diagram is in the image program but not generated yet.
+ * The figure's title, caption and legend still carry the full meaning. */
+.dgm__placeholder {
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-height: 116px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border-style: dashed;
+}
+.dgm__ph-icon {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.7;
+}
+.dgm__ph-text {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}

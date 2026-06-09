@@ -1,0 +1,284 @@
+/* feed.css — the Ideas feed (RR.feed).
+   A scrollable feed of coaching inspiration. Built ONLY on the semantic tokens in
+   styles.css (+ the fixed intensity hues --i-easy/mid/hard/taper, which always
+   carry navy text), so every card reads correctly in BOTH light and dark. Cards
+   are flat (no nested cards); every control is a real button/link, so the global
+   :focus-visible ring applies for free. Honors prefers-reduced-motion. */
+
+/* ---------- Header bits ------------------------------------------------------ */
+.feed-intro { margin: 0 0 var(--sp-2); }
+
+/* The quiet escape hatch to the classic planner + timer (#today). */
+.feed-planner-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 var(--sp-4);
+  color: var(--link);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.feed-planner-link:hover { text-decoration: underline; }
+.feed-planner-link__arrow { font-weight: 800; }
+
+/* ---------- Filter chip bar (reuses .drills-filters* + .chip from css) ------- */
+.feed-filters-wrap { display: flex; flex-direction: column; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.feed-chip-panel { margin-top: var(--sp-1); }
+.feed-clear {
+  align-self: flex-start;
+  min-height: var(--tap-min);
+  padding: 6px 4px;
+  border: none;
+  background: none;
+  color: var(--link);
+  font: 600 var(--fs-sm) var(--font-stack);
+  cursor: pointer;
+}
+.feed-clear:hover { text-decoration: underline; }
+
+/* ---------- The feed list ---------------------------------------------------- */
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* Base feed card: the shared .card chrome + a coloured left "spine" that makes
+   each item type instantly recognizable. The drill spotlight keeps the Drills
+   card look (styled in drills.css) and gets a spine here too, for consistency. */
+.feed-card { border-left: 4px solid var(--line); }
+.feed-card--idea      { border-left-color: var(--i-hard); }   /* coral  */
+.feed-card--tip       { border-left-color: var(--i-easy); }   /* teal   */
+.feed-card--challenge { border-left-color: var(--i-mid); }    /* sun    */
+.feed-card--mindset   { border-left-color: var(--i-taper); }  /* purple */
+.feed-card--theme     { border-left-color: var(--primary); }
+.feed-list > .drill-card-wrap .drill-card { border-left: 4px solid var(--accent); }
+
+/* ---------- Card meta row (kind chip + vibe + theme tag + minutes) ----------- */
+.feed-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+}
+.feed-kind {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font: 800 var(--fs-xs) var(--font-stack);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--navy);   /* navy on the fixed intensity hues clears AA in both themes */
+}
+.feed-kind--idea      { background: var(--i-hard); }
+.feed-kind--tip       { background: var(--i-easy); }
+.feed-kind--challenge { background: var(--i-mid); }
+.feed-kind--mindset   { background: var(--i-taper); }
+.feed-kind--theme     { background: var(--primary-tint); color: var(--text); }
+.feed-vibe {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font: 600 var(--fs-xs) var(--font-stack);
+}
+.feed-tag { color: var(--text-muted); font-size: var(--fs-xs); font-weight: 600; }
+.feed-mins {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+/* ---------- Card body -------------------------------------------------------- */
+.feed-card__title { font-size: var(--fs-h3); margin: 0 0 var(--sp-1); }
+.feed-card__goal,
+.feed-card__body { margin: var(--sp-1) 0 var(--sp-3); color: var(--text); }
+.feed-card__body { color: var(--text-muted); }
+
+/* Mini-flow block list: role · drill name · minutes. */
+.feed-flow { list-style: none; margin: 0 0 var(--sp-3); padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.feed-flow__row {
+  display: grid;
+  grid-template-columns: minmax(64px, auto) 1fr auto;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border-radius: var(--radius-input);
+}
+.feed-flow__role {
+  font: 800 var(--fs-xs) var(--font-stack);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.feed-flow__name { color: var(--text); font-weight: 600; }
+.feed-flow__min { color: var(--text-muted); font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; }
+
+/* One-line tip "hook" that links to the Tips tab. */
+.feed-tiphook {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 var(--sp-3);
+  color: var(--link);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.feed-tiphook:hover { text-decoration: underline; }
+.feed-tiphook__icon { display: inline-flex; color: var(--accent); }
+
+/* Collapsible "how to run it". */
+.feed-steps__wrap { margin: 0 0 var(--sp-3); }
+.feed-steps__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap-min);
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--link);
+  font: 600 var(--fs-sm) var(--font-stack);
+  cursor: pointer;
+}
+.feed-steps__chev { display: inline-flex; transition: transform 0.15s var(--ease); }
+.feed-steps__chev.is-open { transform: rotate(180deg); }
+.feed-steps { margin-top: var(--sp-2); display: flex; flex-direction: column; gap: var(--sp-3); }
+.feed-steps[hidden] { display: none; }
+.feed-steps__block { display: flex; flex-direction: column; gap: 4px; }
+.feed-steps__list { margin: 0; padding-left: 1.25em; color: var(--text); }
+.feed-steps__list li { margin: 2px 0; }
+
+/* ---------- Card footer (Save / Share / Print, or links) --------------------- */
+.feed-card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+/* The save heart. Outline when off, coral fill when on. */
+.feed-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  margin-left: auto;          /* push the heart to the trailing edge */
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+}
+.feed-save:hover { background: var(--overlay); }
+.feed-save.is-on { color: var(--primary); }
+/* Share / Print pill buttons. */
+.feed-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: var(--border-w) solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: 700 var(--fs-sm) var(--font-stack);
+  cursor: pointer;
+}
+.feed-act:hover { background: var(--surface-2); }
+.feed-act__icon { display: inline-flex; }
+/* "Open in Tips →" text link in the tip-card footer. */
+.feed-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  color: var(--link);
+  font-weight: 700;
+  font-size: var(--fs-sm);
+  text-decoration: none;
+}
+.feed-link:hover { text-decoration: underline; }
+
+/* ---------- Tip card --------------------------------------------------------- */
+.feed-tip__link { display: block; color: inherit; text-decoration: none; }
+.feed-tip__head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.feed-tip__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--accent);
+}
+.feed-tip__head .feed-card__title { margin: 0; }
+.feed-tip__points { margin: 0; padding-left: 1.2em; color: var(--text-muted); }
+.feed-tip__points li { margin: 3px 0; }
+.feed-tip__link:hover .feed-card__title { text-decoration: underline; }
+
+/* ---------- Theme card ------------------------------------------------------- */
+.feed-theme__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tap-min);
+  padding: 8px 16px;
+  border: var(--border-w) solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: 700 var(--fs-sm) var(--font-display);
+  cursor: pointer;
+}
+.feed-theme__cta:hover { filter: brightness(0.96); }
+.feed-theme__chev { display: inline-flex; }
+
+/* ---------- "More ideas" button ---------------------------------------------- */
+.feed-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  align-self: center;
+  min-height: var(--tap-min);
+  margin: var(--sp-5) auto 0;
+  padding: 12px 24px;
+  border: var(--border-w) solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: 800 var(--fs-body) var(--font-display);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+.feed-more:hover { background: var(--surface-2); }
+.feed-more:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--shadow-color); }
+.feed-more__icon { display: inline-flex; transition: transform 0.4s var(--ease); }
+.feed-more:hover .feed-more__icon { transform: rotate(180deg); }
+
+/* ---------- Inline drill detail (opened from a spotlight) -------------------- */
+.feed-detail-wrap { display: flex; flex-direction: column; gap: var(--sp-3); }
+.feed-back { align-self: flex-start; }
+.feed-back__icon { display: inline-flex; }
+
+/* ---------- Reduced motion --------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .feed-steps__chev,
+  .feed-more__icon,
+  .feed-more:active { transition: none; transform: none; }
+}

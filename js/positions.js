@@ -116,6 +116,9 @@ RR.positions = (function () {
       };
     });
     return {
+      // In the image program as "rotation:<role abbr>" (see js/diagram-images.js)
+      // so each role can show its own illustrated rotation wheel when generated.
+      template: "rotation:" + (g && g.abbr ? g.abbr : "base"),
       w: 9, h: 9,
       net: 1.2,
       lines: [{ y: 4.2 }],     // the attack (3 m) line

@@ -44,50 +44,7 @@ The three diagram families in the app:
 
 ## Global Style Block
 
-> **Paste this at the start of every prompt.**
-
-```
-A clean, modern instructional sports diagram in a friendly flat-vector style,
-designed for a youth volleyball coaching app. Minimal, uncluttered, and easy to
-read on a phone. Soft rounded shapes, generous negative space, crisp even line
-weights. Warm, encouraging palette: a coral/orange brand accent (#FF6B4A) for
-"your team", a calm teal-blue (#2BB3C0) for the other team or secondary
-elements, warm neutral grey for the court and lines, and an off-white background.
-Players shown as simple flat colored discs or minimal rounded figures (no faces,
-no jerseys, no logos). Motion shown with smooth tapered arrows. A real
-volleyball drawn as a simple white sphere with two curved seam lines. Subtle soft
-shadows, gentle depth, high contrast for accessibility. Cohesive icon-set look,
-vector illustration, infographic clarity. No photorealism.
-```
-
-### Negative Prompt + Technical Specs
-
-```
-Negative prompt: photo, photorealistic, 3D render, busy background, clutter,
-gradients overload, neon, harsh shadows, drop-shadow text, watermark, signature,
-brand logos, real faces, distorted anatomy, extra limbs, misspelled text,
-gibberish text, cramped layout, low contrast, dark muddy colors.
-```
-
-- **Aspect ratio:** `4:3` for top-down court cards, `5:3` (≈ `300×180`) for the
-  side-view motion scenes, `1:1` for the rotation wheel and breath. Midjourney:
-  `--ar 4:3`. DALL·E: ask for "landscape".
-- **Background:** flat off-white or transparent. Ask for "transparent PNG" where
-  your tool supports it so the card re-themes cleanly in light/dark mode.
-- **Resolution:** request the largest the tool offers; these are simple enough to
-  upscale crisply.
-
-### A reusable "court" phrase
-
-Several prompts reuse a top-down court. Wherever a prompt says **`[COURT]`**,
-substitute:
-
-```
-Top-down (bird's-eye) view of a single volleyball court drawn as a soft rounded
-rectangle in warm grey on off-white, the net as a clean dashed line straight
-across the middle with a small post dot at each end, and a thin attack (3-meter)
-line on each side. Near side at the bottom, far side at the top.
-```
+A clean, modern instructional sports diagram in a friendly flat-vector style, designed for a youth volleyball coaching app. Minimal, uncluttered, and easy to read on a phone. Soft rounded shapes, generous negative space, crisp even line weights. Warm, encouraging palette: a coral/orange brand accent (#FF6B4A) for "your team", a calm teal-blue (#2BB3C0) for the other team or secondary elements, warm neutral grey for the court and lines, and an off-white background. Players shown as real simple female volleyball players volleyballing in the actual act they are doing Motion shown with smooth tapered arrows. A real volleyball drawn as a simple white sphere with two curved seam lines. Subtle soft shadows, gentle depth, high contrast for accessibility. Cohesive icon-set look, vector illustration, infographic clarity. No photorealism. Negative Prompt + Technical Specs Negative prompt: photo, photorealistic, 3D render, busy background, clutter, gradients overload, neon, harsh shadows, drop-shadow text, watermark, signature, brand logos, real faces, distorted anatomy, extra limbs, misspelled text, gibberish text, cramped layout, low contrast, dark muddy colors. Aspect ratio: 4:3 for top-down court cards, 5:3 (≈ 300×180) for the side-view motion scenes, 1:1 for the rotation wheel and breath. Midjourney: --ar 4:3. DALL·E: ask for "landscape". Background: flat off-white or transparent. Ask for "transparent PNG" where your tool supports it so the card re-themes cleanly in light/dark mode. Resolution: request the largest the tool offers; these are simple enough to upscale crisply. A reusable "court" phrase Several prompts reuse a top-down court. Wherever a prompt says [COURT], substitute: Top-down (bird's-eye) view of a single volleyball court drawn as a soft rounded rectangle in warm grey on off-white, the net as a clean dashed line straight across the middle with a small post dot at each end, and a thin attack (3-meter) line on each side. Near side at the bottom, far side at the top.```
 
 ---
 

@@ -7,6 +7,7 @@ RR.app = (function () {
   "use strict";
 
   var SCREENS = {
+    ideas:   { title: "Ideas",   blurb: "Fresh practice ideas, drills, challenges and coaching tips — tuned to your team." },
     today:   { title: "Today",   blurb: "Your next practice plan will appear here, ready to run." },
     season:  { title: "Season",  blurb: "Map out your season and see the intensity curve week by week." },
     drills:  { title: "Drills",  blurb: "Browse the drill library and find the right activity for any skill." },
@@ -26,7 +27,7 @@ RR.app = (function () {
   // (the Roster screen became the Players tab).
   var REDIRECTS = { roster: "players" };
 
-  var DEFAULT_ROUTE = "today";
+  var DEFAULT_ROUTE = "ideas";
 
   // Copy for the "set up your team first" empty state on the data-driven screens.
   var EMPTY_COPY = {
@@ -134,6 +135,10 @@ RR.app = (function () {
     if (routeId === "team" && team) {
       // The Team screen owns its body: the auto-saving setup form + summary.
       team.renderTeam(host);
+    } else if (routeId === "ideas" && RR.feed) {
+      // The Ideas feed: coaching inspiration to pull from. It works with NO team,
+      // so it sits ABOVE the team-gated branch and is never blocked by setup.
+      RR.feed.render(host);
     } else if ((routeId === "today" || routeId === "season" || routeId === "history") && team && !team.hasTeam()) {
       // These screens are driven by the team; nudge setup until one exists.
       host.appendChild(team.emptyStateCard(EMPTY_COPY[routeId]));
@@ -177,7 +182,9 @@ RR.app = (function () {
   function updateTabs(routeId) {
     // Sub-screens with no tab of their own light up their nearest parent tab.
     var PARENT = {
-      history: "today", calendar: "today",
+      // The classic planner (#today) and its sub-screens now live UNDER the Ideas
+      // tab — the feed is home base; the full planner is a quiet link within it.
+      today: "ideas", history: "ideas", calendar: "ideas",
       player: "players", positions: "players", lineup: "players"
     };
     var activeTab = PARENT[routeId] || routeId;
