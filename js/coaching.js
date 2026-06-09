@@ -425,8 +425,83 @@ RR.coaching = (function () {
     rules:      "<path d='M5 3v18'/><path d='M5 4h12l-2.5 3.5L17 11H5'/>",
     usro:       "<path d='M3 9h15l-3-3'/><path d='M21 15H6l3 3'/>",
     terms:      "<path d='M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z'/><path d='M9 8h6M9 12h5'/>",
-    equip:      "<path d='M3 8l9-4 9 4-9 4-9-4z'/><path d='M3 8v8l9 4 9-4V8'/><path d='M12 12v8'/>"
+    equip:      "<path d='M3 8l9-4 9 4-9 4-9-4z'/><path d='M3 8v8l9 4 9-4V8'/><path d='M12 12v8'/>",
+    // Added for the expanded library. Unknown keys fall back to an empty glyph,
+    // so a missing icon never breaks a card.
+    growth:     "<path d='M12 21v-9'/><path d='M12 12c0-3 2.2-5.2 5.5-5.2C17.5 9.8 15.3 12 12 12z'/><path d='M12 14c0-2.6-1.9-4.6-4.8-4.6C7.2 12 9.1 14 12 14z'/>",
+    goal:       "<circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='5'/><circle cx='12' cy='12' r='1.4' fill='currentColor' stroke='none'/>",
+    focus:      "<circle cx='12' cy='12' r='3'/><path d='M12 2v3M12 19v3M2 12h3M19 12h3'/>",
+    breathe:    "<path d='M3 12h6a3 3 0 1 0-3-3'/><path d='M3 16h10a3 3 0 1 1-3 3'/>",
+    recovery:   "<path d='M21 12.8A8.5 8.5 0 1 1 11.2 3a6.5 6.5 0 0 0 9.8 9.8z'/>",
+    leader:     "<path d='M5 21V4'/><path d='M5 4h11l-2 3 2 3H5'/>",
+    reflect:    "<path d='M21 12a9 9 0 1 1-2.6-6.4'/><path d='M21 3v5h-5'/>",
+    wellbeing:  "<path d='M12 21s-7-4.6-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.4-7 10-7 10z'/>",
+    court:      "<rect x='3' y='6' width='18' height='12' rx='1.5'/><path d='M12 6v12M3 12h18'/>",
+    demo:       "<path d='M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z'/><circle cx='12' cy='12' r='3'/>",
+    question:   "<circle cx='12' cy='12' r='9'/><path d='M9.6 9.2a2.5 2.5 0 1 1 3.6 2.3c-.9.5-1.2 1-1.2 1.9'/><path d='M12 17h.01'/>",
+    strength:   "<path d='M6 9v6M18 9v6M3.5 10.5v3M20.5 10.5v3M6 12h12'/>",
+    jump:       "<circle cx='12' cy='4.5' r='2'/><path d='M12 7v5m0 0-3 5m3-5 3 5M8 10l4-1 4 1'/>",
+    scout:      "<circle cx='11' cy='11' r='7'/><path d='m21 21-4.3-4.3'/><path d='M8.2 12l2 2 3.4-4'/>"
   };
+
+  // ======================================================================= //
+  //  CATEGORIES — group the (now much larger) tip library so the screen      //
+  //  reads as a tidy set of sections instead of one endless wall of bars.    //
+  //  Each tip carries a `category` key; extra tips (coaching-tips-*.js) add   //
+  //  themselves via addTips(). Order here is the order they render.          //
+  // ======================================================================= //
+  var CATEGORIES = [
+    { key: "practice", label: "Running great practices" },
+    { key: "teaching", label: "Teaching the skills" },
+    { key: "mental",   label: "The mental game" },
+    { key: "talking",  label: "Talking & relationships" },
+    { key: "bodies",   label: "Bodies — training, health & safety" },
+    { key: "gameday",  label: "Game day & competition" },
+    { key: "tactics",  label: "Tactics & team systems" },
+    { key: "team",     label: "Season, team & culture" },
+    { key: "coach",    label: "You, the coach" }
+  ];
+
+  // Map the ORIGINAL 18 tips to a category by their icon key, so we don't have
+  // to edit each object inline. New tips set their own `category` explicitly.
+  var CAT_BY_ICON = {
+    practice: "practice", energy: "practice", fun: "practice", camp: "practice",
+    skills: "teaching",
+    confidence: "mental", mental: "mental",
+    talk: "talking", parents: "talking",
+    athlete: "bodies", safety: "bodies",
+    gameday: "gameday", rules: "gameday",
+    season: "team", tryouts: "team", include: "team",
+    usro: "coach"
+  };
+
+  function slugifyTitle(s) {
+    return String(s || "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "tip";
+  }
+  // Give every tip a stable id + a category (idempotent), so tipById() works and
+  // grouping never drops a card.
+  function normalizeTip(t) {
+    if (!t) return t;
+    if (!t.id) t.id = slugifyTitle(t.title);
+    if (!t.category) t.category = CAT_BY_ICON[t.icon] || "practice";
+    return t;
+  }
+  tips.forEach(normalizeTip);
+
+  // PUBLIC: append more tips (from coaching-tips-*.js). They mutate the same
+  // `tips` array renderTips reads, so order = load order within each category.
+  function addTips(arr) {
+    if (!Array.isArray(arr)) return;
+    arr.forEach(function (t) { tips.push(normalizeTip(t)); });
+  }
+  // PUBLIC: register an icon glyph for a new tip (optional polish).
+  function addIcon(key, svg) { if (key) ICONS[key] = svg; }
+  // PUBLIC: look up a tip by id (used to cross-link guidance).
+  function tipById(id) {
+    for (var i = 0; i < tips.length; i++) { if (tips[i].id === id) return tips[i]; }
+    return null;
+  }
 
   // ======================================================================= //
   //  Tiny DOM helpers (mirrors team.js / season.js; RR.ui arrives Prompt 8) //
@@ -634,6 +709,24 @@ RR.coaching = (function () {
     return tips.slice();
   }
 
+  // Bucket every tip under its category (preserving load order within each).
+  // For camps, the "Running a camp" card floats to the front of its category.
+  function tipsByCategory(team) {
+    var isCamp = !!(team && team.programType === "camp");
+    var groups = {};
+    CATEGORIES.forEach(function (c) { groups[c.key] = []; });
+    tips.forEach(function (t) {
+      var key = groups[t.category] ? t.category : "practice";
+      groups[key].push(t);
+    });
+    if (isCamp && groups.practice.length) {
+      groups.practice.sort(function (a, b) {
+        return (b.icon === "camp" ? 1 : 0) - (a.icon === "camp" ? 1 : 0);
+      });
+    }
+    return groups;
+  }
+
   // A card that points coaches to the per-position guides + recommended drills.
   function buildPositionCard() {
     return h("section", { class: "card tips-poscard" }, [
@@ -675,10 +768,20 @@ RR.coaching = (function () {
     // own screen, reached here and from the Players tab).
     host.appendChild(buildPositionCard());
 
-    // The tips accordion. Open the first card so the screen never reads as a
-    // wall of closed bars; for camps that first card is "Running a camp".
-    orderedTips(team).forEach(function (t, i) {
-      host.appendChild(discloseCard(t.title, t.icon, buildTipPanel(t), i === 0));
+    // The tips accordion, grouped into categories so a big library stays
+    // scannable. Only the very first card opens, so the screen never reads as a
+    // wall of bars. For camps, "Running a camp" is floated to the top of its
+    // category so camp coaches meet it first.
+    var groups = tipsByCategory(team);
+    var opened = false;
+    CATEGORIES.forEach(function (cat) {
+      var list = groups[cat.key];
+      if (!list || !list.length) return;
+      host.appendChild(h("h2", { class: "tips-cat", text: cat.label }));
+      list.forEach(function (t) {
+        host.appendChild(discloseCard(t.title, t.icon, buildTipPanel(t), !opened));
+        opened = true;
+      });
     });
 
     // Reference sections, collapsed by default to keep the page scannable.
@@ -693,11 +796,15 @@ RR.coaching = (function () {
   // ---- Public API ------------------------------------------------------------
   return {
     tips: tips,
+    categories: CATEGORIES,
     byAge: byAge,
     reference: reference,
     referenceNote: referenceNote,
     terms: terms,
     equipment: equipment,
+    addTips: addTips,
+    addIcon: addIcon,
+    tipById: tipById,
     renderTips: renderTips,
     render: renderTips   // alias used by the router
   };
