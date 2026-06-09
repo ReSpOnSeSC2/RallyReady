@@ -4,7 +4,7 @@
 // stale-while-revalidate (see the fetch handler), so a deployed update shows up on
 // the next launch rather than being pinned to the cache.
 // Bump CACHE_VERSION whenever any cached file changes to force clients to update.
-const CACHE_VERSION = "rallyready-v34";
+const CACHE_VERSION = "rallyready-v35";
 
 // Core files that make up the offline app shell. Everything here is fetched and
 // cached up front on install, so the app loads with NO network after first visit.
@@ -52,6 +52,8 @@ const APP_SHELL = [
   "./js/drills-11.js",
   "./js/tts.js",
   "./js/coaching.js",
+  "./js/coaching-tips-2.js",
+  "./js/coaching-tips-3.js",
   "./js/tips-tts.js",
   "./js/terms.js",
   "./js/tips-visuals.js",

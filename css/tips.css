@@ -11,6 +11,20 @@
   color: var(--text);
 }
 
+/* ---- Category section headings (group the larger tip library) ------------ */
+/* A light divider-style header that splits the accordion into themed sections
+   so the screen reads as a tidy set of groups, not one endless list. */
+.tips-cat {
+  margin: var(--sp-6) 0 var(--sp-3);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-h3);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.tips-cat:first-of-type { margin-top: var(--sp-2); border-top: none; padding-top: 0; }
+
 /* ---- Top age card: guidance + reference ---------------------------------- */
 .age-guide__text {
   margin: 0 0 var(--sp-4);
