@@ -120,9 +120,36 @@ RR.photos = (function () {
 
   // ---- Backup hooks (RR.state export/import bundles these) ------------------
   function all() { return JSON.parse(JSON.stringify(map)); }
+
+  // Photos arriving in a backup are untrusted: keep only entries that look like
+  // the ones this app writes (a data:image/* URL of roughly our 256px-JPEG size).
+  // Our own files run ~15–25KB, so the cap is generous for older exports while
+  // still stopping a single full-resolution original from eating the whole
+  // localStorage quota.
+  var MAX_PHOTO_CHARS = 300 * 1024;
+
+  function cleanPhotoMap(next) {
+    var cleaned = {};
+    if (next && typeof next === "object" && !Array.isArray(next)) {
+      Object.keys(next).forEach(function (k) {
+        var v = next[k];
+        if (typeof v === "string" && v.length <= MAX_PHOTO_CHARS && /^data:image\//.test(v)) {
+          cleaned[k] = v;
+        }
+      });
+    }
+    return cleaned;
+  }
+
+  // Replace the whole store (backup restore). Returns true when the new set was
+  // persisted; on a quota failure the previous photos are kept — memory and disk
+  // stay in step — and false tells the caller to warn the coach.
   function replaceAll(next) {
-    map = (next && typeof next === "object") ? JSON.parse(JSON.stringify(next)) : {};
-    persist();
+    var prev = map;
+    map = cleanPhotoMap(next);
+    if (persist()) return true;
+    map = prev;   // roll back — disk still holds the old set
+    return false;
   }
 
   // ---- Avatar node ----------------------------------------------------------

@@ -419,8 +419,24 @@ RR.tipsVisuals = (function () {
     }));
   }
 
-  // A hero motion diagram for tips that earn one; null otherwise.
-  function heroFor(iconKey) {
+  // Tactics + body-mechanics tips get a diagram keyed by the tip's id; several
+  // tactics reuse an existing court illustration (see js/diagram-images.js).
+  var TACTIC = {
+    "serve-receive":      { img: "tactic:serve-receive",   title: "Serve-receive: the W", caption: "Five passers in a W with the setter releasing to a target — pass every serve to the setter's spot." },
+    "transition":         { img: "tactic:transition",      title: "Transition: defense to offense", caption: "Block, pull off the net behind the attack line, then approach and swing — the cycle that scores." },
+    "team-defense":       { img: "basePositions",          title: "Base defensive positions", caption: "Where the six players start on defense, reading the attacker across the net." },
+    "serve-with-purpose": { img: "serveTargets",           title: "Serve to a target", caption: "Pick a zone and serve there on purpose — tough and in, to a spot, beats hard-and-out." },
+    "pick-an-offense":    { img: "tactic:offense-systems", title: "Pick an offense", caption: "4-2, 6-2 or 5-1 — how many setters and hitters you run, and who sets from where." },
+    "land-soft":          { img: "tips:land-soft",         title: "Land soft, save knees & ankles", caption: "Land on two feet and bend the knees and hips to absorb — soft landings protect young joints." },
+    "movement-prep":      { img: "tips:warm-up",           title: "Warm up by moving", caption: "Dynamic movement — lunges, leg swings, high knees — readies the body far better than standing stretches." }
+  };
+
+  // A hero diagram for tips that earn one; null otherwise.
+  function heroFor(iconKey, tipId) {
+    if (tipId && TACTIC[tipId]) {
+      var t = TACTIC[tipId];
+      return visualNode(t.img, function () { return ""; }, { title: t.title, caption: t.caption });
+    }
     if (iconKey === "practice") {
       return visualNode("tips:practice-flow", renderBlocks, {
         title: "A practice that flows",

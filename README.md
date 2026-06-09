@@ -204,9 +204,16 @@ rallyready/
                         diagram.js + format.js + extras-*.js add the
                         "how it's organized" read-out and the SVG court diagrams.
   icons/                App icons.
-  scripts/verify.js     A developer self-test for the planning engine.
+  images/               The illustrated court diagrams the app ships.
+                        (Full-resolution sources live NEXT TO this folder, in
+                        rallyready-design-assets/ — kept out of the app and out
+                        of git so deploys and clones stay small.)
+  scripts/              Developer self-tests: verify.js (planning engine),
+                        verify-feed.js (Ideas feed), verify-sw.js (offline
+                        cache list), verify-i18n.js (EN/RO dictionaries).
 ```
 
 Want to check the engine yourself? With Node installed, run `node scripts/verify.js`
 from the project folder — it generates full seasons and camps and confirms every
-session is valid.
+session is valid. The other three checks run the same way, and all four run
+automatically on every push via GitHub Actions (`.github/workflows/verify.yml`).

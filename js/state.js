@@ -73,22 +73,59 @@ RR.state = (function () {
     return state;
   }
 
-  // Migrate any older shape forward onto a fresh DEFAULTS copy.
+  // True for a plain object — the only shape a stored record may take. Arrays,
+  // strings, numbers and null all fail, which is what filters junk entries below.
+  function isRecord(x) {
+    return !!x && typeof x === "object" && !Array.isArray(x);
+  }
+
+  // Keep only well-typed entries. Anything else (a string inside `teams`, a
+  // number inside `favorites`) came from a corrupt save or a hand-edited backup
+  // and would crash screens downstream, so it is dropped rather than trusted.
+  function onlyRecords(list) {
+    return Array.isArray(list) ? list.filter(isRecord) : [];
+  }
+  function onlyStrings(list) {
+    return Array.isArray(list)
+      ? list.filter(function (s) { return typeof s === "string"; })
+      : [];
+  }
+
+  // Migrate any older shape forward onto a fresh DEFAULTS copy, scrubbing field
+  // types as it goes. load() and importData() both funnel through here, so junk
+  // can't reach live state from disk OR from a restored backup file.
   function migrate(parsed) {
     var state = Object.assign(clone(DEFAULTS), parsed || {});
     // v1 -> v2: a single `team` object becomes the first entry in `teams`.
-    if (!Array.isArray(state.teams)) state.teams = [];
-    if (!state.teams.length && parsed && parsed.team) {
+    state.teams = onlyRecords(state.teams);
+    if (!state.teams.length && parsed && isRecord(parsed.team)) {
       var t = clone(parsed.team);
       if (!t.id) t.id = genId("team");
       state.teams = [t];
       state.activeTeamId = t.id;
     }
-    if (!Array.isArray(state.customDrills)) state.customDrills = [];
-    if (!Array.isArray(state.favorites)) state.favorites = [];
-    if (!Array.isArray(state.savedIdeas)) state.savedIdeas = [];
+    state.savedSessions = onlyRecords(state.savedSessions);
+    // Custom drills must at least be renderable (a record with a name), and
+    // `custom: true` is re-stamped so syncCustomDrills() can always tell them
+    // apart from the bundled library.
+    state.customDrills = onlyRecords(state.customDrills).filter(function (d) {
+      return typeof d.name === "string" && d.name;
+    });
+    state.customDrills.forEach(function (d) {
+      if (!d.id) d.id = genId("drill");
+      d.custom = true;
+    });
+    state.favorites = onlyStrings(state.favorites);
+    state.savedIdeas = onlyStrings(state.savedIdeas);
+    // Keyed lookup maps + settings must be records; anything else resets clean.
+    ["regen", "plannedSessions", "focusOverrides"].forEach(function (k) {
+      if (!isRecord(state[k])) state[k] = {};
+    });
+    if (!isRecord(state.settings)) state.settings = clone(DEFAULTS.settings);
+    if (["system", "light", "dark"].indexOf(state.theme) === -1) state.theme = "system";
+    if (typeof state.activeTeamId !== "string") state.activeTeamId = null;
     // Ensure every team has an id (defensive against partial older saves).
-    state.teams.forEach(function (t) { if (t && !t.id) t.id = genId("team"); });
+    state.teams.forEach(function (t) { if (!t.id) t.id = genId("team"); });
     if (!state.activeTeamId && state.teams.length) state.activeTeamId = state.teams[0].id;
     state.schemaVersion = SCHEMA;
     return syncMirror(state);
@@ -114,13 +151,23 @@ RR.state = (function () {
     }
   }
 
-  // Persist current state. Failures (private mode / quota) are non-fatal.
+  // Persist current state. Failures (private mode / quota) are non-fatal — the
+  // app keeps running on in-memory state — but they are REMEMBERED: every
+  // mutation path ends in notify(), so app.js re-checks isSaveFailing() there
+  // and shows a persistent "changes aren't saving" banner until a write lands.
+  var saveFailed = false;
+
   function save() {
     try {
       capHistory(current);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
-    } catch (e) { /* keep running with in-memory state */ }
+      saveFailed = false;
+    } catch (e) {
+      saveFailed = true;   // quota full / storage blocked — surfaced by app.js
+    }
   }
+
+  function isSaveFailing() { return saveFailed; }
 
   function notify() {
     var snapshot = getState();
@@ -267,19 +314,56 @@ RR.state = (function () {
       photos: (RR.photos && RR.photos.all) ? RR.photos.all() : {}
     }, null, 2);
   }
-  // Returns { ok:true } or { ok:false, error }. Replaces all local data on success.
+  // A restore can only succeed if the file fits this device's localStorage
+  // budget (~5MB of UTF-16 units in most browsers). Oversized files are refused
+  // up front with a clear message instead of half-importing.
+  var MAX_IMPORT_CHARS = 4.5 * 1024 * 1024;
+
+  // The minimal fingerprint of RallyReady state: at least one of these keys.
+  // A random JSON file (some other app's export, a stray download) has none of
+  // them and is refused rather than silently replacing everything with blanks.
+  function looksLikeBackup(data) {
+    if (!isRecord(data)) return false;
+    var KEYS = ["schemaVersion", "teams", "team", "savedSessions", "customDrills", "favorites"];
+    return KEYS.some(function (k) { return Object.prototype.hasOwnProperty.call(data, k); });
+  }
+
+  // Returns { ok:true, warning? } or { ok:false, error }. Replaces all local
+  // data on success; on ANY failure local data is left exactly as it was.
   function importData(json) {
     try {
+      if (typeof json === "string" && json.length > MAX_IMPORT_CHARS) {
+        return { ok: false, error: "That backup is too large to restore on this device." };
+      }
       var parsed = (typeof json === "string") ? JSON.parse(json) : json;
       var data = parsed && parsed.data ? parsed.data : parsed;
-      if (!data || typeof data !== "object") return { ok: false, error: "Not a RallyReady backup file." };
-      current = migrate(data);
-      // Restore photos only when the backup carried them, so importing an older
-      // file never wipes existing photos.
-      if (parsed && parsed.photos && RR.photos && RR.photos.replaceAll) {
-        RR.photos.replaceAll(parsed.photos);
+      if (parsed && parsed.app && parsed.app !== "RallyReady") {
+        return { ok: false, error: "Not a RallyReady backup file." };
       }
-      syncCustomDrills(); save(); notify();
+      if (!looksLikeBackup(data)) {
+        return { ok: false, error: "Not a RallyReady backup file." };
+      }
+
+      var before = current;
+      current = migrate(data);
+      save();
+      if (saveFailed) {
+        // The imported state didn't fit (or storage is blocked). Put the old
+        // state back — disk still holds it — so nothing is half-imported.
+        current = before;
+        saveFailed = false;
+        return { ok: false, error: "That backup couldn't be saved on this device — storage may be full." };
+      }
+      syncCustomDrills(); notify();
+
+      // Restore photos only when the backup carried them, so importing an older
+      // file never wipes existing photos. A photo-quota failure isn't fatal —
+      // the data import above already landed — so it comes back as a warning.
+      if (parsed && parsed.photos && RR.photos && RR.photos.replaceAll) {
+        if (!RR.photos.replaceAll(parsed.photos)) {
+          return { ok: true, warning: "Backup restored, but the photos didn't fit in storage." };
+        }
+      }
       return { ok: true };
     } catch (e) {
       return { ok: false, error: "That file isn't valid JSON." };
@@ -302,6 +386,7 @@ RR.state = (function () {
     update: update,
     subscribe: subscribe,
     genId: genId,
+    isSaveFailing: isSaveFailing,
     // multi-team
     getTeams: getTeams,
     getActiveTeamId: getActiveTeamId,

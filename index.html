@@ -159,109 +159,113 @@
     state -> drills (+ drills-2..11) -> coaching -> periodization -> generator -> ui -> install -> team -> season -> today -> app
     The drill library is split across several files for the <800-lines-per-file rule;
     each drills-N.js concatenates its drills onto RR.drills, so they load in order after drills.js.
+    Every tag is `defer`: the browser fetches them all in parallel without blocking
+    the first paint, then executes them IN THIS ORDER once the DOM is parsed — so
+    the dependency chain above is preserved exactly as with blocking scripts.
   -->
-  <script src="js/state.js"></script>
+  <script defer src="js/state.js"></script>
   <!-- Localization engine + Romanian dictionary (loads early so every module's
        output can be translated at render time; the flag toggle lives in the header). -->
-  <script src="js/i18n.js"></script>
-  <script src="js/i18n-ui.js"></script>
-  <script src="js/i18n-content.js"></script>
-  <script src="js/i18n-content2.js"></script>
-  <script src="js/i18n-positions.js"></script>
-  <script src="js/drills.js"></script>
-  <script src="js/drills-2.js"></script>
-  <script src="js/drills-3.js"></script>
-  <script src="js/drills-4.js"></script>
-  <script src="js/drills-5.js"></script>
-  <script src="js/drills-6.js"></script>
-  <script src="js/drills-7.js"></script>
-  <script src="js/drills-8.js"></script>
-  <script src="js/drills-9.js"></script>
-  <script src="js/drills-10.js"></script>
-  <script src="js/drills-11.js"></script>
+  <script defer src="js/i18n.js"></script>
+  <script defer src="js/i18n-ui.js"></script>
+  <script defer src="js/i18n-content.js"></script>
+  <script defer src="js/i18n-content2.js"></script>
+  <script defer src="js/i18n-positions.js"></script>
+  <script defer src="js/drills.js"></script>
+  <script defer src="js/drills-2.js"></script>
+  <script defer src="js/drills-3.js"></script>
+  <script defer src="js/drills-4.js"></script>
+  <script defer src="js/drills-5.js"></script>
+  <script defer src="js/drills-6.js"></script>
+  <script defer src="js/drills-7.js"></script>
+  <script defer src="js/drills-8.js"></script>
+  <script defer src="js/drills-9.js"></script>
+  <script defer src="js/drills-10.js"></script>
+  <script defer src="js/drills-11.js"></script>
   <!-- Read-aloud (text-to-speech) for the Tips screen. tts.js is the speech engine
        (Web Speech API); tips-tts.js is the on-screen UI that coaching.js composes
        in at render time. Both degrade gracefully where speechSynthesis is absent. -->
-  <script src="js/tts.js"></script>
-  <script src="js/coaching.js"></script>
+  <script defer src="js/tts.js"></script>
+  <script defer src="js/term-glyphs.js"></script>
+  <script defer src="js/coaching.js"></script>
   <!-- Expanded coaching-tips library (mental game, teaching, bodies/health,
        game day, tactics, coach development). Each attaches its tips to
        RR.coaching via addTips(), so they must load after coaching.js. -->
-  <script src="js/coaching-tips-2.js"></script>
-  <script src="js/coaching-tips-3.js"></script>
-  <script src="js/tips-tts.js"></script>
+  <script defer src="js/coaching-tips-2.js"></script>
+  <script defer src="js/coaching-tips-3.js"></script>
+  <script defer src="js/tips-tts.js"></script>
   <!-- Romanian <-> English volleyball-terms reference (composed into the Tips screen). -->
-  <script src="js/terms.js"></script>
+  <script defer src="js/terms.js"></script>
   <!-- Tips "show, don't just tell" visuals (animated SVG diagrams + video links).
        Standalone; the Tips screen (coaching.js) composes it in at render time. -->
-  <script src="js/tips-visuals.js"></script>
+  <script defer src="js/tips-visuals.js"></script>
   <!-- Position coaching content + API (data loads first, then the helpers that
        read it + the drill library). Loaded before roster.js, which reads
        RR.positions for its position <select> options. -->
-  <script src="js/positions-data.js"></script>
-  <script src="js/positions.js"></script>
-  <script src="js/periodization.js"></script>
-  <script src="js/generator.js"></script>
+  <script defer src="js/positions-data.js"></script>
+  <script defer src="js/positions.js"></script>
+  <script defer src="js/periodization.js"></script>
+  <script defer src="js/generator.js"></script>
   <!-- Court-diagram engine + "how it's organized" engine + their per-drill data.
        Load before ui.js, which composes them into the drill cards. The image
        manifest loads first so the engine can swap the schematic SVG for a vetted
        AI illustration where one exists (else a placeholder / the SVG). -->
-  <script src="js/diagram-images.js"></script>
-  <script src="js/diagram.js"></script>
-  <script src="js/format.js"></script>
-  <script src="js/extras-build.js"></script>
+  <script defer src="js/diagram-images.js"></script>
+  <script defer src="js/diagram.js"></script>
+  <script defer src="js/format.js"></script>
+  <script defer src="js/extras-build.js"></script>
   <!-- Per-drill organization overrides + court diagrams. extras-data(.js,-2) are
        the games; -3..-11 add the skill / warm-up / cool-down diagrams by category;
        -12 adds the equipment-drill diagrams (hoops/targets, mat defense). -->
-  <script src="js/extras-data.js"></script>
-  <script src="js/extras-data-2.js"></script>
-  <script src="js/extras-data-3.js"></script>
-  <script src="js/extras-data-4.js"></script>
-  <script src="js/extras-data-5.js"></script>
-  <script src="js/extras-data-6.js"></script>
-  <script src="js/extras-data-7.js"></script>
-  <script src="js/extras-data-8.js"></script>
-  <script src="js/extras-data-9.js"></script>
-  <script src="js/extras-data-10.js"></script>
-  <script src="js/extras-data-11.js"></script>
-  <script src="js/extras-data-12.js"></script>
-  <script src="js/ui.js"></script>
+  <script defer src="js/extras-data.js"></script>
+  <script defer src="js/extras-data-2.js"></script>
+  <script defer src="js/extras-data-3.js"></script>
+  <script defer src="js/extras-data-4.js"></script>
+  <script defer src="js/extras-data-5.js"></script>
+  <script defer src="js/extras-data-6.js"></script>
+  <script defer src="js/extras-data-7.js"></script>
+  <script defer src="js/extras-data-8.js"></script>
+  <script defer src="js/extras-data-9.js"></script>
+  <script defer src="js/extras-data-10.js"></script>
+  <script defer src="js/extras-data-11.js"></script>
+  <script defer src="js/extras-data-12.js"></script>
+  <script defer src="js/ui.js"></script>
   <!-- Player photo pipeline + store (separate localStorage key). Loads before the
        roster/players modules that read and write photos. -->
-  <script src="js/photos.js"></script>
+  <script defer src="js/photos.js"></script>
   <!-- Install ("Add to Home Screen") helper; loads before today.js, which mounts it. -->
-  <script src="js/install.js"></script>
+  <script defer src="js/install.js"></script>
   <!-- Shared feature modules — load after ui.js (they read RR.ui), before the
        screens that compose them (team/season/today/drills). -->
-  <script src="js/teams-ui.js"></script>
-  <script src="js/games-ui.js"></script>
-  <script src="js/drill-editor.js"></script>
-  <script src="js/plan-edit.js"></script>
-  <script src="js/run.js"></script>
-  <script src="js/share.js"></script>
-  <script src="js/roster.js"></script>
+  <script defer src="js/teams-ui.js"></script>
+  <script defer src="js/games-ui.js"></script>
+  <script defer src="js/drill-editor.js"></script>
+  <script defer src="js/plan-edit.js"></script>
+  <script defer src="js/run.js"></script>
+  <script defer src="js/share.js"></script>
+  <script defer src="js/roster.js"></script>
   <!-- Players tab, 1-on-1 profile, position coaching screen, lineup builder.
        They compose RR.ui / RR.roster / RR.photos / RR.positions / RR.diagram. -->
-  <script src="js/players-ui.js"></script>
-  <script src="js/player-profile.js"></script>
-  <script src="js/positions-ui.js"></script>
-  <script src="js/lineup.js"></script>
-  <script src="js/calendar.js"></script>
-  <script src="js/team.js"></script>
-  <script src="js/season.js"></script>
-  <script src="js/today.js"></script>
-  <script src="js/history.js"></script>
+  <script defer src="js/players-ui.js"></script>
+  <script defer src="js/player-profile.js"></script>
+  <script defer src="js/positions-ui.js"></script>
+  <script defer src="js/lineup.js"></script>
+  <script defer src="js/calendar.js"></script>
+  <script defer src="js/team.js"></script>
+  <script defer src="js/season.js"></script>
+  <script defer src="js/today.js"></script>
+  <script defer src="js/history.js"></script>
   <!-- Drills browser screen (reads the RR.drills data + RR.ui helpers). -->
-  <script src="js/drills-ui.js"></script>
+  <script defer src="js/drills-ui.js"></script>
   <!-- Per-page explainer (the i / speaker under every title); app.js mounts it. -->
-  <script src="js/page-guide.js"></script>
+  <script defer src="js/page-guide.js"></script>
   <!-- The Ideas feed: coaching inspiration to pull from (composes RR.ui + the
        drill/tips libraries + its own content layer). Loads before app.js so the
        default #ideas route can render on first paint. -->
-  <script src="js/feed.js"></script>
+  <script defer src="js/feed.js"></script>
   <!-- Curated feed content (mini practice-flows, challenges, mindset nuggets,
        themes). Attaches to RR.feed via add(), so it loads right after feed.js. -->
-  <script src="js/feed-data.js"></script>
-  <script src="js/app.js"></script>
+  <script defer src="js/feed-data.js"></script>
+  <script defer src="js/app.js"></script>
 </body>
 </html>
