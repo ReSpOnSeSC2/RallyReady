@@ -188,6 +188,11 @@
 }
 .feed-save:hover { background: var(--overlay); }
 .feed-save.is-on { color: var(--primary); }
+/* When the heart follows the Share/Print buttons (the idea card), keep it part
+   of that group rather than flung to the trailing edge: the auto margin orphans
+   it to the far-right corner the instant the row is too tight to fit all three
+   and the heart wraps to its own line. The footer's gap handles the spacing. */
+.feed-act ~ .feed-save { margin-left: 0; }
 /* Share / Print use the shared .btn .btn-ghost; only layout differs here. */
 .feed-act { flex: 0 0 auto; }
 /* "Open in Tips →" text link in the tip-card footer. */
