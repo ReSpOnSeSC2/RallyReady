@@ -73,10 +73,14 @@ RR.diagramImages = (function () {
 
     // ---- Part 4 — Tips tactics (top-down court strategy) ----
     "tactic:serve-receive": { file: "tactic-serve-receive.png", alt: "Top-down court: a five-player W serve-receive formation passing the serve up to the setter target near the net." },
-    "tactic:transition":    { file: "tactic-transition.png",    alt: "Top-down court: defense-to-offense transition — block, pull off the net, approach, and swing back over." }
+    "tactic:transition":    { file: "tactic-transition.png",    alt: "Top-down court: defense-to-offense transition — block, pull off the net, approach, and swing back over." },
+    "tactic:offense-systems": { file: "tactic-offense-systems.png", alt: "Three small top-down half-courts comparing the 4-2, 6-2 and 5-1 offenses — teal S setters and coral H hitters placed in each." },
 
-    // Pending: tactic:offense-systems (4-2/6-2/5-1). team-defense and
-    // serve-with-purpose reuse basePositions / serveTargets above.
+    // ---- Part 5 — Tips body mechanics (side view) ----
+    "tips:land-soft": { file: "tips-land-soft.png", alt: "Side view: a player landing softly on both feet, knees bent and hips back to absorb the landing." },
+    "tips:warm-up":   { file: "tips-warm-up.png",   alt: "Side view: a player in a forward walking lunge with arms overhead — a dynamic warm-up movement." }
+
+    // team-defense and serve-with-purpose reuse basePositions / serveTargets above.
   };
 
   function get(key) {

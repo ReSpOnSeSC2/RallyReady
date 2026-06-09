@@ -152,10 +152,30 @@
   border-top: 1px solid var(--border);
 }
 .terms dt:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.terms dt.has-glyph { display: flex; align-items: center; gap: var(--sp-2); }
 .terms dd {
   margin: 2px 0 0;
   color: var(--text-muted);   /* AA on --surface in both themes */
 }
+.terms dt.has-glyph + dd { padding-left: calc(44px + var(--sp-2)); }
+
+/* Tiny schematic glossary glyphs (RR.termGlyphs). Same brand tokens as the
+ * court diagrams, so a glyph reads the same in light AND dark. */
+.terms__defs { display: none; }
+.term-glyph { flex: none; display: inline-flex; }
+.term-glyph .tg { width: 44px; height: 37px; display: block; }
+.tg-court { fill: var(--surface); stroke: var(--text-muted); stroke-width: 1; }
+.tg-net  { stroke: var(--text); stroke-width: 1.4; stroke-dasharray: 2 2; fill: none; }
+.tg-line { stroke: var(--coral); stroke-width: 1.4; stroke-dasharray: 2 2; fill: none; }
+.tg-rod  { stroke: var(--text); stroke-width: 1.6; }
+.tg-arr  { stroke: var(--coral); stroke-width: 1.9; fill: none; stroke-linecap: round; }
+.tg-ah-fill { fill: var(--coral); }
+.tg-foot { fill: var(--text-muted); opacity: 0.5; }
+.tg-a { fill: var(--coral); }
+.tg-b { fill: var(--teal); }
+.tg-n { fill: var(--slate); }
+.tg-ball-face { fill: var(--white); stroke: var(--navy); stroke-width: 1; }
+.tg-ball-seam { fill: none; stroke: var(--navy); stroke-width: 0.8; }
 
 /* ---- Equipment list ------------------------------------------------------- */
 .equip-group { margin-top: var(--sp-5); }
