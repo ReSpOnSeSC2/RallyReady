@@ -28,6 +28,9 @@ RR.diagramImages = (function () {
   //   "placeholder" — a small "illustration coming soon" card (keeps the
   //                   title, caption and legend so the meaning still reads);
   //   "svg"         — fall back to the original schematic SVG.
+  // The full image set is now complete, so any NEW un-illustrated program
+  // diagram shows a placeholder TODO. Call setFallback("svg") to fall back to
+  // the schematic SVG instead.
   var FALLBACK = "placeholder";
 
   // key -> { file, alt }. ONLY list images that actually exist on disk, so
@@ -46,15 +49,34 @@ RR.diagramImages = (function () {
     "approachPath":  { file: "court-approach-path.png",  alt: "Top-down court: one hitter's approach footwork into the net, the set arriving, and the swing over the net." },
     "basePositions": { file: "court-base-positions.png", alt: "Top-down half-court: the six base defensive positions with a coach attacking from across the net." },
     "freeball":      { file: "court-free-ball.png",      alt: "A three-on-three free-ball rally: the coach tosses a free ball and your side runs pass, set, then hit over the net." },
+    "rotateIn":      { file: "court-king-queen.png",     alt: "Top-down court: King/Queen of the Court — your reigning team (coral) on the near side from behind, challengers (teal) across the net facing you, the scoring half tinted green, win/lose rotation arrows, and a queue of waiting teams." },
 
     // ---- Part 2 — Tips motion scenes (side view) ----
     "tips:blocking": { file: "tips-blocking.png", alt: "Side view: a blocker pressing both hands over the net to turn the attack straight back down." },
     "tips:setting":  { file: "tips-setting.png",  alt: "Side view: a setter taking the ball high in a relaxed triangle above the forehead and pushing it out to the hitter." },
-    "tips:digging":  { file: "tips-digging.png",  alt: "Side view: a defender staying low with a flat platform to lift a hard-driven attack back up." }
+    "tips:digging":  { file: "tips-digging.png",  alt: "Side view: a defender staying low with a flat platform to lift a hard-driven attack back up." },
+    "tips:serving":  { file: "tips-serving.png",  alt: "Side view: a player serving overhand, the ball arcing up and over the net into a target on the far court." },
+    "tips:passing":  { file: "tips-passing.png",  alt: "Side view: a player low with a flat forearm platform, popping an incoming serve up to a target." },
+    "tips:hitting":  { file: "tips-hitting.png",  alt: "Side view: a player's approach footwork and jump, spiking the ball sharply down over the net into a target." },
+    "tips:rotate":   { file: "tips-rotate.png",   alt: "Top-down half-court labeled NET: six position circles (front 4 3 2, back 5 6 1) with a looping arrow showing the clockwise rotation order 1, 6, 5, 4, 3, 2." },
+    "tips:breathe":  { file: "tips-breathe.png",  alt: "A calm set of concentric coral and teal rings with the lowercase word breathe at the center — a reset-breath cue." },
+    "tips:practice-flow": { file: "tips-practice-flow.png", alt: "A five-block practice timeline left to right: warm-up, two skill blocks, a game, then a cool-down, with time tick marks beneath." },
 
-    // Not yet generated (left to fall back): rotateIn (King/Queen), tips:serving,
-    // tips:passing, tips:hitting, tips:practice-flow, tips:rotate, tips:breathe,
-    // and rotation:<S|OH|OPP|MB|L|DS>. Add them here as the files land.
+    // ---- Part 3 — position rotation zones (top-down half-court) ----
+    "rotation:base": { file: "rotation-base.png", alt: "Top-down half-court labeled NET: the six rotation-zone circles in standard layout (front 4 3 2, back 5 6 1), all neutral grey." },
+    "rotation:S":    { file: "rotation-setter.png",   alt: "Rotation zones with zone 1 (back-right) highlighted coral and labeled S — the setter's base." },
+    "rotation:OH":   { file: "rotation-outside.png",  alt: "Rotation zones with zone 4 (front-left) highlighted coral and labeled OH — the outside hitter's base." },
+    "rotation:OPP":  { file: "rotation-opposite.png", alt: "Rotation zones with zone 2 (front-right) highlighted coral and labeled OPP — the opposite's base." },
+    "rotation:MB":   { file: "rotation-middle.png",   alt: "Rotation zones with zone 3 (front-center) highlighted coral and labeled MB — the middle blocker's base." },
+    "rotation:L":    { file: "rotation-libero.png",   alt: "Rotation zones with zone 6 (back-center) highlighted coral and labeled L — the libero's base." },
+    "rotation:DS":   { file: "rotation-ds.png",       alt: "Rotation zones with zone 5 (back-left) highlighted coral and labeled DS — the defensive specialist's base." },
+
+    // ---- Part 4 — Tips tactics (top-down court strategy) ----
+    "tactic:serve-receive": { file: "tactic-serve-receive.png", alt: "Top-down court: a five-player W serve-receive formation passing the serve up to the setter target near the net." },
+    "tactic:transition":    { file: "tactic-transition.png",    alt: "Top-down court: defense-to-offense transition — block, pull off the net, approach, and swing back over." }
+
+    // Pending: tactic:offense-systems (4-2/6-2/5-1). team-defense and
+    // serve-with-purpose reuse basePositions / serveTargets above.
   };
 
   function get(key) {

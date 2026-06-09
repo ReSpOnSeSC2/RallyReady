@@ -601,7 +601,7 @@ RR.coaching = (function () {
       if (tip.icon === "skills" && tv.skillGrid) {
         kids.push(tv.skillGrid());
       } else if (tv.heroFor) {
-        var hero = tv.heroFor(tip.icon);
+        var hero = tv.heroFor(tip.icon, tip.id);
         if (hero) kids.push(hero);
       }
       // A compact "See it in action" link row (the six-skills tip carries its
