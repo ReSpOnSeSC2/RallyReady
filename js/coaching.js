@@ -651,48 +651,60 @@ RR.coaching = (function () {
     ]);
   }
 
-  // Team set up -> show THEIR age band's guidance + reference.
-  function buildAgeCard(team) {
-    var band = team.ageGroup;
-    var guidance = byAge[band] || "Set your team's age group to see tailored guidance.";
-    var title = h("h2", { text: "For your age group" });
-    var body = h("p", { class: "age-guide__text", text: guidance });
+  // Remembered age selection so a coach's pick survives re-renders within a
+  // session (renderTips runs again on every navigation).
+  var selectedAge = null;
+  function ageBands() { return (RR.team && RR.team.AGE_GROUPS) || Object.keys(byAge); }
 
-    // Title + band pill on the right, plus a Listen speaker (where supported). The
-    // speaker reads the rendered DOM text, so it follows the current UI language.
-    var end = [h("span", { class: "pill", text: band })];
-    if (RR.tipsTTS && RR.tipsTTS.supported()) {
-      end.push(RR.tipsTTS.listenButton(function () {
-        return title.textContent + ". " + body.textContent;
-      }));
+  // Age-band guidance with a DROPDOWN, so a coach can read any band's notes — not
+  // only their own team's. Defaults to the team's age group when one is set up.
+  function buildAgeCard(team, setUp) {
+    var bands = ageBands();
+    var current = selectedAge || (setUp && team && team.ageGroup) || bands[0];
+    if (bands.indexOf(current) === -1) current = bands[0];
+    selectedAge = current;
+
+    var title = h("h2", { text: "Coaching by age group" });
+    var body = h("p", { class: "age-guide__text" });
+    var refWrap = h("div", { class: "age-ref" });
+
+    function paintBand(band) {
+      selectedAge = band;
+      body.textContent = byAge[band] || "Pick an age group to see tailored guidance.";
+      refWrap.innerHTML = "";
+      refWrap.appendChild(refItems(band));
     }
 
-    return h("section", { class: "card" }, [
-      h("div", { class: "card-head card-head--age" }, [title, h("div", { class: "card-head__end" }, end)]),
-      body,
-      refItems(band),
-      h("p", { class: "muted ref-note", text: referenceNote })
-    ]);
-  }
+    var select = h("select", { class: "input age-select", "aria-label": "Choose an age group" },
+      bands.map(function (b) { return h("option", { value: b, text: b, selected: b === current }); }));
+    select.addEventListener("change", function () { paintBand(select.value); });
 
-  // No team yet -> still useful: the full net/ball table for every band, plus a
-  // gentle nudge to set up the team for age-specific coaching notes.
-  function buildAllBandsCard() {
-    var order = (RR.team && RR.team.AGE_GROUPS) || Object.keys(reference);
-    var rows = h("div", { class: "ref-rows" }, order.map(function (band) {
-      var r = reference[band] || { net: "—", ball: "—" };
-      return h("div", { class: "ref-row" }, [
-        h("span", { class: "ref-row__band", text: band }),
-        h("span", { class: "ref-row__spec", text: r.net + " · " + r.ball })
-      ]);
-    }));
-    return h("section", { class: "card" }, [
-      h("h2", { text: "Net height & ball by age" }),
-      h("p", { class: "muted", text: "Set up your team to get age-specific coaching notes here." }),
-      rows,
-      h("p", { class: "muted ref-note", text: referenceNote }),
-      h("a", { class: "btn btn-primary tips-setup-link", href: "#team", text: "Set up your team" })
-    ]);
+    // The Listen speaker (where supported) reads whatever band is showing, so it
+    // follows both the dropdown and the current UI language.
+    var headKids = [title];
+    if (RR.tipsTTS && RR.tipsTTS.supported()) {
+      headKids.push(h("div", { class: "card-head__end" }, [
+        RR.tipsTTS.listenButton(function () { return title.textContent + ". " + body.textContent; })
+      ]));
+    }
+
+    var kids = [
+      h("div", { class: "card-head card-head--age" }, headKids),
+      h("div", { class: "age-picker" }, [
+        h("label", { class: "eyebrow", for: "tips-age-select", text: "Age group" }),
+        select
+      ]),
+      body,
+      refWrap,
+      h("p", { class: "muted ref-note", text: referenceNote })
+    ];
+    select.setAttribute("id", "tips-age-select");
+    if (!setUp) {
+      kids.push(h("a", { class: "btn btn-ghost tips-setup-link", href: "#team",
+        text: "Set up your team to tailor everything" }));
+    }
+    paintBand(current);
+    return h("section", { class: "card" }, kids);
   }
 
   // ======================================================================= //
@@ -727,15 +739,36 @@ RR.coaching = (function () {
     return groups;
   }
 
-  // A card that points coaches to the per-position guides + recommended drills.
+  // A card that points coaches to the per-position guides + recommended drills,
+  // with a DROPDOWN to jump straight to a chosen role's guide.
   function buildPositionCard() {
+    var list = (RR.positions && RR.positions.LIST) || [];
+
+    var select = h("select", { class: "input pos-select", id: "tips-pos-select",
+      "aria-label": "Choose a position to coach" },
+      [h("option", { value: "", text: "Choose a position…", selected: true })].concat(
+        list.map(function (p) { return h("option", { value: p, text: p }); })
+      ));
+    // Jump to the chosen role's guide (focus() primes the screen; the hash change
+    // routes to it) — mirrors how Today's position-breakout chips open a role.
+    select.addEventListener("change", function () {
+      var pos = select.value;
+      if (!pos) return;
+      if (RR.positionsScreen && RR.positionsScreen.focus) RR.positionsScreen.focus(pos);
+      location.hash = "#positions";
+    });
+
     return h("section", { class: "card tips-poscard" }, [
       h("div", { class: "card-head" }, [
         h("h2", { text: "Coach by position" }),
-        h("span", { class: "pill", text: "6 roles" })
+        h("span", { class: "pill", text: (list.length || 6) + " roles" })
       ]),
       h("p", { class: "age-guide__text",
         text: "How to coach setters, hitters, middles, liberos and more — responsibilities, cues, common mistakes, rotation basics, and drills pulled from the library for each role." }),
+      h("div", { class: "pos-picker" }, [
+        h("label", { class: "eyebrow", for: "tips-pos-select", text: "Jump to a position" }),
+        select
+      ]),
       h("a", { class: "btn btn-primary tips-setup-link", href: "#positions", text: "Open position coaching" })
     ]);
   }
@@ -761,8 +794,9 @@ RR.coaching = (function () {
     host.appendChild(h("p", { class: "screen-sub tips-intro",
       text: "Real, practical coaching help — tuned to your team's age and program." }));
 
-    // Top: age guidance + reference (or the all-bands table until a team exists).
-    host.appendChild(setUp ? buildAgeCard(team) : buildAllBandsCard());
+    // Top: age guidance + reference. A dropdown lets the coach read any band's
+    // notes; it defaults to their team's age group when one is set up.
+    host.appendChild(buildAgeCard(team, setUp));
 
     // Position coaching entry point (the guides + recommended drills live on their
     // own screen, reached here and from the Players tab).

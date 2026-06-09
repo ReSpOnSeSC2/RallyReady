@@ -11,6 +11,22 @@
   color: var(--text);
 }
 
+/* ---- Dropdown pickers (age group + jump-to-position) --------------------- */
+/* A labelled select that sits on its own row inside the top cards, so the
+   coach can browse any age band's notes or jump straight to a role's guide. */
+.age-picker,
+.pos-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0 var(--sp-4);
+}
+.age-picker > .eyebrow,
+.pos-picker > .eyebrow { display: block; }
+.age-select,
+.pos-select { width: 100%; }
+.age-ref { margin-top: var(--sp-2); }
+
 /* ---- Category section headings (group the larger tip library) ------------ */
 /* A light divider-style header that splits the accordion into themed sections
    so the screen reads as a tidy set of groups, not one endless list. */
