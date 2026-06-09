@@ -96,13 +96,13 @@ RR.feed = (function () {
   // ======================================================================= //
   //  Age tuning — NO team setup required, the feed just asks for an age      //
   // ======================================================================= //
-  // The only input the Ideas feed needs. The chosen band persists in
-  // RR.state.feedAgeGroup; if a team happens to be set up we default to its age
-  // group, otherwise "All ages". Drives every age filter in the composer.
+  // The ONLY input the Ideas feed needs, and it is fully self-contained: the
+  // chosen band lives in RR.state.feedAgeGroup and is read/written ONLY here, so
+  // the age feature is strictly scoped to this screen — it never reads or changes
+  // the team, and no other screen consumes it. Default null = "All ages".
   function resolvedAgeGroup() {
     var st = (RR.state && RR.state.getState()) || {};
-    if (st.feedAgeGroup) return st.feedAgeGroup;
-    return (st.team && st.team.ageGroup) ? st.team.ageGroup : null;   // null = all ages
+    return st.feedAgeGroup || null;   // null = all ages; team setup is irrelevant here
   }
   function resolvedBand() {
     var ag = resolvedAgeGroup();
@@ -166,9 +166,11 @@ RR.feed = (function () {
   // the right net height + ball WITHOUT requiring team setup.
   function shareTeam() {
     var t = (RR.state && RR.state.getState().team) || null;
-    if (t) return t;
-    var ag = resolvedAgeGroup();
-    return ag ? { ageGroup: ag } : null;
+    var ag = resolvedAgeGroup();   // the feed's chosen age (null = All ages)
+    // Match the carry sheet's net/ball to the age the coach is browsing; keep the
+    // team name when there is one. With "All ages", use the team's own reference.
+    if (ag) return { name: t ? t.name : undefined, ageGroup: ag };
+    return t;
   }
   // Build a share-compatible session from a mini-flow, resolving each block's
   // drillId to the full drill so the carry sheet carries setup/steps/cues/gear.
