@@ -361,6 +361,45 @@ RR.tipsVisuals = (function () {
     return fig;
   }
 
+  // ---- AI illustration support (see js/diagram-images.js) --------------------
+  // A vetted illustration replaces the animated SVG where one exists; a scene
+  // that's in the image program but not generated yet shows a placeholder (or,
+  // if FALLBACK is "svg", the original animation). Title + caption stay either
+  // way, so the meaning never disappears.
+  function imageFigureNode(image, opts) {
+    opts = opts || {};
+    var fig = h("figure", { class: "tv" + (opts.compact ? " tv--compact" : "") });
+    fig.setAttribute("role", "img");
+    var label = (opts.title ? opts.title + ". " : "") + (opts.caption || "");
+    if (label) fig.setAttribute("aria-label", label);
+    if (opts.title) fig.appendChild(h("p", { class: "tv__title", text: opts.title }));
+    fig.appendChild(h("div", { class: "tv__canvas tv__canvas--img" }, [
+      h("img", { class: "tv__img", src: image.src, alt: image.alt || label || "", loading: "lazy", decoding: "async" })
+    ]));
+    if (opts.caption) fig.appendChild(h("figcaption", { class: "tv__cap", text: opts.caption }));
+    return fig;
+  }
+  function placeholderFigureNode(opts) {
+    opts = opts || {};
+    var fig = h("figure", { class: "tv" + (opts.compact ? " tv--compact" : "") });
+    fig.setAttribute("role", "img");
+    var label = (opts.title ? opts.title + ". " : "") + (opts.caption || "");
+    if (label) fig.setAttribute("aria-label", label);
+    if (opts.title) fig.appendChild(h("p", { class: "tv__title", text: opts.title }));
+    fig.appendChild(h("div", { class: "tv__canvas tv__placeholder", "aria-hidden": "true",
+      html: "<svg viewBox='0 0 24 24' class='tv__ph-icon' aria-hidden='true'><rect x='3' y='4' width='18' height='16' rx='2'/><circle cx='8.5' cy='9.5' r='1.6'/><path d='M21 15l-5-5L5 20'/></svg><span class='tv__ph-text'>Illustration coming soon</span>" }));
+    if (opts.caption) fig.appendChild(h("figcaption", { class: "tv__cap", text: opts.caption }));
+    return fig;
+  }
+  // Best node for a Tips visual: illustration if we have it, else SVG (when
+  // FALLBACK="svg") or a placeholder. `svgFn` lazily builds the original SVG.
+  function visualNode(imageKey, svgFn, opts) {
+    var image = (RR.diagramImages && imageKey) ? RR.diagramImages.get(imageKey) : null;
+    if (image) return imageFigureNode(image, opts);
+    if (RR.diagramImages && RR.diagramImages.FALLBACK === "svg") return figureNode(svgFn(), opts);
+    return placeholderFigureNode(opts);
+  }
+
   function watchChip(query, label) {
     return h("a", { class: "tv-watch", href: searchUrl(query), target: "_blank", rel: "noopener" }, [
       h("span", { class: "tv-watch__i", "aria-hidden": "true",
@@ -373,7 +412,8 @@ RR.tipsVisuals = (function () {
   function skillGrid() {
     return h("div", { class: "tv-skills" }, SKILLS.map(function (s) {
       return h("div", { class: "tv-skill" }, [
-        figureNode(renderSide(s.scene), { title: s.name, caption: s.caption, compact: true }),
+        visualNode("tips:" + s.name.toLowerCase(), function () { return renderSide(s.scene); },
+          { title: s.name, caption: s.caption, compact: true }),
         watchChip(s.watch, "Watch " + s.name.toLowerCase())
       ]);
     }));
@@ -382,19 +422,19 @@ RR.tipsVisuals = (function () {
   // A hero motion diagram for tips that earn one; null otherwise.
   function heroFor(iconKey) {
     if (iconKey === "practice") {
-      return figureNode(renderBlocks(), {
+      return visualNode("tips:practice-flow", renderBlocks, {
         title: "A practice that flows",
         caption: "Run practice in clear blocks and keep each one moving — warm-up, a couple of skill blocks, a game, then a cool-down."
       });
     }
     if (iconKey === "mental") {
-      return figureNode(renderBreathe(), {
+      return visualNode("tips:breathe", renderBreathe, {
         title: "The reset breath",
         caption: "A slow breath — in, hold, out — and a cue word settle the nerves so the last mistake doesn't carry to the next rally."
       });
     }
     if (iconKey === "gameday" || iconKey === "rules") {
-      return figureNode(renderRotation(), {
+      return visualNode("tips:rotate", renderRotation, {
         title: "Rotate clockwise",
         caption: "Each time you win the serve, everyone rotates one spot clockwise: 1 → 6 → 5 → 4 → 3 → 2. Line up legally and you never give away a point."
       });

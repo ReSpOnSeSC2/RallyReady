@@ -39,6 +39,7 @@ RR.state = (function () {
     focusOverrides: {},     // per-(team|date|slot) coach-chosen skill focus
     customDrills: [],       // coach-authored drills, merged into RR.drills at boot
     favorites: [],          // starred drill ids
+    savedIdeas: [],         // saved Ideas-feed item ids (separate from drill favorites)
     installDismissed: false,// user dismissed the "Install RallyReady" banner
     settings: {
       practiceMinutes: 60,        // sensible default practice length
@@ -84,6 +85,7 @@ RR.state = (function () {
     }
     if (!Array.isArray(state.customDrills)) state.customDrills = [];
     if (!Array.isArray(state.favorites)) state.favorites = [];
+    if (!Array.isArray(state.savedIdeas)) state.savedIdeas = [];
     // Ensure every team has an id (defensive against partial older saves).
     state.teams.forEach(function (t) { if (t && !t.id) t.id = genId("team"); });
     if (!state.activeTeamId && state.teams.length) state.activeTeamId = state.teams[0].id;
@@ -241,6 +243,18 @@ RR.state = (function () {
     return i === -1;   // true when it is now a favorite
   }
 
+  // Saved Ideas-feed items — kept SEPARATE from drill `favorites`, with the same
+  // shape + API so the feed mirrors the favorites pattern (see js/feed.js).
+  function isSavedIdea(id) { return (current.savedIdeas || []).indexOf(id) !== -1; }
+  function toggleSavedIdea(id) {
+    var saved = (current.savedIdeas || []).slice();
+    var i = saved.indexOf(id);
+    if (i === -1) saved.push(id); else saved.splice(i, 1);
+    current.savedIdeas = saved;
+    save(); notify();
+    return i === -1;   // true when it is now saved
+  }
+
   // ---- Backup / restore (no backend — a plain JSON file) --------------------
   // Player photos live in their own localStorage store (RR.photos), so the backup
   // bundles them alongside the main data; restore puts them back too. Older
@@ -300,6 +314,8 @@ RR.state = (function () {
     syncCustomDrills: syncCustomDrills,
     isFavorite: isFavorite,
     toggleFavorite: toggleFavorite,
+    isSavedIdea: isSavedIdea,
+    toggleSavedIdea: toggleSavedIdea,
     // backup
     exportData: exportData,
     importData: importData

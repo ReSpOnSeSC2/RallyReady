@@ -209,11 +209,37 @@ RR.diagram = (function () {
       head.textContent = title;
       fig.appendChild(head);
     }
-    var holder = document.createElement("div");
-    holder.className = "dgm__canvas";
-    holder.innerHTML = svgMarkup(spec);
-    fig.appendChild(holder);
-    if (spec.legend && spec.legend.length) fig.appendChild(legend(spec.legend));
+
+    // Prefer a vetted AI illustration. Otherwise show a placeholder (this diagram
+    // is part of the image program but its picture isn't generated yet) or the
+    // schematic SVG (specs with no template/img — the live lineup builder and
+    // bespoke one-off scenes — always keep their SVG).
+    var mode = (RR.diagramImages && RR.diagramImages.resolve)
+      ? RR.diagramImages.resolve(spec) : { kind: "svg" };
+
+    if (mode.kind === "img") {
+      var box = document.createElement("div");
+      box.className = "dgm__canvas dgm__canvas--img";
+      var img = document.createElement("img");
+      img.className = "dgm__img";
+      img.src = mode.image.src;
+      img.alt = mode.image.alt || label || "Court diagram";
+      img.loading = "lazy";
+      img.decoding = "async";
+      box.appendChild(img);
+      fig.appendChild(box);
+      // The illustration has its legend baked in — skip the DOM legend.
+    } else if (mode.kind === "placeholder") {
+      fig.appendChild(placeholder());
+      if (spec.legend && spec.legend.length) fig.appendChild(legend(spec.legend));
+    } else {
+      var holder = document.createElement("div");
+      holder.className = "dgm__canvas";
+      holder.innerHTML = svgMarkup(spec);
+      fig.appendChild(holder);
+      if (spec.legend && spec.legend.length) fig.appendChild(legend(spec.legend));
+    }
+
     if (spec.caption) {
       var cap = document.createElement("figcaption");
       cap.className = "dgm__cap";
@@ -221,6 +247,22 @@ RR.diagram = (function () {
       fig.appendChild(cap);
     }
     return fig;
+  }
+
+  // A small "illustration coming soon" stand-in for a program diagram whose
+  // picture isn't generated yet. The surrounding title/caption/legend still
+  // carry the meaning, so nothing is lost while the image set is completed.
+  function placeholder() {
+    var box = document.createElement("div");
+    box.className = "dgm__canvas dgm__placeholder";
+    box.setAttribute("aria-hidden", "true");
+    box.innerHTML =
+      "<svg viewBox='0 0 24 24' class='dgm__ph-icon' focusable='false' aria-hidden='true'>" +
+      "<rect x='3' y='4' width='18' height='16' rx='2'/>" +
+      "<circle cx='8.5' cy='9.5' r='1.6'/>" +
+      "<path d='M21 15l-5-5L5 20'/></svg>" +
+      "<span class='dgm__ph-text'>Illustration coming soon</span>";
+    return box;
   }
 
   // A small key (swatch + word) for diagrams whose colours carry meaning.

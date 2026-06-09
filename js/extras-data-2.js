@@ -24,6 +24,16 @@ RR.extras = RR.extras || {};
     diagram: dk.rotateIn({ teamSize: 2, wait: 3, caption: "Win on the challenger side to cross over and become queens; lose as queens and rotate to the back of the line. Points score only on the queen side." })
   };
 
+  // Hand-built "run the whole play" scene — uses the dedicated free-ball
+  // illustration (img:"freeball"); the acrossNet base keeps a valid 3v3 court as
+  // the rare SVG fallback if the picture is ever unavailable.
+  E["free-ball-mini-game"] = {
+    diagram: Object.assign(
+      dk.acrossNet({ teamSize: 3, wait: 2, caption: "A three-on-three free-ball rally: the coach tosses a free ball and your side runs pass → set → hit. Switch which side gets the free ball each rally." }),
+      { img: "freeball" }
+    )
+  };
+
   E["king-of-the-court-doubles"] = {
     format: {
       grouping: "Doubles (teams of 2). King side scores; challenger side and a waiting line fill the rest.",

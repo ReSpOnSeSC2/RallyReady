@@ -24,6 +24,16 @@ RR.pageGuide = (function () {
   // use it"). Keep the two arrays the same length and in the same order — they are
   // zipped into the translation dictionary at load.
   var GUIDE = {
+    ideas: {
+      en: [
+        "Ideas is your inspiration feed — a place to pull from before practice, not another form to fill in. Scroll through ready-made practice ideas, drill spotlights, bite-size tips, fun challenges and mindset nuggets, all tuned to your team's age and program.",
+        "Browse for as long as you like, save the ones you love, and tap “More ideas” for a fresh mix. Found something you want to run? Share or print it as a carry sheet — or open the full planner and timer when you'd rather have the classic, step-by-step practice."
+      ],
+      ro: [
+        "Idei este fluxul tău de inspirație — un loc din care să te inspiri înainte de antrenament, nu încă un formular de completat. Derulează idei de antrenament gata făcute, exerciții puse în lumină, sfaturi scurte, provocări distractive și gânduri despre mentalitate, toate adaptate vârstei și programului echipei tale.",
+        "Răsfoiește cât vrei, salvează-le pe cele care îți plac și apasă „Mai multe idei” pentru un amestec nou. Ai găsit ceva ce vrei să folosești? Distribuie-l sau tipărește-l ca foaie de teren — sau deschide planificatorul complet și cronometrul când preferi antrenamentul clasic, pas cu pas."
+      ]
+    },
     today: {
       en: [
         "This is your home base on practice day. RallyReady looks at your team's age group and where you are in the season, then builds a complete, ready-to-run practice plan for you — warm-up, skill blocks, a game, and a cool-down — so you can walk into the gym without spending your evening planning.",

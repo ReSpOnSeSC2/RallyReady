@@ -309,20 +309,31 @@ RR.dk = (function () {
   // Sugar: collect specs into an ordered multi-step array.
   function seq() { return Array.prototype.slice.call(arguments).filter(Boolean); }
 
+  // Stamp every builder's output with its template name, so the renderer can
+  // swap in the matching AI illustration (see js/diagram-images.js). An explicit
+  // `template`/`img` already on the spec wins, so callers can override per drill.
+  function tag(name, fn) {
+    return function (opt) {
+      var spec = fn(opt);
+      if (spec && !spec.template && !spec.img) spec.template = name;
+      return spec;
+    };
+  }
+
   return {
     spread: spread,
-    serveTargets: serveTargets,
-    acrossNet: acrossNet,
-    rotateIn: rotateIn,
-    circlePass: circlePass,
-    pairsRows: pairsRows,
-    stations: stations,
-    coachFeed: coachFeed,
-    wall: wall,
-    feedLine: feedLine,
-    lanes: lanes,
-    approachPath: approachPath,
-    basePositions: basePositions,
+    serveTargets: tag("serveTargets", serveTargets),
+    acrossNet: tag("acrossNet", acrossNet),
+    rotateIn: tag("rotateIn", rotateIn),
+    circlePass: tag("circlePass", circlePass),
+    pairsRows: tag("pairsRows", pairsRows),
+    stations: tag("stations", stations),
+    coachFeed: tag("coachFeed", coachFeed),
+    wall: tag("wall", wall),
+    feedLine: tag("feedLine", feedLine),
+    lanes: tag("lanes", lanes),
+    approachPath: tag("approachPath", approachPath),
+    basePositions: tag("basePositions", basePositions),
     titled: titled,
     seq: seq
   };

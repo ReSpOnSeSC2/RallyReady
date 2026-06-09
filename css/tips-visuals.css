@@ -34,6 +34,40 @@
   display: block;
 }
 .tv--compact .tv-svg { max-width: 100%; }
+
+/* AI illustration replacing the animated SVG (see js/diagram-images.js). The
+ * picture is self-contained, so only the title + caption sit around it. */
+.tv__canvas--img { padding: 0; overflow: hidden; background: var(--surface); }
+.tv__img {
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  display: block;
+  border-radius: var(--radius-card);
+}
+.tv--compact .tv__img { max-width: 100%; }
+
+/* Placeholder for a Tips scene whose picture isn't generated yet. */
+.tv__placeholder {
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-height: 104px;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border-style: dashed;
+}
+.tv__ph-icon {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.7;
+}
+.tv__ph-text { font-size: var(--fs-xs); font-weight: 700; letter-spacing: 0.02em; }
+
 .tv__cap {
   margin-top: var(--sp-2);
   font-size: var(--fs-sm);
