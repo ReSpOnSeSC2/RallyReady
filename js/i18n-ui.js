@@ -179,6 +179,18 @@
       "Restaurezi din acest fișier? Înlocuiește toate echipele și tot istoricul de pe acest dispozitiv.",
     "Backup restored. 🏐": "Copia a fost restaurată. 🏐",
     "Couldn't read that file.": "Nu s-a putut citi fișierul.",
+    "Not a RallyReady backup file.": "Fișierul nu este o copie RallyReady.",
+    "That file isn't valid JSON.": "Fișierul nu este un JSON valid.",
+    "That backup is too large to restore on this device.":
+      "Copia este prea mare pentru a fi restaurată pe acest dispozitiv.",
+    "That backup couldn't be saved on this device — storage may be full.":
+      "Copia nu a putut fi salvată pe acest dispozitiv — spațiul de stocare ar putea fi plin.",
+    "Backup restored, but the photos didn't fit in storage.":
+      "Copia a fost restaurată, dar fotografiile nu au încăput în spațiul de stocare.",
+    // Storage-health banner (app.js) — shown while saves are failing.
+    "Your changes aren't being saved.": "Modificările tale nu se salvează.",
+    "Storage is full or blocked — remove a few player photos or old history, or export a backup from Teams before closing.":
+      "Spațiul de stocare e plin sau blocat — șterge câteva fotografii ale jucătorilor sau din istoricul vechi, ori exportă o copie din Echipe înainte să închizi.",
     "Restore backup": "Restaurează o copie",
     "Backup & restore": "Copie & restaurare",
     "Everything lives on this device. Export a file to keep it safe or move it to another phone, then restore it there.":
@@ -538,7 +550,9 @@
     "Common mistakes & fixes": "Greșeli frecvente & corecturi",
     "Watch for": "Atenție la",
     "Fix": "Corectură",
-    "Rotation & overlap": "Rotație & suprapunere",
+    // Also a Tips section title — keep in step with i18n-content2.js, which
+    // registers the same English key (one translation must win for both).
+    "Rotation & overlap": "Rotația și suprapunerea",
     "Drills for this position": "Exerciții pentru acest post",
     "No matching drills for this age band yet — browse the full library on the Drills tab.":
       "Niciun exercițiu potrivit pentru această grupă de vârstă încă — răsfoiește toată biblioteca în fila Exerciții.",

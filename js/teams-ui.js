@@ -130,7 +130,9 @@ RR.teamsUI = (function () {
         }
         var res = RR.state.importData(String(reader.result));
         fileInput.value = "";
-        if (res.ok) { ui.confirmToast("Backup restored. 🏐"); onChange(); }
+        // A restore can succeed with a caveat (e.g. photos didn't fit) — show
+        // the caveat when there is one, the happy toast otherwise.
+        if (res.ok) { ui.confirmToast(res.warning || "Backup restored. 🏐"); onChange(); }
         else { ui.confirmToast(res.error || "Couldn't read that file."); }
       };
       reader.readAsText(file);

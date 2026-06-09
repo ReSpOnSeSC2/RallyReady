@@ -209,6 +209,35 @@ RR.app = (function () {
     document.title = "RallyReady · " + SCREENS[id].title;
   }
 
+  // ---- Storage health banner -------------------------------------------------
+  // localStorage writes can fail (quota full — photos are the usual culprit — or
+  // private browsing). state.js keeps running on in-memory state so the session
+  // isn't lost, but the coach must know edits won't survive a reload. This
+  // banner appears between the app bar and the screen on the first failed save
+  // and disappears again on the next successful one. Re-checked on every state
+  // notify(), since every mutation path ends in one.
+  function updateStorageWarning() {
+    var failing = !!(RR.state.isSaveFailing && RR.state.isSaveFailing());
+    var el = document.getElementById("storageWarning");
+    if (failing && !el) {
+      el = document.createElement("div");
+      el.id = "storageWarning";
+      el.className = "storage-warning";
+      el.setAttribute("role", "alert");
+      var strong = document.createElement("strong");
+      strong.textContent = "Your changes aren’t being saved.";
+      var span = document.createElement("span");
+      span.textContent = " Storage is full or blocked — remove a few player photos or old history, or export a backup from Teams before closing.";
+      el.appendChild(strong);
+      el.appendChild(span);
+      var main = document.getElementById("screen");
+      if (main && main.parentNode) main.parentNode.insertBefore(el, main);
+      else document.body.appendChild(el);
+    } else if (!failing && el && el.parentNode) {
+      el.parentNode.removeChild(el);
+    }
+  }
+
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
 
@@ -267,10 +296,13 @@ RR.app = (function () {
     if (!SCREENS[raw] && !REDIRECTS[raw]) { location.replace("#" + DEFAULT_ROUTE); }
     route();
     window.addEventListener("hashchange", route);
+    // Watch persistence health from boot onward (see updateStorageWarning).
+    if (RR.state && RR.state.subscribe) RR.state.subscribe(updateStorageWarning);
+    updateStorageWarning();
     registerServiceWorker();
   }
 
-  // Scripts are at the end of <body>, so the DOM is ready to query now.
+  // Scripts load with `defer`, so the DOM is fully parsed when this runs.
   init();
 
   return {

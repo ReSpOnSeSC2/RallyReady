@@ -601,7 +601,7 @@ RR.coaching = (function () {
       if (tip.icon === "skills" && tv.skillGrid) {
         kids.push(tv.skillGrid());
       } else if (tv.heroFor) {
-        var hero = tv.heroFor(tip.icon);
+        var hero = tv.heroFor(tip.icon, tip.id);
         if (hero) kids.push(hero);
       }
       // A compact "See it in action" link row (the six-skills tip carries its
@@ -616,8 +616,16 @@ RR.coaching = (function () {
 
   function buildTerms() {
     var dl = h("dl", { class: "terms" });
+    var tg = RR.termGlyphs;
+    // Spatial terms get a tiny schematic glyph ("show, don't just tell"). The
+    // shared arrowhead marker is injected once, hidden, at the top of the list.
+    if (tg && tg.defs) dl.appendChild(h("div", { class: "terms__defs", "aria-hidden": "true", html: tg.defs() }));
     terms.forEach(function (t) {
-      dl.appendChild(h("dt", { text: t.term }));
+      var glyph = (tg && tg["for"]) ? tg["for"](t.term) : null;
+      dl.appendChild(h("dt", { class: glyph ? "has-glyph" : null }, [
+        glyph ? h("span", { class: "term-glyph", "aria-hidden": "true", html: glyph }) : null,
+        h("span", { class: "term-name", text: t.term })
+      ]));
       dl.appendChild(h("dd", { text: t.def }));
     });
     return dl;

@@ -124,43 +124,26 @@ RR.diagram = (function () {
     });
 
     // Paths: ball flight (solid), movement (dashed), serve (solid accent).
-    // Labels are collected and drawn in a final overlay pass (after the player
-    // discs) so a disc can never paint over — and clip — the start of a label
-    // whose path begins on a player. They keep their own CSS halo for contrast.
-    var pathLabels = [];
     (spec.paths || []).forEach(function (p) {
       var k = p.kind || "ball";
       var a = p.from, b = p.to;
-      var d, apexX, apexY;
+      var d;
       if (p.curve) {
         // A simple quadratic bow so two arrows between the same spots don't overlap.
         var mx = (a[0] + b[0]) / 2 + (p.curve) * (b[1] - a[1]) * 0.4;
         var my = (a[1] + b[1]) / 2 - (p.curve) * (b[0] - a[0]) * 0.4;
         d = "M" + px(a[0]) + " " + py(a[1]) + "Q" + px(mx) + " " + py(my) +
             " " + px(b[0]) + " " + py(b[1]);
-        // Apex of the quadratic at t=0.5 (in unit space) — the bowed middle,
-        // which is further from the endpoints (and their discs) than the chord.
-        apexX = 0.25 * a[0] + 0.5 * mx + 0.25 * b[0];
-        apexY = 0.25 * a[1] + 0.5 * my + 0.25 * b[1];
       } else {
         d = "M" + px(a[0]) + " " + py(a[1]) + "L" + px(b[0]) + " " + py(b[1]);
-        apexX = (a[0] + b[0]) / 2;
-        apexY = (a[1] + b[1]) / 2;
       }
       pieces.push(selfEl("path", {
         d: d, class: "dgm-path dgm-path--" + k, "marker-end": "url(#dgm-arrow-" + k + ")"
       }));
       if (p.label) {
-        // Nudge the label off the path, perpendicular to its direction, so it
-        // sits in open space beside the line instead of straddling a disc.
-        // Bias the offset upward for shallow paths so labels read above them.
-        var dx = b[0] - a[0], dy = b[1] - a[1];
-        var len = Math.hypot(dx, dy) || 1;
-        var nx = -dy / len, ny = dx / len;            // unit perpendicular
-        if (ny > 0) { nx = -nx; ny = -ny; }           // keep the nudge upward
-        pathLabels.push(el("text", {
-          x: px(apexX) + nx * 11, y: py(apexY) + ny * 11 - 2,
-          class: "dgm-pathlabel", "text-anchor": "middle"
+        var lx = (a[0] + b[0]) / 2, ly = (a[1] + b[1]) / 2;
+        pieces.push(el("text", {
+          x: px(lx), y: py(ly) - 4, class: "dgm-pathlabel", "text-anchor": "middle"
         }, esc(p.label)));
       }
     });
@@ -198,10 +181,6 @@ RR.diagram = (function () {
         }, esc(pl.note)));
       }
     });
-
-    // Path labels overlay everything else (their halo keeps them legible), so a
-    // disc or note drawn after a path can never clip the label's text.
-    pathLabels.forEach(function (t) { pieces.push(t); });
 
     return el("svg", {
       viewBox: "0 0 " + r2(pw) + " " + r2(ph),

@@ -1,0 +1,26 @@
+# Runs every self-test on each push and pull request, so a regression in the
+# planning engine, the feed data, the service-worker precache list, or the
+# i18n dictionaries is caught before it reaches a coach's phone.
+# The same checks run locally with:  node scripts/verify.js  (etc.)
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Planning engine (seasons + camps)
+        run: node scripts/verify.js
+      - name: Ideas feed data integrity
+        run: node scripts/verify-feed.js
+      - name: Service worker precache completeness
+        run: node scripts/verify-sw.js
+      - name: i18n dictionary health + coverage report
+        run: node scripts/verify-i18n.js

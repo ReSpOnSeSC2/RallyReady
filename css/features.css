@@ -248,6 +248,23 @@
   .favstar, .pe-tool, .teamswitch__pick, .pick__row { transition: none; }
 }
 
+/* ---------------------------------------------------- Storage warning ------- */
+/* Shown by app.js between the app bar and the screen when localStorage writes
+   start failing (quota full / private mode); removed when a save lands again.
+   Fixed sun-on-navy pairing (like the badges) so it clears AA in BOTH themes. */
+.storage-warning {
+  margin: var(--sp-3) var(--sp-4) 0;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--sun);
+  color: var(--navy);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+}
+.storage-warning strong { font-weight: 800; }
+
 /* ---------------------------------------------------- Wide screens ---------- */
 @media (min-width: 540px) {
   .de-actions { justify-content: flex-end; }
