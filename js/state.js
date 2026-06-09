@@ -40,6 +40,7 @@ RR.state = (function () {
     customDrills: [],       // coach-authored drills, merged into RR.drills at boot
     favorites: [],          // starred drill ids
     savedIdeas: [],         // saved Ideas-feed item ids (separate from drill favorites)
+    feedAgeGroup: null,     // Ideas-feed age band (no team setup needed); null = all ages
     installDismissed: false,// user dismissed the "Install RallyReady" banner
     settings: {
       practiceMinutes: 60,        // sensible default practice length

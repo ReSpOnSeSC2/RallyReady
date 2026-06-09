@@ -94,6 +94,25 @@ RR.feed = (function () {
   var SKILL_CHIPS = ["Ball Control", "Passing", "Setting", "Serving", "Hitting", "Blocking", "Defense", "Team Play"];
 
   // ======================================================================= //
+  //  Age tuning — NO team setup required, the feed just asks for an age      //
+  // ======================================================================= //
+  // The ONLY input the Ideas feed needs, and it is fully self-contained: the
+  // chosen band lives in RR.state.feedAgeGroup and is read/written ONLY here, so
+  // the age feature is strictly scoped to this screen — it never reads or changes
+  // the team, and no other screen consumes it. Default null = "All ages".
+  function resolvedAgeGroup() {
+    var st = (RR.state && RR.state.getState()) || {};
+    return st.feedAgeGroup || null;   // null = all ages; team setup is irrelevant here
+  }
+  function resolvedBand() {
+    var ag = resolvedAgeGroup();
+    return (ag && RR.team && RR.team.ageRange) ? RR.team.ageRange(ag) : null;
+  }
+  function setFeedAgeGroup(ag) {
+    if (RR.state && RR.state.update) RR.state.update({ feedAgeGroup: ag || null });
+  }
+
+  // ======================================================================= //
   //  Shared card pieces                                                     //
   // ======================================================================= //
   // A small eyebrow row: the card KIND chip, plus optional vibe / theme tag /
@@ -142,9 +161,19 @@ RR.feed = (function () {
 
   function feedFooter(actions) { return h("div", { class: "feed-card__foot" }, actions); }
 
+  // Net/ball reference for the carry sheet: the real team if one is set up, else a
+  // minimal stand-in carrying just the chosen age group — so the sheet still shows
+  // the right net height + ball WITHOUT requiring team setup.
+  function shareTeam() {
+    var t = (RR.state && RR.state.getState().team) || null;
+    var ag = resolvedAgeGroup();   // the feed's chosen age (null = All ages)
+    // Match the carry sheet's net/ball to the age the coach is browsing; keep the
+    // team name when there is one. With "All ages", use the team's own reference.
+    if (ag) return { name: t ? t.name : undefined, ageGroup: ag };
+    return t;
+  }
   // Build a share-compatible session from a mini-flow, resolving each block's
   // drillId to the full drill so the carry sheet carries setup/steps/cues/gear.
-  function currentTeam() { return (RR.state && RR.state.getState().team) || null; }
   function ideaToSession(idea) {
     return {
       skillFocus: idea.skill,
@@ -156,18 +185,20 @@ RR.feed = (function () {
     };
   }
   // RR.share.session / printSession are already null-tolerant — no changes there.
-  function shareIdea(idea) { if (RR.share && RR.share.session) RR.share.session(ideaToSession(idea), currentTeam()); }
-  function printIdea(idea) { if (RR.share && RR.share.printSession) RR.share.printSession(ideaToSession(idea), currentTeam()); }
-  function actButton(kind, label, glyph, idea, fn) {
-    var btn = h("button", { type: "button", class: "feed-act feed-act--" + kind }, [
-      h("span", { class: "feed-act__icon", "aria-hidden": "true", html: ui.icon(glyph, 18) }),
+  function shareIdea(idea) { if (RR.share && RR.share.session) RR.share.session(ideaToSession(idea), shareTeam()); }
+  function printIdea(idea) { if (RR.share && RR.share.printSession) RR.share.printSession(ideaToSession(idea), shareTeam()); }
+  // Footer actions use the app's shared .btn .btn-ghost (ink outline + hard
+  // offset shadow), so Share/Print match every other button in RallyReady.
+  function actButton(label, glyph, idea, fn) {
+    var btn = h("button", { type: "button", class: "btn btn-ghost feed-act" }, [
+      h("span", { class: "btn__icon", "aria-hidden": "true", html: ui.icon(glyph, 18) }),
       h("span", { text: label })
     ]);
     btn.addEventListener("click", function (e) { e.stopPropagation(); fn(idea); });
     return btn;
   }
-  function shareButton(idea) { return actButton("share", "Share", SHARE, idea, shareIdea); }
-  function printButton(idea) { return actButton("print", "Print", PRINTER, idea, printIdea); }
+  function shareButton(idea) { return actButton("Share", SHARE, idea, shareIdea); }
+  function printButton(idea) { return actButton("Print", PRINTER, idea, printIdea); }
 
   // The block list of a mini-flow, resolved to real drill names + minutes.
   function flowList(idea) {
@@ -223,7 +254,7 @@ RR.feed = (function () {
     var t = tipFor(idea.tipRef);
     if (t) kids.push(tipHookLine(t));
     kids.push(stepsDisclosure(idea));
-    kids.push(feedFooter([saveButton(idea), shareButton(idea), printButton(idea)]));
+    kids.push(feedFooter([shareButton(idea), printButton(idea), saveButton(idea)]));
     return h("section", { class: "card feed-card feed-card--idea" }, kids);
   }
 
@@ -278,9 +309,9 @@ RR.feed = (function () {
 
   // A theme/collection card: tapping "See ideas" applies its filter to the feed.
   function themeCard(t) {
-    var cta = h("button", { type: "button", class: "feed-theme__cta" }, [
+    var cta = h("button", { type: "button", class: "btn btn-ghost feed-theme__cta" }, [
       h("span", { text: "See ideas" }),
-      h("span", { class: "feed-theme__chev", "aria-hidden": "true", html: ui.icon(CHEV_RIGHT, 16) })
+      h("span", { class: "btn__icon feed-theme__chev", "aria-hidden": "true", html: ui.icon(CHEV_RIGHT, 16) })
     ]);
     cta.addEventListener("click", function () { applyThemeFilter(t); });
     return h("section", { class: "card feed-card feed-card--theme" }, [
@@ -355,7 +386,6 @@ RR.feed = (function () {
     return a;
   }
 
-  function ageBandOf(team) { return team ? RR.team.ageRange(team.ageGroup) : null; }
   function overlapsAge(item, band) {
     if (!band) return true;
     if (item.ageMin == null || item.ageMax == null) return true;   // ageless items always pass
@@ -429,17 +459,17 @@ RR.feed = (function () {
     return items.map(function (x) { return x.item; });
   }
 
-  function filterKey(team, filters) {
-    return (team ? team.ageGroup + "|" + team.programType : "noteam") +
+  function filterKey(filters) {
+    return (resolvedAgeGroup() || "all-ages") +
       "|" + (filters.skill || "") + "|" + (filters.vibe || "") + "|" + (filters.saved ? "saved" : "");
   }
 
   // Build (and cache) the full, filtered, interleaved, date-seeded sequence. Cache
-  // key folds in the team, the filters and the day, so it rebuilds exactly when any
-  // of those change — and stays identical on a same-day reload.
-  function buildSequence(team, filters) {
-    var band = ageBandOf(team);
-    var rnd = mulberry32(hashStr(dateSeedStr() + "|" + filterKey(team, filters)));
+  // key folds in the chosen age group, the filters and the day, so it rebuilds
+  // exactly when any change — and stays identical on a same-day reload.
+  function buildSequence(filters) {
+    var band = resolvedBand();
+    var rnd = mulberry32(hashStr(dateSeedStr() + "|" + filterKey(filters)));
     var pools = {
       idea: data.ideas.filter(function (it) { return candidateMatches(it, "idea", band, filters); }),
       challenge: data.challenges.filter(function (it) { return candidateMatches(it, "challenge", band, filters); }),
@@ -453,15 +483,15 @@ RR.feed = (function () {
     pools.tip = pools.tip.slice(0, TIP_CAP);
     return interleave(pools, rnd);
   }
-  function fullSequence(team, filters) {
-    var key = filterKey(team, filters) + "|" + dateSeedStr();
-    if (seqCache.key !== key) seqCache = { key: key, list: buildSequence(team, filters) };
+  function fullSequence(filters) {
+    var key = filterKey(filters) + "|" + dateSeedStr();
+    if (seqCache.key !== key) seqCache = { key: key, list: buildSequence(filters) };
     return seqCache.list;
   }
 
   // PUBLIC-ish: the feed as composed for `batch` (cumulative — pages 0..batch).
-  function composeFeed(team, filters, batch) {
-    var list = fullSequence(team, filters);
+  function composeFeed(filters, batch) {
+    var list = fullSequence(filters);
     return list.slice(0, Math.min((batch + 1) * PAGE, list.length));
   }
 
@@ -572,7 +602,7 @@ RR.feed = (function () {
   }
   // The chip bar: a "Filter ideas" disclosure (collapsed by default) holding skill,
   // vibe, collection (theme) and Saved chips, plus a Clear affordance.
-  function buildChipBar(team) {
+  function buildChipBar() {
     var panel = h("div", { class: "drills-filters feed-chip-panel", id: "feed-filters" });
     panel.appendChild(chipGroup("Skill", SKILL_CHIPS.map(function (s) {
       return chip(s, filters.skill === s, function () { selectSkill(s); }, ui.skillColor(s));
@@ -619,6 +649,49 @@ RR.feed = (function () {
     ]);
   }
 
+  // The age picker — the only setup the feed needs. A labelled native select that
+  // reuses the app's .age-picker + .input styling (identical to the Tips screen),
+  // so it matches the rest of RallyReady exactly.
+  function agePicker() {
+    var current = resolvedAgeGroup() || "";
+    var bands = (RR.team && RR.team.AGE_GROUPS) || [];
+    var sel = h("select", { class: "input age-select", id: "feed-age-select",
+      "aria-label": "Show coaching ideas for an age group" },
+      [h("option", { value: "", text: "All ages", selected: current === "" })].concat(
+        bands.map(function (b) { return h("option", { value: b, text: b, selected: b === current }); })
+      ));
+    sel.addEventListener("change", function () {
+      setFeedAgeGroup(sel.value || null);
+      batch = 0;
+      paint();
+      window.scrollTo(0, 0);
+    });
+    return h("div", { class: "age-picker feed-age" }, [
+      h("label", { class: "eyebrow", for: "feed-age-select", text: "Coaching age group" }),
+      sel
+    ]);
+  }
+
+  // Tie the always-on "Fresh coaching ideas" intro to the page-guide "About this
+  // page" control: opening About hides the intro (the panel covers the same
+  // ground), closing it brings the intro back. The page-guide lives in the
+  // app-owned screen-head, so we observe its info button from here.
+  function aboutInfoBtn() { return document.querySelector(".page-guide__info"); }
+  function syncIntroToAbout() {
+    var intro = feedRoot && feedRoot.querySelector(".feed-intro");
+    if (!intro) return;
+    var info = aboutInfoBtn();
+    intro.hidden = !!(info && info.getAttribute("aria-expanded") === "true");
+  }
+  function wireAboutToggle() {
+    var info = aboutInfoBtn();
+    if (!info || info._feedIntroWired) return;   // wire once per app-built head
+    info._feedIntroWired = true;
+    // Registered AFTER page-guide's own click handler, so aria-expanded is already
+    // updated when this runs.
+    info.addEventListener("click", syncIntroToAbout);
+  }
+
   function emptyFeed() {
     return ui.emptyState({
       title: "Nothing matches yet",
@@ -633,8 +706,8 @@ RR.feed = (function () {
   // "More ideas ↻" — reveal the next batch by APPENDING (so scroll position and
   // any expanded cards are preserved). Removes itself once the feed is exhausted.
   function moreButton(listEl, seqList) {
-    var btn = h("button", { type: "button", class: "feed-more" }, [
-      h("span", { class: "feed-more__icon", "aria-hidden": "true", html: ui.icon(REFRESH, 18) }),
+    var btn = h("button", { type: "button", class: "btn btn-ghost feed-more" }, [
+      h("span", { class: "feed-more__icon btn__icon", "aria-hidden": "true", html: ui.icon(REFRESH, 18) }),
       h("span", { text: "More ideas" })
     ]);
     btn.addEventListener("click", function () {
@@ -647,10 +720,10 @@ RR.feed = (function () {
     return btn;
   }
 
-  function paintFeed(team) {
+  function paintFeed() {
     // Saved is its own view (all saved items, no pagination); otherwise the
     // composed, filtered, paginated feed.
-    var seqList = filters.saved ? savedSequence() : fullSequence(team, effectiveFilter());
+    var seqList = filters.saved ? savedSequence() : fullSequence(effectiveFilter());
     if (!seqList.length) { feedRoot.appendChild(filters.saved ? emptySaved() : emptyFeed()); return; }
     var listEl = h("div", { class: "feed-list" });
     feedRoot.appendChild(listEl);
@@ -671,11 +744,12 @@ RR.feed = (function () {
       return;
     }
 
-    var team = (RR.state && RR.state.getState().team) || null;
     feedRoot.appendChild(introLine());
+    feedRoot.appendChild(agePicker());
     feedRoot.appendChild(plannerLink());
-    feedRoot.appendChild(buildChipBar(team));
-    paintFeed(team);
+    feedRoot.appendChild(buildChipBar());
+    paintFeed();
+    syncIntroToAbout();   // honor the "About this page" toggle's current state
   }
 
   function render(host) {
@@ -687,6 +761,7 @@ RR.feed = (function () {
     // so paint() can rebuild freely without wiping the title/page guide.
     feedRoot = h("div", { class: "feed-root" });
     host.appendChild(feedRoot);
+    wireAboutToggle();
     paint();
   }
 

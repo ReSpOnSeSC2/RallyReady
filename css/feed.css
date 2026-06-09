@@ -22,6 +22,10 @@
 .feed-planner-link:hover { text-decoration: underline; }
 .feed-planner-link__arrow { font-weight: 800; }
 
+/* Age picker — reuses the app's .age-picker + .input (identical to the Tips
+   screen). Sits directly under the intro as the feed's primary control. */
+.feed-age { margin: 0 0 var(--sp-4); }
+
 /* ---------- Filter chip bar (reuses .drills-filters* + .chip from css) ------- */
 .feed-filters-wrap { display: flex; flex-direction: column; gap: var(--sp-3); margin-bottom: var(--sp-4); }
 .feed-chip-panel { margin-top: var(--sp-1); }
@@ -184,22 +188,8 @@
 }
 .feed-save:hover { background: var(--overlay); }
 .feed-save.is-on { color: var(--primary); }
-/* Share / Print pill buttons. */
-.feed-act {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 8px 14px;
-  border: var(--border-w) solid var(--line);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  color: var(--text);
-  font: 700 var(--fs-sm) var(--font-stack);
-  cursor: pointer;
-}
-.feed-act:hover { background: var(--surface-2); }
-.feed-act__icon { display: inline-flex; }
+/* Share / Print use the shared .btn .btn-ghost; only layout differs here. */
+.feed-act { flex: 0 0 auto; }
 /* "Open in Tips →" text link in the tip-card footer. */
 .feed-link {
   display: inline-flex;
@@ -232,43 +222,13 @@
 .feed-tip__link:hover .feed-card__title { text-decoration: underline; }
 
 /* ---------- Theme card ------------------------------------------------------- */
-.feed-theme__cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: var(--tap-min);
-  padding: 8px 16px;
-  border: var(--border-w) solid var(--line);
-  border-radius: var(--radius-pill);
-  background: var(--primary);
-  color: var(--on-primary);
-  font: 700 var(--fs-sm) var(--font-display);
-  cursor: pointer;
-}
-.feed-theme__cta:hover { filter: brightness(0.96); }
-.feed-theme__chev { display: inline-flex; }
+/* "See ideas" uses the shared .btn .btn-ghost; only its placement differs. */
+.feed-theme__cta { align-self: flex-start; }
 
 /* ---------- "More ideas" button ---------------------------------------------- */
-.feed-more {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  align-self: center;
-  min-height: var(--tap-min);
-  margin: var(--sp-5) auto 0;
-  padding: 12px 24px;
-  border: var(--border-w) solid var(--line);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  color: var(--text);
-  font: 800 var(--fs-body) var(--font-display);
-  box-shadow: var(--shadow);
-  cursor: pointer;
-}
-.feed-more:hover { background: var(--surface-2); }
-.feed-more:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--shadow-color); }
-.feed-more__icon { display: inline-flex; transition: transform 0.4s var(--ease); }
+/* Uses the shared .btn .btn-ghost; centred under the feed with a spinning glyph. */
+.feed-more { align-self: center; margin: var(--sp-5) auto 0; }
+.feed-more__icon { transition: transform 0.4s var(--ease); }
 .feed-more:hover .feed-more__icon { transform: rotate(180deg); }
 
 /* ---------- Inline drill detail (opened from a spotlight) -------------------- */
@@ -279,6 +239,5 @@
 /* ---------- Reduced motion --------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .feed-steps__chev,
-  .feed-more__icon,
-  .feed-more:active { transition: none; transform: none; }
+  .feed-more__icon { transition: none; transform: none; }
 }
