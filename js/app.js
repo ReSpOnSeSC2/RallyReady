@@ -16,6 +16,7 @@ RR.app = (function () {
     team:    { title: "Teams",   blurb: "Create, switch and set up the teams you coach." },
     // These aren't tabs — they're reached from in-screen links — but each is a real
     // route so it gets a title, a focus target, and back/forward support.
+    "ideas-browse": { title: "All ideas", blurb: "The full feed — every idea, drill, challenge and tip, with filters." },
     history:   { title: "History",  blurb: "Your completed practices." },
     calendar:  { title: "Schedule", blurb: "The next few weeks of practices and games at a glance." },
     player:    { title: "Player",   blurb: "1-on-1 coaching: notes, goals, skills and attendance." },
@@ -136,9 +137,12 @@ RR.app = (function () {
       // The Team screen owns its body: the auto-saving setup form + summary.
       team.renderTeam(host);
     } else if (routeId === "ideas" && RR.feed) {
-      // The Ideas feed: coaching inspiration to pull from. It works with NO team,
-      // so it sits ABOVE the team-gated branch and is never blocked by setup.
+      // The Ideas deck: one card at a time, swiped through. It works with NO
+      // team, so it sits ABOVE the team-gated branch and is never blocked by setup.
       RR.feed.render(host);
+    } else if (routeId === "ideas-browse" && RR.feed) {
+      // The full Ideas feed (filters, themes, Saved) — reached from the deck.
+      RR.feed.renderBrowse(host);
     } else if ((routeId === "today" || routeId === "season" || routeId === "history") && team && !team.hasTeam()) {
       // These screens are driven by the team; nudge setup until one exists.
       host.appendChild(team.emptyStateCard(EMPTY_COPY[routeId]));
@@ -184,6 +188,7 @@ RR.app = (function () {
     var PARENT = {
       // The classic planner (#today) and its sub-screens now live UNDER the Ideas
       // tab — the feed is home base; the full planner is a quiet link within it.
+      "ideas-browse": "ideas",
       today: "ideas", history: "ideas", calendar: "ideas",
       player: "players", positions: "players", lineup: "players"
     };

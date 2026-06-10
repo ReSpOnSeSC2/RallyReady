@@ -26,12 +26,22 @@ RR.pageGuide = (function () {
   var GUIDE = {
     ideas: {
       en: [
-        "Ideas is your inspiration feed — a place to pull from before practice, not another form to fill in. Scroll through ready-made practice ideas, drill spotlights, bite-size tips, fun challenges and mindset nuggets, all tuned to your team's age and program.",
-        "Browse for as long as you like, save the ones you love, and tap “More ideas” for a fresh mix. Found something you want to run? Share or print it as a carry sheet — or open the full planner and timer when you'd rather have the classic, step-by-step practice."
+        "Ideas is your daily deck of coaching inspiration — a dozen cards, dealt fresh each day and tuned to the age group you pick. Each card is a ready-made practice idea, a drill spotlight, a bite-size tip, a fun challenge or a mindset nugget, shown one at a time so it never overwhelms.",
+        "Swipe right (or tap ♥ Save) to keep a card, swipe left (or tap ✗ Skip) to pass — your keepers wait under “See saved”. Want everything at once? “Browse all ideas” opens the full feed with filters, and the classic planner and timer stay one tap away."
       ],
       ro: [
-        "Idei este fluxul tău de inspirație — un loc din care să te inspiri înainte de antrenament, nu încă un formular de completat. Derulează idei de antrenament gata făcute, exerciții puse în lumină, sfaturi scurte, provocări distractive și gânduri despre mentalitate, toate adaptate vârstei și programului echipei tale.",
-        "Răsfoiește cât vrei, salvează-le pe cele care îți plac și apasă „Mai multe idei” pentru un amestec nou. Ai găsit ceva ce vrei să folosești? Distribuie-l sau tipărește-l ca foaie de teren — sau deschide planificatorul complet și cronometrul când preferi antrenamentul clasic, pas cu pas."
+        "Idei este pachetul tău zilnic de inspirație pentru antrenorat — o duzină de cărți, împărțite proaspăt în fiecare zi și adaptate grupei de vârstă pe care o alegi. Fiecare carte este o idee de antrenament gata făcută, un exercițiu pus în lumină, un sfat scurt, o provocare distractivă sau un gând despre mentalitate, arătate pe rând ca să nu te copleșească.",
+        "Glisează la dreapta (sau apasă ♥ Salvează) ca să păstrezi o carte, glisează la stânga (sau apasă ✗ Sari peste) ca să treci mai departe — cele păstrate te așteaptă la „Vezi salvatele”. Vrei totul deodată? „Răsfoiește toate ideile” deschide fluxul complet cu filtre, iar planificatorul clasic și cronometrul rămân la o atingere distanță."
+      ]
+    },
+    "ideas-browse": {
+      en: [
+        "This is the full Ideas feed — every practice idea, drill spotlight, tip, challenge, mindset nugget and themed collection in one scrollable list.",
+        "Use the filters to narrow by skill, vibe or collection, tap the ♥ on anything you like to save it, and hit “More ideas” for a fresh mix. Prefer the calmer view? Head back to today's deck."
+      ],
+      ro: [
+        "Acesta este fluxul complet de Idei — fiecare idee de antrenament, exercițiu pus în lumină, sfat, provocare, gând despre mentalitate și colecție tematică, într-o singură listă derulabilă.",
+        "Folosește filtrele ca să restrângi după tehnică, atmosferă sau colecție, apasă ♥ pe orice îți place ca să-l salvezi și apasă „Mai multe idei” pentru un amestec nou. Preferi vederea mai liniștită? Întoarce-te la pachetul de azi."
       ]
     },
     today: {
