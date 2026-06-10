@@ -266,6 +266,9 @@
   <!-- Curated feed content (mini practice-flows, challenges, mindset nuggets,
        themes). Attaches to RR.feed via add(), so it loads right after feed.js. -->
   <script defer src="js/feed-data.js"></script>
+  <!-- The Ideas deck: the one-card-at-a-time default #ideas view. Composes
+       RR.feed (deckSequence/renderItem), so it loads after feed.js. -->
+  <script defer src="js/feed-deck.js"></script>
   <script defer src="js/app.js"></script>
 </body>
 </html>

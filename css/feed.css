@@ -241,8 +241,111 @@
 .feed-back { align-self: flex-start; }
 .feed-back__icon { display: inline-flex; }
 
+/* ---------- The Ideas deck (js/feed-deck.js) --------------------------------- */
+/* One card at a time. The stage owns the swipe gesture: touch-action keeps
+   vertical panning with the browser (cards can be tall), while horizontal
+   drags move the card via inline transforms written by JS. */
+.deck { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+.deck-stage { touch-action: pan-y; }
+.deck-card { position: relative; }
+.deck-stage--dragging .deck-card {
+  transition: none;
+  will-change: transform;
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* Swipe hints, faded in by drag distance (opacity written inline by JS). */
+.deck-hint {
+  position: absolute;
+  top: var(--sp-3);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  border: 2px solid currentColor;
+  font: 800 var(--fs-sm) var(--font-stack);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--surface);
+  opacity: 0;
+  pointer-events: none;
+}
+.deck-hint--save { right: var(--sp-3); color: var(--primary); transform: rotate(6deg); }
+.deck-hint--skip { left: var(--sp-3); color: var(--text-muted); transform: rotate(-6deg); }
+
+/* Progress: digits for the eye; .deck-sr carries the spoken version. */
+.deck-progress {
+  margin: 0;
+  text-align: center;
+  color: var(--text-muted);
+  font: 700 var(--fs-sm) var(--font-stack);
+  letter-spacing: 0.05em;
+}
+.deck-sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Back / ✗ Skip / ♥ Save. Save is the headline action (biggest thumb target). */
+.deck-controls { display: flex; gap: var(--sp-2); }
+.deck-btn { min-height: var(--tap-min); }
+.deck-btn--skip { flex: 1; }
+.deck-btn--save { flex: 1.4; }
+.deck-swipe-tip {
+  margin: 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+}
+
+/* End-of-deck card: stacked full-width actions. */
+.deck-end__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+.deck-end__actions .btn { width: 100%; }
+
+/* Footer escape hatches (the browse link reuses the planner-link look). */
+.deck-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin-top: var(--sp-2);
+}
+.deck-footer .feed-planner-link { margin: 0; }
+
+/* The browse view's way back to the deck. */
+.feed-deck-return { margin: 0 0 var(--sp-3); }
+
+/* Motion: snap-back after an under-threshold drag, the off-screen fling on a
+   commit, and a small slide-in for each fresh card — all gated so reduced
+   motion gets instant, animation-free flips. */
+@media (prefers-reduced-motion: no-preference) {
+  .deck-stage:not(.deck-stage--dragging) .deck-card {
+    transition: transform 0.2s var(--ease);
+  }
+  .deck-card--fling {
+    transition: transform 0.25s var(--ease), opacity 0.25s var(--ease) !important;
+  }
+  .deck-stage:not(.deck-stage--dragging) .deck-hint { transition: opacity 0.2s var(--ease); }
+  @keyframes deck-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.985); }
+    to   { opacity: 1; transform: none; }
+  }
+  .deck-stage .deck-card { animation: deck-in 0.18s var(--ease); }
+}
+
 /* ---------- Reduced motion --------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .feed-steps__chev,
   .feed-more__icon { transition: none; transform: none; }
+  .deck-card,
+  .deck-card--fling,
+  .deck-hint { transition: none !important; animation: none !important; }
 }

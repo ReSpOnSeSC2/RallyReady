@@ -260,8 +260,10 @@ RR.feed = (function () {
 
   // A drill spotlight reuses the shared Drills card; tapping opens the full
   // drill detail in a lightweight inline panel (no separate route needed).
-  function drillSpotlightCard(drill) {
-    return ui.drillCard(drill, { onOpen: openDrillDetail });
+  // opts.onOpen lets the deck (js/feed-deck.js) supply its own detail view —
+  // the default repaints THIS module's browse root.
+  function drillSpotlightCard(drill, opts) {
+    return ui.drillCard(drill, { onOpen: (opts && opts.onOpen) || openDrillDetail });
   }
 
   // A compact tip card: icon chip + title + first 1–2 points. The body is a real
@@ -323,8 +325,9 @@ RR.feed = (function () {
   }
 
   // Dispatcher: pick a renderer by item.type. A raw drill (from RR.drills) has
-  // no `type`, so it falls through to the spotlight renderer.
-  function renderItem(item) {
+  // no `type`, so it falls through to the spotlight renderer. `opts` is only
+  // meaningful for drills (see drillSpotlightCard); other cards ignore it.
+  function renderItem(item, opts) {
     if (!item) return document.createComment("empty");
     switch (item.type) {
       case "idea": return ideaCard(item);
@@ -332,8 +335,8 @@ RR.feed = (function () {
       case "mindset": return mindsetCard(item);
       case "theme": return themeCard(item);
       case "tip": return tipCard(item);
-      case "drill": return drillSpotlightCard(item);
-      default: return drillSpotlightCard(item);
+      case "drill": return drillSpotlightCard(item, opts);
+      default: return drillSpotlightCard(item, opts);
     }
   }
 
@@ -495,6 +498,37 @@ RR.feed = (function () {
     return list.slice(0, Math.min((batch + 1) * PAGE, list.length));
   }
 
+  // The deck: the daily hand for the one-card-at-a-time view (js/feed-deck.js).
+  // Same pools and seeded machinery as the browse feed, but UNFILTERED (age
+  // tuning only) and with NO theme cards — a collection's "See ideas" applies a
+  // browse filter, which is meaningless one card at a time. The "|deck|" seed
+  // marker keeps the deal's order different from the same-day browse order. The
+  // deck UI shows DECK_SIZE cards per deal; "Deal me more" walks further into
+  // this one sequence, so there are no same-day repeats.
+  var DECK_SIZE = 12;       // cards per deal
+  var DECK_DRILL_CAP = 8;   // tighter caps than the feed so every deal stays mixed
+  var DECK_TIP_CAP = 6;
+  var deckCache = { key: null, list: [] };
+  function deckSequence() {
+    var key = dateSeedStr() + "|deck|" + (resolvedAgeGroup() || "all-ages");
+    if (deckCache.key === key) return deckCache.list;
+    var band = resolvedBand();
+    var rnd = mulberry32(hashStr(key));
+    var none = { skill: null, vibe: null, saved: false };
+    var pools = {
+      idea: data.ideas.filter(function (it) { return candidateMatches(it, "idea", band, none); }),
+      challenge: data.challenges.filter(function (it) { return candidateMatches(it, "challenge", band, none); }),
+      mindset: data.mindset.filter(function (it) { return candidateMatches(it, "mindset", band, none); }),
+      drill: drillCandidates(band, none),
+      tip: tipCandidates(none)
+    };
+    Object.keys(pools).forEach(function (k) { pools[k] = seededShuffle(pools[k], rnd); });
+    pools.drill = pools.drill.slice(0, DECK_DRILL_CAP);
+    pools.tip = pools.tip.slice(0, DECK_TIP_CAP);
+    deckCache = { key: key, list: interleave(pools, rnd) };
+    return deckCache.list;
+  }
+
   // ======================================================================= //
   //  Inline drill detail (opened from a spotlight card)                     //
   // ======================================================================= //
@@ -552,6 +586,13 @@ RR.feed = (function () {
       if (RR.state.isFavorite && RR.state.isFavorite(d.id)) items.push(d);
     });
     return items;
+  }
+
+  // PUBLIC: point the browse view at the Saved collection BEFORE navigating to
+  // #ideas-browse (the deck's "See saved" uses this; the route change repaints).
+  function showSaved() {
+    filters.skill = null; filters.vibe = null; filters.themeId = null; filters.saved = true;
+    batch = 0;
   }
 
   function activeFilterCount() {
@@ -651,8 +692,10 @@ RR.feed = (function () {
 
   // The age picker — the only setup the feed needs. A labelled native select that
   // reuses the app's .age-picker + .input styling (identical to the Tips screen),
-  // so it matches the rest of RallyReady exactly.
-  function agePicker() {
+  // so it matches the rest of RallyReady exactly. The deck passes its own
+  // onChange (reset position + repaint its root); with no args the browse view's
+  // default behaviour is unchanged.
+  function agePicker(onChange) {
     var current = resolvedAgeGroup() || "";
     var bands = (RR.team && RR.team.AGE_GROUPS) || [];
     var sel = h("select", { class: "input age-select", id: "feed-age-select",
@@ -662,6 +705,7 @@ RR.feed = (function () {
       ));
     sel.addEventListener("change", function () {
       setFeedAgeGroup(sel.value || null);
+      if (onChange) { onChange(); return; }
       batch = 0;
       paint();
       window.scrollTo(0, 0);
@@ -744,6 +788,12 @@ RR.feed = (function () {
       return;
     }
 
+    // Browse is now the secondary view (#ideas-browse); the deck on #ideas is
+    // home base, so offer the way back before anything else.
+    feedRoot.appendChild(h("a", { class: "feed-planner-link feed-deck-return", href: "#ideas" }, [
+      h("span", { class: "feed-planner-link__arrow", "aria-hidden": "true", text: "← " }),
+      h("span", { text: "Back to today's deck" })
+    ]));
     feedRoot.appendChild(introLine());
     feedRoot.appendChild(agePicker());
     feedRoot.appendChild(plannerLink());
@@ -752,7 +802,9 @@ RR.feed = (function () {
     syncIntroToAbout();   // honor the "About this page" toggle's current state
   }
 
-  function render(host) {
+  // The full feed, now the BROWSE view on #ideas-browse — everything it always
+  // was (filters, themes, Saved, "More ideas"), reached from the deck.
+  function renderBrowse(host) {
     hostEl = host;
     current = { mode: "feed", drill: null };
     // In the Saved view, un-saving a card should remove it immediately.
@@ -765,8 +817,22 @@ RR.feed = (function () {
     paint();
   }
 
+  // #ideas (the default route) renders the one-card-at-a-time deck. If
+  // feed-deck.js ever failed to load, fall back to the browse feed rather than
+  // a blank screen (the same philosophy as app.js's fallbackCard).
+  function render(host) {
+    if (RR.feedDeck && RR.feedDeck.render) { RR.feedDeck.render(host); return; }
+    renderBrowse(host);
+  }
+
   return {
-    render: render,
+    render: render,               // the deck (default #ideas view)
+    renderBrowse: renderBrowse,   // the full feed (#ideas-browse)
+    renderItem: renderItem,       // per-type card dispatcher (reused by the deck)
+    deckSequence: deckSequence,   // the daily deck composition
+    DECK_SIZE: DECK_SIZE,
+    agePicker: agePicker,
+    showSaved: showSaved,
     data: data,   // { ideas, challenges, mindset, themes } — read by the composer
     add: add      // public extension point used by js/feed-data*.js
   };

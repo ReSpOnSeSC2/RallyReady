@@ -675,7 +675,32 @@
     "Manage players & attendance": "Gestionează jucătorii & prezența",
     "1-minute setup": "Configurare de un minut",
     "Tell RallyReady your team's age group and season dates, and every practice will be tailored to them.":
-      "Spune-i lui RallyReady grupa de vârstă a echipei și datele sezonului, iar fiecare antrenament va fi croit pe ele."
+      "Spune-i lui RallyReady grupa de vârstă a echipei și datele sezonului, iar fiecare antrenament va fi croit pe ele.",
+
+    // ---- feed-deck.js: the Ideas deck ----
+    "One card at a time — today's picks, fresh each day.":
+      "Câte o carte pe rând — alegerile de azi, proaspete în fiecare zi.",
+    "Skip": "Sari peste",
+    "Skipped": "Sărit peste",
+    "Back": "Înapoi",
+    "Back one card": "Înapoi o carte",
+    "♥ Save": "♥ Salvează",
+    "Swipe right to save, left to skip.": "Glisează la dreapta ca să salvezi, la stânga ca să sari peste.",
+    "Browse all ideas": "Răsfoiește toate ideile",
+    "All ideas": "Toate ideile",
+    "The full feed — every idea, drill, challenge and tip, with filters.":
+      "Fluxul complet — fiecare idee, exercițiu, provocare și sfat, cu filtre.",
+    "That's the deck for today": "Acesta a fost pachetul de azi",
+    "New cards tomorrow — same time, fresh mix.": "Cărți noi mâine — același loc, amestec proaspăt.",
+    "Nothing saved this time — deal more or browse the full feed.":
+      "Nimic salvat de data asta — mai împarte cărți sau răsfoiește fluxul complet.",
+    "Deal me more": "Mai împarte-mi cărți",
+    "See saved": "Vezi salvatele",
+    "Back to the deck": "Înapoi la pachet",
+    "Back to today's deck": "Înapoi la pachetul de azi",
+    "Nothing in the deck": "Nimic în pachet",
+    "Try a different age group — or browse the full feed of ideas, drills, challenges and tips.":
+      "Încearcă altă grupă de vârstă — sau răsfoiește fluxul complet de idei, exerciții, provocări și sfaturi."
   });
 
   // ---- file-specific runtime patterns ---------------------------------------
@@ -735,6 +760,11 @@
     { re: /^Back to (.+)$/, ro: function (m) { return "Înapoi la " + t(m[1]); } },
 
     // lineup.js — picker title
-    { re: /^Assign (.+)$/, ro: function (m) { return "Atribuie " + t(m[1]); } }
+    { re: /^Assign (.+)$/, ro: function (m) { return "Atribuie " + t(m[1]); } },
+
+    // feed-deck.js — deck progress (for the ear) + end-card summary
+    { re: /^Card (\d+) of (\d+)$/, ro: function (m) { return "Cartea " + m[1] + " din " + m[2]; } },
+    { re: /^You saved (\d+) ideas?\.$/,
+      ro: function (m) { return "Ai salvat " + m[1] + (m[1] === "1" ? " idee." : " idei."); } }
   ]);
 }());
