@@ -2,12 +2,12 @@
 //
 // The drill cards explained WHAT to do but never HOW the team is set up: does
 // everyone go at once or one at a time? who counts the score? where do people
-// stand? This module answers that for ALL 215 drills.
+// stand? This module answers that for every bundled and coach-authored drill.
 //
 // It works in two tiers (the "smart-tiered" approach):
 //   1. derive(d)  — a real, specific organization read-out built from the drill's
 //      own attributes (player count, equipment, game-vs-drill, duration). Never a
-//      placeholder; every drill gets a concrete answer.
+//      placeholder; every bundled or coach-authored drill gets a concrete answer.
 //   2. overrides  — hand-authored detail in RR.extras[id].format for the games
 //      and position-critical drills, merged OVER the derived defaults.
 //

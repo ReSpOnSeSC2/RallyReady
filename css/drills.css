@@ -171,6 +171,12 @@ input.drills-search__input { padding-left: calc(var(--sp-4) + 30px); }
 .drill-detail__badges { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-2); }
 .drill-detail__name { margin: 0; font-size: var(--fs-title); letter-spacing: -0.02em; }
 .drill-detail__name:focus { outline: none; }   /* programmatic focus target */
+.drill-detail__name:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.drill-detail { scroll-margin-top: calc(var(--appbar-h) + var(--sp-3)); }
 
 /* Stat strip (difficulty / age / time). */
 .drill-detail__stats {
@@ -211,6 +217,7 @@ input.drills-search__input { padding-left: calc(var(--sp-4) + 30px); }
 .drill-detail__adjust-col .eyebrow { color: var(--text); }
 
 @media (max-width: 360px) {
+  .drill-detail { padding: var(--sp-4); }
   .drill-detail__stats { grid-template-columns: 1fr; gap: var(--sp-2); }
   .drill-detail__adjust { grid-template-columns: 1fr; }
 }

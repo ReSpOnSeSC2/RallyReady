@@ -296,7 +296,14 @@ RR.positionsScreen = (function () {
         h("p", { class: "muted pos-drills__hint",
           text: "Tap a drill for the full setup, cues and video. These work the skills this position lives in." }),
         h("div", { class: "drills-list pos-drills__list" }, drills.map(function (d) {
-          return ui.drillCard(d, { onOpen: function (drill) { view.drill = drill; paint(); window.scrollTo(0, 0); } });
+          return ui.drillCard(d, { onOpen: function (drill) {
+            view.drill = drill;
+            paint();
+            var head = host.querySelector(".drill-detail__name");
+            if (head) { head.setAttribute("tabindex", "-1"); head.focus(); }
+            var detail = host.querySelector(".drill-detail");
+            if (detail) detail.scrollIntoView({ block: "start" });
+          } });
         }))
       ]);
     }

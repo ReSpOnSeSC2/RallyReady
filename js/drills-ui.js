@@ -153,9 +153,10 @@ RR.drillsScreen = (function () {
     var editing = null;    // null | "new" | { drill } while the drill editor is open
 
     // Intro line (program-aware, full --text so it passes AA on --bg).
-    host.appendChild(h("p", { class: "screen-sub drills-intro", text: hasTeam
+    var intro = h("p", { class: "screen-sub drills-intro", text: hasTeam
       ? ("Find the right activity for any skill — tuned to " + ui.programLabel(team) + ", " + team.ageGroup + ".")
-      : "Browse the full drill library. Set up your team to tune it to their age and program." }));
+      : "Browse the full drill library. Set up your team to tune it to their age and program." });
+    host.appendChild(intro);
 
     var controlsHost = h("div", { class: "drills-controls" });
     var bodyHost = h("div", { class: "drills-body" });
@@ -325,6 +326,7 @@ RR.drillsScreen = (function () {
     function paint(keepFocus) {
       bodyHost.innerHTML = "";
       controlsHost.hidden = !!selected || !!editing;
+      intro.hidden = !!selected || !!editing;
 
       if (editing) { bodyHost.appendChild(editorView()); return; }
       if (selected) { bodyHost.appendChild(detailView(selected)); return; }
@@ -380,7 +382,9 @@ RR.drillsScreen = (function () {
       // Move focus to the detail heading so screen readers announce the change.
       var head = bodyHost.querySelector(".drill-detail__name");
       if (head) { head.setAttribute("tabindex", "-1"); head.focus(); }
-      window.scrollTo(0, 0);
+      // Land on the drill itself rather than the page-level Drills heading.
+      var detail = bodyHost.querySelector(".drill-detail");
+      if (detail) detail.scrollIntoView({ block: "start" });
     }
 
     function detailView(drill) {

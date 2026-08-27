@@ -563,6 +563,7 @@ textarea.input {
   font-size: var(--fs-xs);
   font-weight: 600;
   transition: color 0.18s var(--ease);   /* smooth fade between active/inactive */
+  min-width: 0;
 }
 /* The icon sits inside a rounded "key" that fills with a coral-tint, ink-outlined
    pill only when the tab is active — a clear, tactile bottom-nav selection. */
@@ -576,6 +577,23 @@ textarea.input {
   transition: background 0.18s var(--ease), border-color 0.18s var(--ease);
 }
 .tab-label { line-height: 1; }
+
+/* The smallest supported phones need every header/nav item to relinquish its
+   intrinsic width. Labels remain available to assistive tech while the visible
+   chrome compresses without causing horizontal page scroll. */
+@media (max-width: 420px) {
+  .appbar { gap: var(--sp-1); padding-left: var(--sp-2); padding-right: var(--sp-2); }
+  .brand { min-width: 0; gap: 6px; }
+  .brand__ball { width: 27px; height: 27px; flex: none; }
+  .brand__name { overflow: hidden; font-size: 21px; text-overflow: ellipsis; white-space: nowrap; }
+  .lang-toggle { gap: 0; padding: 2px; }
+  .lang-opt { gap: 0; padding: 6px; }
+  .lang-opt__txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .lang-opt .flag { width: 20px; height: 14px; }
+  .theme-toggle { width: 42px; height: 42px; }
+  .tabbar a svg { padding-left: 9px; padding-right: 9px; }
+  .tab-label { overflow: hidden; max-width: 100%; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+}
 
 .tabbar a.is-active { color: var(--tab-active); }
 .tabbar a.is-active svg { background: var(--primary-tint); border-color: var(--line); }

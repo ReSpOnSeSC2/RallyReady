@@ -537,7 +537,8 @@ RR.feed = (function () {
     paint();
     var head = feedRoot.querySelector(".drill-detail__name");
     if (head) { head.setAttribute("tabindex", "-1"); head.focus(); }
-    window.scrollTo(0, 0);
+    var detail = feedRoot.querySelector(".drill-detail");
+    if (detail) detail.scrollIntoView({ block: "start" });
   }
   function detailView(drill) {
     var back = h("button", { type: "button", class: "btn btn-ghost feed-back" }, [

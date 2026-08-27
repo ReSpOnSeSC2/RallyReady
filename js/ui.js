@@ -284,9 +284,10 @@ RR.ui = (function () {
   // Back-compat alias (single wrapper of all figures).
   function diagramFigure(drill) { return diagramFigures(drill); }
 
-  // drillDetail(drill) — the full read-out for one drill: setup, steps, cues,
-  // equipment, age range, difficulty dots, easier/harder, and the "Watch how"
-  // link. Used by the Drills browser's detail view. No nested cards.
+  // drillDetail(drill) — the full read-out for one drill. The real, animated
+  // court example sits immediately below the name so it is the first teaching
+  // content a coach sees; setup, steps, cues and adjustments follow. Shared by
+  // Drills, Ideas, and position recommendations. No nested cards.
   function drillDetail(drill, opts) {
     opts = opts || {};
     var stats = h("div", { class: "drill-detail__stats" }, [
@@ -310,14 +311,11 @@ RR.ui = (function () {
     var sections = [
       detailSection("Setup", h("p", { text: drill.setup }))
     ];
-    // The "how it's organized" read-out and the court diagram sit right after
-    // Setup — that's exactly when a coach is picturing how to run it.
+    // The organization read-out stays with Setup. The court visual no longer
+    // appears here because its animated replacement lives at the top of the
+    // detail card (below the name, above the stats).
     var org = organizeSection(drill);
     if (org) sections.push(org);
-    var fig = diagramFigure(drill);
-    if (fig) sections.push(h("div", { class: "drill-detail__section drill-detail__diagram" }, [
-      h("span", { class: "eyebrow", text: "On the court" }), fig
-    ]));
     sections.push(
       detailSection("Run it", h("ol", { class: "drill-detail__steps" },
         (drill.steps || []).map(function (s) { return h("li", { text: s }); }))),
@@ -377,12 +375,12 @@ RR.ui = (function () {
       footer.push(h("div", { class: "drill-detail__custom-ctl" }, ctl));
     }
 
-    return h("section", { class: "card drill-detail" }, [
-      h("div", { class: "drill-detail__head" }, head),
-      stats,
-      h("div", { class: "drill-detail__body" }, sections),
-      footer
-    ]);
+    var detailKids = [h("div", { class: "drill-detail__head" }, head)];
+    if (RR.drillAnimation && RR.drillAnimation.figure) {
+      detailKids.push(RR.drillAnimation.figure(drill));
+    }
+    detailKids.push(stats, h("div", { class: "drill-detail__body" }, sections), footer);
+    return h("section", { class: "card drill-detail" }, detailKids);
   }
 
   // ======================================================================= //
@@ -438,19 +436,21 @@ RR.ui = (function () {
     ]);
 
     // ---- Detail: everything a coach needs to run the block ------------------
-    var sections = [
+    // Lead with the same live example used by full drill details so expanding
+    // a practice block never falls back to the old static court image.
+    var sections = [];
+    if (RR.drillAnimation && RR.drillAnimation.figure) {
+      sections.push(RR.drillAnimation.figure(drill));
+    }
+    sections.push(
       h("div", { class: "block__section" }, [
         h("span", { class: "eyebrow", text: "Setup" }),
         h("p", { text: drill.setup })
       ])
-    ];
+    );
     var orgList = organizeList(drill);
     if (orgList) sections.push(h("div", { class: "block__section block__organize" }, [
       h("span", { class: "eyebrow", text: "How it's organized" }), orgList
-    ]));
-    var fig = diagramFigure(drill);
-    if (fig) sections.push(h("div", { class: "block__section block__diagram" }, [
-      h("span", { class: "eyebrow", text: "On the court" }), fig
     ]));
     sections.push(h("div", { class: "block__section" }, [
       h("span", { class: "eyebrow", text: "Run it" }),
