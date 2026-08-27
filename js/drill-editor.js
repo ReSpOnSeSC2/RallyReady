@@ -34,7 +34,7 @@ RR.drillEditor = (function () {
     return {
       name: "", skill: "Passing", ageMin: 8, ageMax: 18, difficulty: 2,
       minPlayers: 2, durationMin: 10, isGame: false, isStaple: false, campFriendly: false,
-      equipment: ["balls"], setup: "", steps: [], cues: [], easier: "", harder: ""
+      equipment: ["balls"], motionType: "", setup: "", steps: [], cues: [], easier: "", harder: ""
     };
   }
 
@@ -92,6 +92,19 @@ RR.drillEditor = (function () {
       sel.addEventListener("change", function () { form.skill = sel.value; });
       return sel;
     }
+    function motionSelect() {
+      var sel = h("select", { class: "input" });
+      sel.appendChild(h("option", { value: "", text: "Choose a human demonstration…",
+        selected: !form.motionType }));
+      var choices = RR.drillHumanMotion && RR.drillHumanMotion.options
+        ? RR.drillHumanMotion.options() : [];
+      choices.forEach(function (choice) {
+        sel.appendChild(h("option", { value: choice.value, text: choice.label,
+          selected: form.motionType === choice.value }));
+      });
+      sel.addEventListener("change", function () { form.motionType = sel.value; });
+      return sel;
+    }
     function diffSeg() {
       var group = h("div", { class: "segmented", role: "radiogroup", "aria-label": "Difficulty" });
       [1, 2, 3, 4, 5].forEach(function (d) {
@@ -136,8 +149,10 @@ RR.drillEditor = (function () {
     }
 
     var nameInput = input("name", { type: "text", maxlength: "60", placeholder: "e.g. Queen of the Court" });
+    var motionInput = motionSelect();
+    var stepsInput = area("steps", 5);
     var errEl = h("p", { class: "field-error", role: "alert", hidden: true }, [
-      h("span", { text: "Give your drill a name and pick a skill." })
+      h("span", { text: "Give your drill a name, human demonstration, and at least one step." })
     ]);
 
     var formEl = h("form", { class: "team-form de-form", novalidate: "novalidate",
@@ -145,6 +160,8 @@ RR.drillEditor = (function () {
       labelled("Drill name", nameInput),
       errEl,
       labelled("Skill", skillSelect(), "Which category it belongs to."),
+      labelled("Human demonstration", motionInput,
+        "Choose the movement the athlete should demonstrate. RallyReady will not guess from your notes."),
       h("div", { class: "de-grid" }, [
         labelled("Youngest age", ageSelect("ageMin")),
         labelled("Oldest age", ageSelect("ageMax"))
@@ -157,7 +174,7 @@ RR.drillEditor = (function () {
       h("div", { class: "de-flags" }, [checkbox("isGame", "It's a game"), checkbox("campFriendly", "Camp-friendly")]),
       labelled("Equipment", equipChips()),
       labelled("Setup", area("setup", 3), "How to set the court / players up."),
-      labelled("Steps", area("steps", 5), "How to run it — one step per line."),
+      labelled("Steps", stepsInput, "How to run it — one step per line."),
       labelled("Coaching cues", area("cues", 4), "What to say — one cue per line."),
       h("div", { class: "de-grid" }, [
         labelled("Make it easier", area("easier", 2)),
@@ -178,7 +195,21 @@ RR.drillEditor = (function () {
 
     function save() {
       var name = (form.name || "").trim();
-      if (!name || !form.skill) { errEl.hidden = false; nameInput.focus(); return; }
+      var motionValid = !!(RR.drillHumanMotion && RR.drillHumanMotion.assetFor &&
+        RR.drillHumanMotion.assetFor(form.motionType));
+      var stepList = lines(form.steps);
+      if (!name || !form.skill || !motionValid) {
+        errEl.querySelector("span").textContent = "Give your drill a name and choose a valid human demonstration.";
+        errEl.hidden = false;
+        (name ? motionInput : nameInput).focus();
+        return;
+      }
+      if (!stepList.length) {
+        errEl.querySelector("span").textContent = "Add at least one step so the demonstration can follow your drill.";
+        errEl.hidden = false;
+        stepsInput.focus();
+        return;
+      }
       if (form.ageMin > form.ageMax) { var t = form.ageMin; form.ageMin = form.ageMax; form.ageMax = t; }
       var drill = {
         name: name, skill: form.skill,
@@ -186,8 +217,9 @@ RR.drillEditor = (function () {
         minPlayers: form.minPlayers || 1, durationMin: form.durationMin || 10,
         isGame: !!form.isGame, isStaple: false, campFriendly: !!form.campFriendly,
         equipment: form.equipment.slice(),
+        motionType: form.motionType,
         setup: (form.setup || "").trim(),
-        steps: lines(form.steps), cues: lines(form.cues),
+        steps: stepList, cues: lines(form.cues),
         easier: (form.easier || "").trim() || "Slow it down or shorten it.",
         harder: (form.harder || "").trim() || "Add a target, a score, or game speed.",
         videoSearchUrl: (RR.drillVideoSearch ? RR.drillVideoSearch(name)

@@ -57,12 +57,19 @@ RR.extras = RR.extras || {};
     },
     diagram: dk.serveTargets({
       servers: 1,
+      extraPlayers: [
+        { x: 7.7, y: 3.9, label: "Sh", team: "n", note: "shags and confirms the zone" },
+        { x: 6.5, y: 12.95, label: "Q", team: "n", note: "waits behind end line" }
+      ],
       zones: [
         { x: 0.5, y: 0.7, w: 2.4, h: 2.2, tone: "target", label: "1" },
         { x: 3.3, y: 0.7, w: 2.4, h: 2.2, tone: "target", label: "2" },
-        { x: 6.1, y: 0.7, w: 2.4, h: 2.2, tone: "target", label: "3" }
+        { x: 6.1, y: 0.7, w: 2.4, h: 2.2, tone: "target", label: "3" },
+        { x: 0.5, y: 3.3, w: 2.4, h: 2.2, tone: "good", label: "4" },
+        { x: 3.3, y: 3.3, w: 2.4, h: 2.2, tone: "good", label: "5" },
+        { x: 6.1, y: 3.3, w: 2.4, h: 2.2, tone: "good", label: "6" }
       ],
-      caption: "One server at a time aims zone to zone, 'travelling around the world'; the group rotates serve → shag."
+      caption: "One server at a time aims through all six zones, 'travelling around the world'; the group rotates serve → shag → wait after every ball."
     })
   };
 
@@ -83,7 +90,7 @@ RR.extras = RR.extras || {};
       tracking: "Coach calls makes/misses; players self-police sitting and standing. Last fish swimming wins.",
       aim: "Keep it light and fast — 6–8 min."
     },
-    diagram: dk.serveTargets({ servers: 5, caption: "All serve each round; a miss = sit down ('dead fish'), a make from sitting brings you back." })
+    diagram: dk.serveTargets({ servers: 6, caption: "All six servers work across the end line each round; a miss = sit down ('dead fish'), a make from sitting brings you back." })
   };
 
   E["serving-relay-race"] = {
@@ -93,7 +100,27 @@ RR.extras = RR.extras || {};
       tracking: "A team counts a point only for serves that land in. First team to a target number of made serves wins. Each team self-counts; coach settles ties.",
       aim: "Race to 10–15 made serves per team."
     },
-    diagram: dk.serveTargets({ servers: 2, caption: "Each team serves one at a time, shags, and tags the next — race to a target of made serves." })
+    diagram: {
+      caption: "Two three-player relay teams: each front server serves, follows the sideline to shag, returns the ball, tags the next teammate, and joins the back of the same line.",
+      w: 9, h: 14, net: 6, lines: [{ y: 3 }, { y: 9 }],
+      court: [{ x: 0, y: 0, w: 9, h: 12 }],
+      zones: [{ x: 0.6, y: 0.7, w: 3.4, h: 2.4, tone: "target", label: "TEAM A" }, { x: 5, y: 0.7, w: 3.4, h: 2.4, tone: "target", label: "TEAM B" }],
+      players: [
+        { x: 2.5, y: 12.45, label: "A1", team: "a", note: "serves now" },
+        { x: 2.5, y: 13.15, label: "A2", team: "a", note: "next" },
+        { x: 1.65, y: 13.15, label: "A3", team: "a", note: "waits" },
+        { x: 6.5, y: 12.45, label: "B1", team: "b", note: "serves now" },
+        { x: 6.5, y: 13.15, label: "B2", team: "b", note: "next" },
+        { x: 7.35, y: 13.15, label: "B3", team: "b", note: "waits" }
+      ],
+      paths: [
+        { from: [2.5, 12.1], to: [2.5, 2], kind: "serve", label: "serve A", curve: 0.12 },
+        { from: [2.5, 12.45], to: [2, 13.05], via: [[0.55, 8], [0.55, 2], [1.3, 12]], kind: "move", label: "shag · tag · back", curve: 0, playerIndex: 0 },
+        { from: [6.5, 12.1], to: [6.5, 2], kind: "serve", label: "serve B", curve: -0.12 },
+        { from: [6.5, 12.45], to: [7, 13.05], via: [[8.45, 8], [8.45, 2], [7.7, 12]], kind: "move", label: "shag · tag · back", curve: 0, playerIndex: 3 }
+      ],
+      legend: [{ tone: "a", text: "Team A relay" }, { tone: "b", text: "Team B relay" }, { tone: "move", text: "Serve → shag → tag → back" }]
+    }
   };
 
   E["youth-serving-target-game"] = {
@@ -199,7 +226,7 @@ RR.extras = RR.extras || {};
       tracking: "Players call their own score; coach confirms close calls. Keep games short so lines move.",
       aim: "Quick games to 5; loser rotates, winner defends."
     },
-    diagram: dk.acrossNet({ teamSize: 1, courtX0: 2, courtW: 5, wait: 2, caption: "1v1 on a short court; winner stays, loser swaps with a waiting player." })
+    diagram: dk.acrossNet({ teamSize: 1, courtX0: 2, courtW: 5, wait: 2, sequence: "two-touch", caption: "1v1 on a short court; control the first touch, send the second over, then winner stays while the loser swaps with a waiting player." })
   };
 
   E["two-v-two-deep-court"] = {
@@ -209,7 +236,7 @@ RR.extras = RR.extras || {};
       tracking: "Pairs call their own score; coach keeps the rotation moving and confirms the winner.",
       aim: "Games to 7–10, winner stays on."
     },
-    diagram: dk.acrossNet({ teamSize: 2, wait: 2, caption: "2v2 over a full court; lots of touches per player. Winners stay, a waiting pair rotates in." })
+    diagram: dk.acrossNet({ teamSize: 2, wait: 2, sequence: "serve-three", caption: "2v2 over a full court; serve, then require pass → set → attack. Winners stay and a waiting pair rotates in." })
   };
 
   E["narrow-court-line-battle"] = {
@@ -219,7 +246,7 @@ RR.extras = RR.extras || {};
       tracking: "Teams call their own score; first to the target wins the 'line battle'.",
       aim: "Games to 7; rotate the losing team off."
     },
-    diagram: dk.acrossNet({ teamSize: 2, courtX0: 2.5, courtW: 4, wait: 2, caption: "2v2 on a narrowed court — keeps every contact straight up the line." })
+    diagram: dk.acrossNet({ teamSize: 2, courtX0: 2.5, courtW: 4, wait: 2, sequence: "narrow", caption: "2v2 on a narrowed court — every pass, set, attack, and dig stays inside the straight line lane." })
   };
 
   E["three-v-three-mini-game"] = {
@@ -229,7 +256,7 @@ RR.extras = RR.extras || {};
       tracking: "Teams self-score; coach confirms the winner and rotates a fresh trio in.",
       aim: "Games to 11; winner stays."
     },
-    diagram: dk.acrossNet({ teamSize: 3, wait: 3, caption: "3v3 with three-contact rules so everyone touches the ball each rally." })
+    diagram: dk.acrossNet({ teamSize: 3, wait: 3, sequence: "serve-three", caption: "3v3 with pass → set → attack required so everyone touches the ball; rotate positions after the rally." })
   };
 
   E["two-touch-mini-volley"] = {
@@ -239,7 +266,7 @@ RR.extras = RR.extras || {};
       tracking: "Teams call their own score; coach keeps it upbeat and rotating.",
       aim: "Short games to 5–7."
     },
-    diagram: dk.acrossNet({ teamSize: 2, courtX0: 2, courtW: 5, wait: 2, caption: "Small-court 2v2 with a friendly two-touch rule for younger players." })
+    diagram: dk.acrossNet({ teamSize: 2, courtX0: 2, courtW: 5, wait: 2, sequence: "two-touch", caption: "Small-court 2v2: control the first touch, then send the required second touch over." })
   };
 
   E["newcomb-catch-volley"] = {
@@ -249,7 +276,7 @@ RR.extras = RR.extras || {};
       tracking: "Teams self-score rally points; coach teaches where to stand between rallies.",
       aim: "Games to 11; progress toward one real contact when ready."
     },
-    diagram: dk.acrossNet({ teamSize: 3, wait: 0, caption: "Newcomb: catch and throw over the net to learn positioning before live contacts." })
+    diagram: dk.acrossNet({ teamSize: 3, wait: 0, sequence: "newcomb", caption: "Newcomb: catch, use up to three teammate passes, then throw over the net; rotate positions after the rally." })
   };
 
   E["volley-tennis"] = {
@@ -259,7 +286,7 @@ RR.extras = RR.extras || {};
       tracking: "Teams call their own score, tennis-style; coach confirms.",
       aim: "Games to 7–11; rotate teams."
     },
-    diagram: dk.acrossNet({ teamSize: 2, courtX0: 1.8, courtW: 5.4, wait: 2, caption: "Volley-tennis 2v2 — one bounce allowed before each touch so beginners get set." })
+    diagram: dk.acrossNet({ teamSize: 2, courtX0: 1.8, courtW: 5.4, wait: 2, sequence: "bounce", caption: "Volley-tennis 2v2: allow one bounce before each touch, use up to three touches, then send the ball over." })
   };
 
   E["four-v-four-continuous"] = {
@@ -269,7 +296,7 @@ RR.extras = RR.extras || {};
       tracking: "Teams self-score; coach feeds balls and keeps the running total.",
       aim: "Timed 6–8 min blocks, then rotate subs in."
     },
-    diagram: dk.acrossNet({ teamSize: 4, wait: 2, caption: "4v4 with the coach feeding a fresh ball the moment a rally dies — non-stop transitions." })
+    diagram: dk.acrossNet({ teamSize: 4, wait: 2, sequence: "reentry", caption: "4v4 with three touches; the coach feeds a fresh ball the moment a rally dies, so both teams reset and transition immediately." })
   };
 
   E["free-ball-mini-game"] = {
@@ -316,7 +343,7 @@ RR.extras = RR.extras || {};
       tracking: "Single shared count for both teams together; a fault resets it. Coach calls the count.",
       aim: "Beat the team's best number of clean rallies."
     },
-    diagram: dk.acrossNet({ teamSize: 3, caption: "Both sides cooperate to rally the ball cleanly over the net as many times as possible." })
+    diagram: dk.acrossNet({ teamSize: 3, sequence: "cooperative", caption: "Both sides cooperate, count every clean crossing, and build to three controlled touches per side." })
   };
 
 })(window.RR);

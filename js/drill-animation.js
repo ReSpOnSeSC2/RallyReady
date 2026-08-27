@@ -23,6 +23,8 @@ RR.drillAnimation = (function () {
   var activeRoots = [];
   var intersectionObserver = null;
   var visibilityHooked = false;
+  var reducedMotionQuery = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
+  var reducedMotionHooked = false;
 
   // Ball paths in the authored diagrams can mean a rally sequence, separate
   // feeds, or mutually exclusive choices. Geometry alone cannot tell those
@@ -42,13 +44,14 @@ RR.drillAnimation = (function () {
     "setter-footwork-to-target": [null, null, "0,1"],
     "back-setting": ["0,1"],
     "self-toss-spike": ["0,1"],
-    "hitting-off-a-live-set": [null, "2,3"],
+    "hitting-off-a-live-set": [null, "1,2"],
+    "middle-quick-attack": [null, "1,2,0"],
     "pursuit-emergency-defense": [null, "1,2"],
     "dig-to-target": ["0,1"],
     "free-ball-transition": [null, "0,1,2"],
     "platform-angle-passing": ["2,3"],
     "out-of-system-passing": ["0,1", "0,1,2"],
-    "libero-serve-receive-range": ["0,1"],
+    "libero-serve-receive-range": ["0,2"],
     "two-person-serve-receive": ["0,1"],
     "jump-setting": [null, "1,2"],
     "tempo-setting": ["0,1", "0,1", "0,1"],
@@ -56,9 +59,10 @@ RR.drillAnimation = (function () {
     "high-contact-arm-swing": ["0,1"],
     "libero-dig-and-run-through": ["0,1", "0,2"],
     "overhead-defensive-hands": ["0,1"],
-    "run-the-rotation-offense": ["0,1"],
+    "run-the-rotation-offense": ["0,1,2,3"],
+    "setting-shuttle-relay": ["0,2"],
     "butterfly-pepper": ["0,1,2"],
-    "pepper-to-zones": ["0,1"],
+    "pepper-to-zones": ["0,1,2,3"],
     "cooperative-pass-count": ["0,1,2,3,4,5"],
     "bounce-and-dig": ["0,1"],
     "overhand-throw-progression": [null, "0,1"],
@@ -89,7 +93,7 @@ RR.drillAnimation = (function () {
     "mid-court-passing-decision": ["0,1"],
     "passing-box-drill": ["0,1,2,3"],
     "right-side-back-set-footwork": [null, null, "0,1"],
-    "approach-timing-off-the-pass": [null, "2,3"],
+    "approach-timing-off-the-pass": [null, "1,2"],
     "soft-block-deflection": ["0,1"],
     "down-ball-digging-lines": ["0,1", "0,1"],
     "team-circle-recovery": ["0,1,2,3,4,5"],
@@ -100,8 +104,8 @@ RR.drillAnimation = (function () {
     "serve-receive-vs-jump-serve": ["0,1"],
     "setting-over-net-to-target": ["0,1"],
     "setting-quick-connection": ["0,1"],
-    "hitting-from-all-positions": ["2,3", "2,3", "2,3"],
-    "attack-and-transition-to-defense": ["2,3", null, "0,1"],
+    "hitting-from-all-positions": ["1,2", "1,2", "1,2"],
+    "attack-and-transition-to-defense": ["1,2", null, "0,1"],
     "collapse-dig-and-recover": ["0,1"],
     "amoeba-team-game": ["0,1,2,3,4,5,6"],
     "passing-21-circle": ["0,1,2,3,4"],
@@ -110,6 +114,8 @@ RR.drillAnimation = (function () {
     "setter-release-from-base": [null, null, "0,1"],
     "box-hitting-reps": ["0,1"],
     "ladder-to-dig-reaction": ["1,2"],
+    "sideout-percentage-gauntlet": ["0,1,2,3"],
+    "dig-and-catch-game": ["0,1"],
     "med-ball-overhead-slams": ["0,1"],
     "med-ball-chest-pass-wall": ["0,1"],
     "reaction-ball-wall-singles": ["0,1"],
@@ -231,12 +237,12 @@ RR.drillAnimation = (function () {
       w: 9, h: 8,
       zones: [{ x: 0.55, y: 0.8, w: 7.9, h: 6.35, tone: "neutral", label: "MAT" }],
       players: [{ x: 1.55, y: 5.8, label: "D", team: "a", note: "start" }],
-      paths: [
-        { from: [1.9, 5.55], to: [3.45, 3.2], via: [[2.9, 5]], kind: "move", curve: -0.12, label: "ROLL" },
-        { from: [3.45, 3.2], to: [5.15, 4.8], kind: "move", curve: 0.14, label: "SIDE ROLL" },
-        { from: [5.15, 4.8], to: [7.35, 3.55], kind: "move", label: "SPRAWL" },
-        { from: [7.35, 3.55], to: [7.35, 5.75], kind: "move", label: "POP UP" }
-      ],
+      paths: [{
+        from: [1.9, 5.55],
+        via: [[2.9, 5], [3.45, 3.2], [5.15, 4.8], [7.35, 3.55]],
+        to: [7.35, 5.75], kind: "move", curve: 0,
+        label: "ROLL → SIDE ROLL → SPRAWL → POP UP", playerIndex: 0
+      }],
       legend: [{ tone: "move", text: "Saved safe-floor sequence" }]
     };
   }
@@ -368,9 +374,17 @@ RR.drillAnimation = (function () {
   function ladderLateralScene(drill) {
     var scene = ladderScene(drill);
     scene.title = "Sideways in-in, out-out";
-    scene.paths.push({ from: [4.5, 0.85], to: [4.5, 7.75],
-      via: [[5.2, 1.55], [3.8, 2.6], [5.2, 3.65], [3.8, 4.7], [5.2, 5.75], [3.8, 6.8]], kind: "move", label: "RETURN" });
-    scene.paths.push({ from: [4.5, 0.8], to: [7.65, 0.8], kind: "move", label: "SHUFFLE OUT" });
+    scene.paths = [{
+      from: [4.5, 7.8],
+      via: [
+        [3.8, 6.8], [5.2, 5.75], [3.8, 4.7], [5.2, 3.65], [3.8, 2.6], [5.2, 1.55], [4.5, 0.8],
+        [5.2, 1.55], [3.8, 2.6], [5.2, 3.65], [3.8, 4.7], [5.2, 5.75], [3.8, 6.8], [4.5, 7.75],
+        [5.2, 6.8], [3.8, 5.75], [5.2, 4.7], [3.8, 3.65], [5.2, 2.6], [3.8, 1.55], [4.5, 0.8]
+      ],
+      to: [7.65, 0.8], kind: "move", curve: 0,
+      label: "IN-IN / OUT-OUT → RETURN → NEXT TRIP → SHUFFLE OUT",
+      playerIndex: 0
+    }];
     scene.legend = [{ tone: "move", text: "Lateral footwork" }];
     return scene;
   }
@@ -430,10 +444,11 @@ RR.drillAnimation = (function () {
       title: "Step up, drive the knee, lower", caption: realCaption(drill), w: 9, h: 8,
       zones: [{ x: 3.35, y: 3.25, w: 2.3, h: 2.2, tone: "target", label: "BOX" }],
       players: [{ x: 4.5, y: 6.65, label: "", team: "a" }],
-      paths: [
-        { from: [4.5, 6.25], to: [4.5, 3.65], kind: "move", label: "STEP UP" },
-        { from: [4.5, 3.65], to: [4.5, 6.25], kind: "move", curve: 0.12, label: "LOWER" }
-      ],
+      paths: [{
+        from: [4.5, 6.25], via: [[4.5, 3.65]], to: [4.5, 6.25],
+        kind: "move", label: "STEP UP → LOWER", curve: 0,
+        playerIndex: 0
+      }],
       rings: [{ x: 4.5, y: 2.7, r: 0.65, tone: "target" }],
       legend: [{ tone: "move", text: "Controlled — no jump" }]
     };
@@ -569,9 +584,12 @@ RR.drillAnimation = (function () {
       case "guided-breathing-and-reflection": return breathingScene(drill);
       case "mini-band-lateral-walks":
         return lowerBandScene(drill, "Side steps, monster walks, squats", [
-          { from: [4.25, 5.1], to: [7.55, 5.1], kind: "move", label: "SIDE STEPS" },
-          { from: [4.5, 4.8], to: [4.5, 2.05], kind: "move", label: "MONSTER WALK" },
-          { from: [3.7, 5.5], to: [3.7, 6.25], kind: "move", label: "SQUAT" }
+          {
+            from: [4.25, 5.1],
+            via: [[7.55, 5.1], [4.5, 5.1], [4.5, 2.05], [4.5, 4.8], [3.7, 5.5]],
+            to: [3.7, 6.25], kind: "move", curve: 0,
+            label: "SIDE STEPS → MONSTER WALK → SQUAT", playerIndex: 0
+          }
         ]);
       case "calf-and-ankle-recovery":
         return phaseSequenceScene(drill, "Calf and ankle reset",
@@ -598,9 +616,13 @@ RR.drillAnimation = (function () {
       case "mini-band-glute-bridges": return gluteBridgeScene(drill);
       case "mini-band-defensive-shuffle":
         return lowerBandScene(drill, "Shuffle both ways, then box", [
-          { from: [4.35, 5.1], to: [7.5, 5.1], kind: "move", label: "RIGHT" },
-          { from: [7.45, 5.35], to: [1.45, 5.35], kind: "move", label: "LEFT" },
-          { from: [3.2, 4.35], to: [5.8, 2.1], via: [[5.8, 4.35], [5.8, 2.1], [3.2, 2.1]], kind: "move", label: "BOX" }
+          {
+            from: [4.35, 5.1],
+            via: [[7.5, 5.1], [1.45, 5.35], [3.2, 4.35], [5.8, 4.35],
+              [5.8, 2.1], [3.2, 2.1]],
+            to: [3.2, 4.35], kind: "move", curve: 0,
+            label: "RIGHT → LEFT → BOX", playerIndex: 0
+          }
         ]);
       case "ladder-lateral-quicksteps": return ladderLateralScene(drill);
       case "jump-rope-speed-intervals":
@@ -676,7 +698,15 @@ RR.drillAnimation = (function () {
   function applyAutomaticPause(root) {
     if (!root) return;
     var shouldPause = document.hidden || root._damIntersecting === false;
+    var changed = root.classList.contains("is-auto-paused") !== shouldPause;
     root.classList.toggle("is-auto-paused", shouldPause);
+    if (changed && typeof root._damAutoPauseChanged === "function") {
+      root._damAutoPauseChanged(shouldPause);
+    }
+  }
+
+  function reducedMotionActive() {
+    return !!(reducedMotionQuery && reducedMotionQuery.matches);
   }
 
   function pruneRoots() {
@@ -708,6 +738,17 @@ RR.drillAnimation = (function () {
         activeRoots.forEach(applyAutomaticPause);
       });
       visibilityHooked = true;
+    }
+    if (!reducedMotionHooked && reducedMotionQuery) {
+      var onMotionPreference = function () {
+        pruneRoots();
+        activeRoots.forEach(function (item) {
+          if (typeof item._damMotionChanged === "function") item._damMotionChanged(reducedMotionActive());
+        });
+      };
+      if (reducedMotionQuery.addEventListener) reducedMotionQuery.addEventListener("change", onMotionPreference);
+      else if (reducedMotionQuery.addListener) reducedMotionQuery.addListener(onMotionPreference);
+      reducedMotionHooked = true;
     }
   }
 
@@ -812,18 +853,42 @@ RR.drillAnimation = (function () {
       selfEl("path", { d: "M-7.5 -1.5Q0 3 7.5 -1.5M0 -7.5Q4 0 0 7.5", class: "dam-object__ball-seam" });
   }
 
-  function renderSvg(spec, id) {
+  function renderSvg(spec, id, facts) {
     spec = spec || {};
+    facts = facts || {};
     var w = spec.w || 9;
     var hUnits = spec.h || 12;
     var scale = Math.min(MAX_W / w, MAX_H / hUnits);
+    var stagedPeople = Math.max(0, facts.additional || 0);
+    var stagingCapacity = Math.max(4, Math.floor((w * scale) / 15));
+    var stagingRows = stagedPeople ? Math.ceil(stagedPeople / stagingCapacity) : 0;
+    var topPad = PAD + (stagingRows ? 24 + stagingRows * 15 : 0);
     var width = w * scale + PAD * 2;
-    var height = hUnits * scale + PAD * 2;
+    var height = hUnits * scale + topPad + PAD;
     function px(x) { return PAD + x * scale; }
-    function py(y) { return PAD + y * scale; }
+    function py(y) { return topPad + y * scale; }
 
     var pieces = [defs(id)];
     var movers = [];
+    if (stagedPeople) {
+      pieces.push(selfEl("rect", {
+        x: PAD, y: 5, width: w * scale, height: topPad - PAD + 11,
+        rx: 8, class: "dam-staging"
+      }));
+      pieces.push(el("text", {
+        x: PAD + 8, y: 19, class: "dam-staging-label"
+      }, esc(translated(facts.additionalMode || "Not individually plotted") + " · +" + stagedPeople)));
+      for (var stagedIndex = 0; stagedIndex < stagedPeople; stagedIndex++) {
+        var stagedRow = Math.floor(stagedIndex / stagingCapacity);
+        var stagedColumn = stagedIndex % stagingCapacity;
+        var stagedX = PAD + 9 + stagedColumn * 15;
+        var stagedY = 31 + stagedRow * 15;
+        pieces.push(el("g", {
+          class: "dam-staged-person", transform: "translate(" + stagedX + " " + stagedY + ")"
+        }, selfEl("circle", { cx: 0, cy: -3.5, r: 2.8, class: "dam-staged-person__head" }) +
+          selfEl("path", { d: "M0 0v6M-4 2l4-2 4 2M0 6l-3 5M0 6l3 5", class: "dam-staged-person__body" })));
+      }
+    }
     var courts = spec.court || [];
     if (!Array.isArray(courts)) courts = [courts];
     courts.forEach(function (court) {
@@ -864,6 +929,9 @@ RR.drillAnimation = (function () {
       }));
     });
 
+    var players = spec.players || [];
+    var playerR = Math.max(12, scale * 0.38);
+    var participantModel = facts.moveBindings ? { moveBindings: facts.moveBindings } : participantModelFor(null, spec);
     var paths = spec.paths || [];
     var ballEntries = [];
     paths.forEach(function (path, index) {
@@ -877,7 +945,7 @@ RR.drillAnimation = (function () {
         "marker-end": "url(#" + id + "-" + kind + ")",
         style: "--dam-delay:" + delay + "s;--dam-duration:" + duration + "s"
       }));
-      if (path.label) {
+      if (path.label && !path.hideLabel) {
         var from = path.from || [0, 0], to = path.to || from;
         pieces.push(el("text", {
           x: px((from[0] + to[0]) / 2), y: py((from[1] + to[1]) / 2) - 8,
@@ -889,9 +957,27 @@ RR.drillAnimation = (function () {
       var objectMove = kind === "move" && (spec.motionBallPaths || []).indexOf(index) !== -1;
       if (kind === "move" && !objectMove) {
         var style = "--dam-delay:" + delay + "s;--dam-duration:" + duration + "s;offset-path:path('" + d + "')";
-        movers.push(el("g", { class: "dam-mover", style: style },
-          selfEl("circle", { r: 10, class: "dam-mover__halo" }) +
-          selfEl("circle", { r: 5.5, class: "dam-mover__dot" })));
+        var binding = participantModel.moveBindings[index];
+        if (binding) {
+          var movingPlayer = binding.player;
+          var movingTone = cleanString(movingPlayer.team).replace(/[^a-z0-9_-]/gi, "") || "n";
+          var glyph = selfEl("circle", { r: playerR + 5, class: "dam-mover__halo" }) +
+            selfEl("circle", { r: playerR, class: "dam-player dam-player--" + movingTone });
+          if (movingPlayer.label != null && movingPlayer.label !== "") {
+            glyph += el("text", {
+              x: 0, y: 0, class: "dam-player-label dam-player-label--" + movingTone,
+              "text-anchor": "middle", "dominant-baseline": "central"
+            }, esc(movingPlayer.label));
+          }
+          movers.push(el("g", {
+            class: "dam-mover dam-mover--bound", style: style,
+            "data-player-index": binding.playerIndex, "data-binding": binding.source
+          }, glyph));
+        } else {
+          movers.push(el("g", { class: "dam-mover", style: style },
+            selfEl("circle", { r: 10, class: "dam-mover__halo" }) +
+            selfEl("circle", { r: 5.5, class: "dam-mover__dot" })));
+        }
       } else {
         ballEntries.push({ path: path, index: index, kind: kind });
       }
@@ -924,8 +1010,6 @@ RR.drillAnimation = (function () {
       pieces.push(el("g", { class: "dam-static-ball", transform: "translate(" + round(px(ball.x)) + " " + round(py(ball.y)) + ")" }, ballGlyph(ball.object)));
     });
 
-    var players = spec.players || [];
-    var playerR = Math.max(12, scale * 0.38);
     players.forEach(function (player, index) {
       var x = px(player.x), y = py(player.y);
       var tone = player.team || "n";
@@ -978,6 +1062,339 @@ RR.drillAnimation = (function () {
     list.hidden = !list.children.length;
   }
 
+  // Turn one reviewed court scene into a factual, screen-reader-friendly
+  // account of who is plotted and what moves. This deliberately does not infer
+  // a setter, passer, queue location, or route from prose. Player roles come
+  // only from authored labels/notes/legend items; operation text comes from the
+  // saved grouping/flow fields and the current saved instruction.
+  function validMinimum(drill) {
+    var value = drill && drill.minPlayers;
+    return typeof value === "number" && isFinite(value) && value >= 1 &&
+      value <= 30 && Math.floor(value) === value ? value : null;
+  }
+
+  function defaultViewFor(drill, hasHuman) {
+    var minimum = validMinimum(drill);
+    return hasHuman && !(minimum != null && minimum >= 2) ? "technique" : "court";
+  }
+
+  function groupedMarkerCount(player) {
+    var match = /^\+(\d+)$/.exec(cleanString(player && player.label));
+    return match ? Number(match[1]) : 0;
+  }
+
+  function isReferenceMarker(player) {
+    var label = cleanString(player && player.label);
+    var note = cleanString(player && player.note);
+    return (label === "•" && /^(spot|ball)$/i.test(note)) ||
+      (label === "◎" && /^target$/i.test(note)) ||
+      (!label && /^(high ball|ball pops up|land (balanced|inside),? ready|step back|farthest in|passer spot|roll\/sprawl out)$/i.test(note)) ||
+      (label === "T" && /^cone \/ hoop \/ coach$/i.test(note));
+  }
+
+  function isCoachMarker(player) {
+    return cleanString(player && player.team).toLowerCase() === "coach";
+  }
+
+  function exactActorIndex(players, path) {
+    if (typeof path.playerIndex === "number" && Math.floor(path.playerIndex) === path.playerIndex &&
+        path.playerIndex >= 0 && path.playerIndex < players.length) return path.playerIndex;
+    var reference = cleanString(path.actor || path.playerId || path.player);
+    if (!reference) return -1;
+    var matches = [];
+    players.forEach(function (player, index) {
+      if (isReferenceMarker(player) || groupedMarkerCount(player)) return;
+      if ([player.id, player.actor, player.playerId, player.label].some(function (value) {
+        return cleanString(value) === reference;
+      })) matches.push(index);
+    });
+    return matches.length === 1 ? matches[0] : -1;
+  }
+
+  function nearestOriginIndex(players, path) {
+    var from = path && path.from;
+    if (!Array.isArray(from) || typeof from[0] !== "number" || typeof from[1] !== "number") return -1;
+    var ranked = [];
+    players.forEach(function (player, index) {
+      if (groupedMarkerCount(player) || isReferenceMarker(player) || isCoachMarker(player)) return;
+      if (typeof player.x !== "number" || typeof player.y !== "number") return;
+      var dx = player.x - from[0];
+      var dy = player.y - from[1];
+      ranked.push({ index: index, distance: Math.sqrt(dx * dx + dy * dy) });
+    });
+    ranked.sort(function (a, b) { return a.distance - b.distance; });
+    if (!ranked.length || ranked[0].distance > 0.9) return -1;
+    // Equidistant actors are ambiguous, so keep the neutral movement marker.
+    if (ranked[1] && Math.abs(ranked[1].distance - ranked[0].distance) < 0.08) return -1;
+    return ranked[0].index;
+  }
+
+  function participantModelFor(drill, spec) {
+    spec = spec || {};
+    var players = Array.isArray(spec.players) ? spec.players : [];
+    var positionedPeople = 0;
+    var groupedPeople = 0;
+    var supportPeople = 0;
+    players.forEach(function (player) {
+      if (isReferenceMarker(player)) return;
+      if (isCoachMarker(player)) { supportPeople += 1; return; }
+      var grouped = groupedMarkerCount(player);
+      if (grouped) groupedPeople += grouped;
+      else positionedPeople += 1;
+    });
+    var minimum = validMinimum(drill);
+    var representedPeople = positionedPeople + groupedPeople;
+    var bindings = {};
+    (spec.paths || []).forEach(function (path, index) {
+      var kind = path.kind || "ball";
+      var reviewedObjectMove = kind === "move" &&
+        (spec.motionBallPaths || []).indexOf(index) !== -1;
+      if (kind !== "move" || reviewedObjectMove) return;
+      var hasExplicitActor = path.playerIndex != null ||
+        !!cleanString(path.actor || path.playerId || path.player);
+      var explicit = exactActorIndex(players, path);
+      var playerIndex = hasExplicitActor ? explicit : nearestOriginIndex(players, path);
+      if (playerIndex >= 0) {
+        bindings[index] = {
+          pathIndex: index,
+          playerIndex: playerIndex,
+          player: players[playerIndex],
+          source: explicit >= 0 ? "explicit" : "origin"
+        };
+      }
+    });
+    return {
+      minimum: minimum,
+      players: players,
+      positionedPeople: positionedPeople,
+      groupedPeople: groupedPeople,
+      supportPeople: supportPeople,
+      representedPeople: representedPeople,
+      additional: minimum == null ? 0 : Math.max(0, minimum - representedPeople),
+      moveBindings: bindings
+    };
+  }
+
+  function uniqueLegendRole(spec, tone) {
+    if (!tone) return "";
+    var matches = (spec.legend || []).filter(function (item) {
+      return item && item.tone === tone && cleanString(item.text);
+    });
+    return matches.length === 1 ? cleanString(matches[0].text) : "";
+  }
+
+  function participantTokens(spec) {
+    var tokens = [];
+    var byKey = {};
+    (spec.players || []).forEach(function (player) {
+      if (isReferenceMarker(player)) return;
+      var grouped = groupedMarkerCount(player);
+      var exactLabel = cleanString(player.label);
+      var legendRole = uniqueLegendRole(spec, player.team);
+      var label = exactLabel || legendRole || "Unlabeled court marker";
+      var note = cleanString(player.note);
+      var tone = cleanString(player.team) || "n";
+      var support = isCoachMarker(player);
+      var key = [tone, label, note, grouped ? "group" : support ? "support" : "person"].join("\u001f");
+      if (!byKey[key]) {
+        byKey[key] = { tone: tone, label: label, note: note, copies: 0, people: 0,
+          support: support };
+        tokens.push(byKey[key]);
+      }
+      byKey[key].copies += 1;
+      byKey[key].people += grouped || 1;
+    });
+    return tokens;
+  }
+
+  function additionalMode(grouping, flow) {
+    var source = (grouping + " " + flow).toLowerCase();
+    if (/\b(wait|waiting|queue|line|sideline|sub|subs|off[- ]?court)\b/.test(source)) {
+      return "Waiting / line";
+    }
+    if (/\b(at once|same time|simultaneous|simultaneously|parallel|pairs?|groups?|stations?|circles?|split)\b/.test(source)) {
+      return "Parallel / grouped";
+    }
+    if (/\b(rotate|rotates|rotating|rotation|take turns|alternate|alternates)\b/.test(source)) {
+      return "Rotating roles";
+    }
+    return "Not individually plotted";
+  }
+
+  function routeLabel(entry, ballNumber, movementNumber) {
+    var exact = cleanString(entry.path && entry.path.label);
+    if (exact) return exact;
+    if (entry.isBall) {
+      return (entry.kind === "serve" ? "Serve route " : "Ball route ") + ballNumber;
+    }
+    return "Player route " + movementNumber;
+  }
+
+  function courtFactsFor(drill, spec, instruction) {
+    spec = spec || {};
+    var fields = RR.format && RR.format.fields ? RR.format.fields(drill || {}) : {};
+    var grouping = cleanString(fields.grouping);
+    var flow = cleanString(fields.flow);
+    var participants = participantModelFor(drill, spec);
+    var minimum = participants.minimum;
+    var positionedPeople = participants.positionedPeople;
+    var groupedPeople = participants.groupedPeople;
+    var representedPeople = participants.representedPeople;
+    var additional = participants.additional;
+
+    var ballNumber = 0;
+    var movementNumber = 0;
+    var ballEntries = [];
+    var movementEntries = [];
+    (spec.paths || []).forEach(function (path, index) {
+      var kind = path.kind || "ball";
+      var reviewedObjectMove = kind === "move" &&
+        (spec.motionBallPaths || []).indexOf(index) !== -1;
+      var entry = { path: path, index: index, kind: kind,
+        isBall: kind !== "move" || reviewedObjectMove };
+      if (entry.isBall) {
+        ballNumber += 1;
+        entry.label = routeLabel(entry, ballNumber, movementNumber);
+        ballEntries.push(entry);
+      } else {
+        movementNumber += 1;
+        entry.label = routeLabel(entry, ballNumber, movementNumber);
+        movementEntries.push(entry);
+      }
+    });
+
+    var ballSequences = reviewedBallGroups(ballEntries, spec.motionChains).map(function (group) {
+      return group.map(function (entry) { return entry.label; });
+    });
+    return {
+      minimum: minimum,
+      positionedPeople: positionedPeople,
+      groupedPeople: groupedPeople,
+      supportPeople: participants.supportPeople,
+      representedPeople: representedPeople,
+      additional: additional,
+      additionalMode: additional ? additionalMode(grouping, flow) : "",
+      participantTokens: participantTokens(spec),
+      moveBindings: participants.moveBindings,
+      ballRouteCount: ballEntries.length,
+      ballSequences: ballSequences,
+      movementRouteCount: movementEntries.length,
+      movementRoutes: movementEntries.map(function (entry) { return entry.label; }),
+      grouping: grouping,
+      flow: flow,
+      instruction: cleanString(instruction) || cleanString(spec.caption) || realCaption(drill)
+    };
+  }
+
+  function factMetric(value, label, extraClass) {
+    var metric = node("span", "drill-motion__court-metric" + (extraClass ? " " + extraClass : ""));
+    metric.appendChild(node("strong", "drill-motion__court-metric-value", value));
+    metric.appendChild(node("span", "drill-motion__court-metric-label", translated(label)));
+    return metric;
+  }
+
+  function factRow(label, text, className) {
+    var row = node("div", "drill-motion__court-fact" + (className ? " " + className : ""));
+    row.appendChild(node("dt", "drill-motion__court-fact-label", translated(label)));
+    row.appendChild(node("dd", "drill-motion__court-fact-copy", translated(text)));
+    return row;
+  }
+
+  function routeRow(label, count, sequences, emptyText) {
+    var row = node("div", "drill-motion__court-route");
+    var heading = node("span", "drill-motion__court-route-label");
+    heading.appendChild(node("strong", "", String(count)));
+    heading.appendChild(document.createTextNode(" " + translated(label)));
+    row.appendChild(heading);
+    var list = node("span", "drill-motion__court-route-list");
+    if (!sequences.length) {
+      list.appendChild(node("span", "drill-motion__court-route-empty", translated(emptyText)));
+    } else {
+      sequences.forEach(function (sequenceLabels) {
+        var chip = node("span", "drill-motion__court-route-chip");
+        sequenceLabels.forEach(function (route, index) {
+          if (index) chip.appendChild(node("span", "drill-motion__court-route-arrow", "→"));
+          chip.appendChild(node("span", "", translated(route)));
+        });
+        list.appendChild(chip);
+      });
+    }
+    row.appendChild(list);
+    return row;
+  }
+
+  function participantTokenNode(token, additional) {
+    var tone = cleanString(token.tone).replace(/[^a-z0-9_-]/gi, "") || "n";
+    var item = node("li", "drill-motion__court-token drill-motion__court-token--" + tone +
+      (additional ? " drill-motion__court-token--additional" : "") +
+      (token.support ? " drill-motion__court-token--support" : ""));
+    var avatars = node("span", "drill-motion__court-avatars");
+    avatars.setAttribute("aria-hidden", "true");
+    for (var index = 0; index < token.people; index++) {
+      avatars.appendChild(node("span", "drill-motion__court-avatar"));
+    }
+    item.appendChild(avatars);
+    var label = additional
+      ? "+" + token.people + " · " + translated(token.label)
+      : translated(token.label) + (token.copies > 1 ? " ×" + token.copies : "");
+    item.appendChild(node("span", "drill-motion__court-token-label", label));
+    if (token.note) item.appendChild(node("span", "drill-motion__court-token-note", translated(token.note)));
+    if (token.support) item.appendChild(node("span", "drill-motion__court-token-note",
+      translated("support role")));
+    item.setAttribute("aria-label", token.people + " · " + translated(token.label) +
+      (token.note ? " · " + translated(token.note) : ""));
+    return item;
+  }
+
+  function fillCourtFacts(container, facts) {
+    container.innerHTML = "";
+    container.appendChild(node("h3", "drill-motion__court-summary-title", translated("Players & mechanics")));
+
+    var metrics = node("div", "drill-motion__court-metrics");
+    metrics.appendChild(factMetric(facts.positionedPeople, "Positioned"));
+    if (facts.groupedPeople) metrics.appendChild(factMetric("+" + facts.groupedPeople, "Grouped marker"));
+    if (facts.supportPeople) metrics.appendChild(factMetric(facts.supportPeople, "Coach / support"));
+    if (facts.minimum != null) metrics.appendChild(factMetric(facts.minimum, "Saved minimum"));
+    if (facts.additional) {
+      metrics.appendChild(factMetric("+" + facts.additional, facts.additionalMode,
+        "drill-motion__court-metric--additional"));
+    }
+    container.appendChild(metrics);
+
+    if (facts.participantTokens.length || facts.additional) {
+      var participantSection = node("div", "drill-motion__court-participants");
+      participantSection.appendChild(node("span", "drill-motion__court-kicker", translated("Participants")));
+      var participantList = node("ul", "drill-motion__court-tokens");
+      facts.participantTokens.forEach(function (token) {
+        participantList.appendChild(participantTokenNode(token, false));
+      });
+      if (facts.additional) participantList.appendChild(participantTokenNode({
+        tone: "n", label: facts.additionalMode, note: "", copies: facts.additional,
+        people: facts.additional
+      }, true));
+      participantSection.appendChild(participantList);
+      container.appendChild(participantSection);
+    }
+
+    var mechanics = node("div", "drill-motion__court-mechanics");
+    mechanics.appendChild(node("span", "drill-motion__court-kicker", translated("Authored routes")));
+    mechanics.appendChild(routeRow(facts.ballRouteCount === 1 ? "ball path" : "ball paths",
+      facts.ballRouteCount, facts.ballSequences,
+      "No authored ball path in this step."));
+    mechanics.appendChild(routeRow(facts.movementRouteCount === 1 ? "player path" : "player paths",
+      facts.movementRouteCount,
+      facts.movementRoutes.map(function (route) { return [route]; }),
+      "No authored player path in this step."));
+    container.appendChild(mechanics);
+
+    var operation = node("dl", "drill-motion__court-operation");
+    if (facts.grouping) operation.appendChild(factRow("Grouping", facts.grouping));
+    if (facts.flow) operation.appendChild(factRow("How it runs", facts.flow));
+    if (facts.instruction) operation.appendChild(factRow("Current step", facts.instruction,
+      "drill-motion__court-fact--step"));
+    container.appendChild(operation);
+  }
+
   function iconButton(label, svgBody, className) {
     var button = node("button", "drill-motion__button " + (className || ""));
     button.type = "button";
@@ -989,13 +1406,26 @@ RR.drillAnimation = (function () {
 
   function figure(drill) {
     var specs = scenesFor(drill);
+    var humanApi = RR.drillHumanMotion;
+    var program = humanApi && humanApi.programFor ? humanApi.programFor(drill, specs) : [];
+    var hasHuman = !!program.length;
+    var needsHumanChoice = !!(drill && drill.custom && !hasHuman);
+    var items = hasHuman ? program : specs.map(function (spec, index) {
+      return {
+        title: spec.title || (specs.length > 1 ? "Step " + (index + 1) : "How it moves"),
+        instruction: spec.caption || realCaption(drill), scene: spec
+      };
+    });
     var id = "drill-motion-" + (++sequence);
-    var reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    var root = node("section", "drill-motion" + (reduced ? " is-reduced is-paused" : ""));
-    root.setAttribute("aria-label", "Animated example for " + (drill.name || "this drill"));
+    var root = node("section", "drill-motion has-court-details");
+    root.setAttribute("aria-label", (hasHuman ? "Human demonstration for " :
+      needsHumanChoice ? "Human demonstration selection needed for " : "Animated example for ") +
+      (drill.name || "this drill"));
     root.setAttribute("data-drill-id", drill.id || "custom");
+    root.setAttribute("data-human-demo", hasHuman ? "true" : "false");
 
-    var eyebrow = node("span", "drill-motion__eyebrow", "Animated example");
+    var eyebrow = node("span", "drill-motion__eyebrow", hasHuman ? "Human technique" :
+      needsHumanChoice ? "Human demonstration needed" : "Animated example");
     var phaseStatus = node("span", "drill-motion__phase");
     phaseStatus.setAttribute("aria-live", "polite");
     phaseStatus.setAttribute("aria-atomic", "true");
@@ -1006,40 +1436,105 @@ RR.drillAnimation = (function () {
     top.appendChild(topCopy);
 
     var transport = node("div", "drill-motion__transport");
-    var pause = null;
-    if (reduced) {
-      var still = node("span", "drill-motion__reduced", "Still preview");
-      still.setAttribute("title", "Animation is off because reduced motion is enabled on this device.");
-      transport.appendChild(still);
-    } else {
-      pause = iconButton(translated("Pause"), "<path d='M8 5v14M16 5v14'/>", "drill-motion__pause");
-      pause.setAttribute("data-no-i18n", "");
-      transport.appendChild(pause);
-    }
-    var replay = null;
-    if (!reduced) {
-      replay = iconButton("Replay", "<path d='M4 11a8 8 0 1 0 2.3-5.7L4 7.6'/><path d='M4 3v4.6h4.6'/>", "drill-motion__replay");
-      transport.appendChild(replay);
-    }
+    var still = node("span", "drill-motion__reduced", "Still preview");
+    still.setAttribute("title", "Animation is off because reduced motion is enabled on this device.");
+    transport.appendChild(still);
+    var pause = iconButton(translated("Pause"), "<path d='M8 5v14M16 5v14'/>", "drill-motion__pause");
+    pause.setAttribute("data-no-i18n", "");
+    transport.appendChild(pause);
+    var replay = iconButton("Replay", "<path d='M4 11a8 8 0 1 0 2.3-5.7L4 7.6'/><path d='M4 3v4.6h4.6'/>", "drill-motion__replay");
+    transport.appendChild(replay);
     top.appendChild(transport);
     root.appendChild(top);
 
+    if (needsHumanChoice) {
+      var humanRequired = node("p", "drill-motion__human-required",
+        "Edit this drill and choose a human demonstration before using the example. RallyReady will not guess from your notes.");
+      humanRequired.setAttribute("role", "status");
+      root.appendChild(humanRequired);
+    }
+
+    var viewBar = null;
+    var techniqueButton = null;
+    var courtButton = null;
+    if (hasHuman) {
+      viewBar = node("div", "drill-motion__viewbar");
+      viewBar.setAttribute("role", "tablist");
+      viewBar.setAttribute("aria-label", "Demonstration view");
+      techniqueButton = node("button", "drill-motion__view-button is-active", "Technique");
+      techniqueButton.type = "button";
+      techniqueButton.id = id + "-technique-tab";
+      techniqueButton.setAttribute("role", "tab");
+      techniqueButton.setAttribute("aria-selected", "true");
+      techniqueButton.tabIndex = 0;
+      courtButton = node("button", "drill-motion__view-button", "Court movement");
+      courtButton.type = "button";
+      courtButton.id = id + "-court-tab";
+      courtButton.setAttribute("role", "tab");
+      courtButton.setAttribute("aria-selected", "false");
+      courtButton.tabIndex = -1;
+      viewBar.appendChild(techniqueButton);
+      viewBar.appendChild(courtButton);
+      root.appendChild(viewBar);
+    }
+
     var viewport = node("div", "drill-motion__viewport");
     viewport.id = id + "-viewport";
-    viewport.setAttribute("role", "img");
-    var panels = [];
-    var titles = [];
-    var captions = [];
-    specs.forEach(function (spec, index) {
-      var panel = node("div", "drill-motion__panel");
-      panel.setAttribute("data-motion-step", String(index));
-      if (index !== 0) panel.hidden = true;
-      panel.innerHTML = renderSvg(spec, id + "-scene-" + index);
-      viewport.appendChild(panel);
-      panels.push(panel);
-      titles.push(spec.title || (specs.length > 1 ? "Step " + (index + 1) : "How it moves"));
-      captions.push(spec.caption || realCaption(drill));
-    });
+    viewport.setAttribute("role", "group");
+
+    var techniqueView = null;
+    var humanCrop = null;
+    var humanImage = null;
+    var humanLabel = null;
+    var humanPhases = null;
+    var humanActions = null;
+    if (hasHuman) {
+      techniqueView = node("div", "drill-motion__technique");
+      techniqueView.id = id + "-technique";
+      techniqueView.setAttribute("role", "tabpanel");
+      techniqueView.setAttribute("aria-labelledby", techniqueButton.id);
+      var humanDemo = node("div", "dam-human-demo");
+      var humanVisual = node("div", "dam-human-visual");
+      humanVisual.appendChild(node("span", "dam-human-floor"));
+      humanCrop = node("div", "dam-human-crop");
+      humanImage = node("img", "dam-human-atlas");
+      humanImage.alt = "";
+      humanImage.setAttribute("aria-hidden", "true");
+      humanImage.decoding = "async";
+      humanImage.loading = "lazy";
+      humanCrop.appendChild(humanImage);
+      humanVisual.appendChild(humanCrop);
+      humanLabel = node("span", "dam-human-label");
+      humanVisual.appendChild(humanLabel);
+      humanDemo.appendChild(humanVisual);
+      var humanGuide = node("div", "dam-human-guide");
+      humanActions = node("div", "dam-human-actions");
+      humanActions.setAttribute("aria-label", "Techniques in this step");
+      humanPhases = node("ol", "dam-human-phases");
+      humanPhases.id = id + "-phases";
+      humanPhases.setAttribute("aria-label", "Technique phases and body cues");
+      humanGuide.appendChild(humanActions);
+      humanGuide.appendChild(humanPhases);
+      humanDemo.appendChild(humanGuide);
+      techniqueView.appendChild(humanDemo);
+      viewport.appendChild(techniqueView);
+      techniqueButton.setAttribute("aria-controls", techniqueView.id);
+    }
+
+    var courtView = node("div", "drill-motion__court-view");
+    courtView.id = id + "-court";
+    courtView.setAttribute("role", "tabpanel");
+    if (courtButton) courtView.setAttribute("aria-labelledby", courtButton.id);
+    else courtView.setAttribute("aria-label", translated("Court movement"));
+    if (hasHuman) courtView.hidden = true;
+    var courtDiagram = node("div", "drill-motion__court-diagram");
+    var courtSummary = node("aside", "drill-motion__court-summary");
+    courtSummary.setAttribute("aria-label", translated("Court participant and movement details"));
+    courtSummary.tabIndex = 0;
+    courtView.appendChild(courtDiagram);
+    courtView.appendChild(courtSummary);
+    viewport.appendChild(courtView);
+    if (courtButton) courtButton.setAttribute("aria-controls", courtView.id);
     root.appendChild(viewport);
 
     var progress = node("div", "drill-motion__progress");
@@ -1052,29 +1547,36 @@ RR.drillAnimation = (function () {
     var title = node("p", "drill-motion__title");
     var caption = node("p", "drill-motion__caption");
     var legend = node("ul", "drill-motion__legend");
+    var coach = node("aside", "drill-motion__coach");
+    var coachTitle = node("p", "drill-motion__coach-title", "Coach this");
+    var coachList = node("ul", "drill-motion__coach-list");
+    coach.appendChild(coachTitle);
+    coach.appendChild(coachList);
     title.id = id + "-title";
     caption.id = id + "-caption";
     legend.id = id + "-legend";
     viewport.setAttribute("aria-labelledby", title.id);
-    viewport.setAttribute("aria-describedby", caption.id + " " + legend.id);
+    viewport.setAttribute("aria-describedby", caption.id + " " + legend.id +
+      (humanPhases ? " " + humanPhases.id : ""));
     if (pause) pause.setAttribute("aria-controls", viewport.id);
     if (replay) replay.setAttribute("aria-controls", viewport.id);
     copy.appendChild(title);
     copy.appendChild(caption);
     copy.appendChild(legend);
     info.appendChild(copy);
+    info.appendChild(coach);
 
     var stepControls = null;
     var previous = null;
     var next = null;
     var dots = [];
-    if (specs.length > 1) {
+    if (items.length > 1) {
       stepControls = node("div", "drill-motion__steps");
       stepControls.setAttribute("aria-label", "Animation steps");
       previous = iconButton("Previous step", "<path d='m15 18-6-6 6-6'/>", "drill-motion__step-button");
       next = iconButton("Next step", "<path d='m9 18 6-6-6-6'/>", "drill-motion__step-button");
       var dotRow = node("div", "drill-motion__dots");
-      specs.forEach(function (_, index) {
+      items.forEach(function (_, index) {
         var dot = node("button", "drill-motion__dot");
         dot.type = "button";
         dot.setAttribute("aria-label", "Show step " + (index + 1));
@@ -1090,7 +1592,162 @@ RR.drillAnimation = (function () {
     root.appendChild(info);
 
     var current = 0;
-    var paused = reduced;
+    // Multi-player drills lead with the full factual court operation; solo
+    // drills still lead with the detailed human technique sequence.
+    var currentView = defaultViewFor(drill, hasHuman);
+    var paused = false;
+    var actionIndex = 0;
+    var actionTimer = null;
+    var ACTION_DURATION = 6400;
+
+    function fillHuman(item) {
+      var actionIds = item.actions && item.actions.length ? item.actions : [item.action];
+      actionIndex = clamp(actionIndex, 0, actionIds.length - 1);
+      var actionId = actionIds[actionIndex];
+      var meta = humanApi.assetFor(actionId);
+      if (!meta) return;
+      var frame = actionId === item.action ? item.frame :
+        (humanApi.frameFor ? humanApi.frameFor(actionId, item.instruction) : 0);
+      techniqueView.setAttribute("data-mode", meta.mode);
+      humanCrop.setAttribute("data-mode", meta.mode);
+      humanCrop.style.setProperty("--dam-atlas-ratio", meta.width + " / " + meta.height);
+      humanCrop.style.setProperty("--dam-poster-x", frame % 2 ? "-50%" : "0%");
+      humanCrop.style.setProperty("--dam-poster-y", frame > 1 ? "-50%" : "0%");
+      humanImage.src = meta.asset;
+      humanImage.width = meta.width;
+      humanImage.height = meta.height;
+      humanLabel.textContent = meta.label;
+      humanActions.innerHTML = "";
+      actionIds.forEach(function (listedActionId, listedIndex) {
+        var actionMeta = humanApi.assetFor(listedActionId);
+        if (!actionMeta) return;
+        var interactive = actionIds.length > 1;
+        var chip = node(interactive ? "button" : "span",
+          "dam-human-action" + (listedIndex === actionIndex ? " is-primary" : ""), actionMeta.label);
+        if (interactive) {
+          chip.type = "button";
+          chip.setAttribute("aria-pressed", listedIndex === actionIndex ? "true" : "false");
+          chip.setAttribute("aria-label", "Show " + actionMeta.label + " technique");
+          chip.addEventListener("click", function () { selectAction(listedIndex); });
+        }
+        humanActions.appendChild(chip);
+      });
+      humanPhases.innerHTML = "";
+      var visiblePhases = meta.mode === "catalog" ? [meta.phases[frame] || meta.phases[0]] : meta.phases;
+      visiblePhases.forEach(function (phase, index) {
+        var row = node("li", "dam-human-phase");
+        var number = node("span", "dam-human-phase__number", String(meta.mode === "catalog" ? frame + 1 : index + 1));
+        number.setAttribute("aria-hidden", "true");
+        var words = node("span", "dam-human-phase__words");
+        words.appendChild(node("strong", "dam-human-phase__label", phase.label));
+        words.appendChild(node("span", "dam-human-phase__cue", phase.cue));
+        row.appendChild(number);
+        row.appendChild(words);
+        humanPhases.appendChild(row);
+      });
+    }
+
+    function activeMeta(item) {
+      if (!hasHuman || !item) return null;
+      var actionIds = item.actions && item.actions.length ? item.actions : [item.action];
+      return humanApi.assetFor(actionIds[clamp(actionIndex, 0, actionIds.length - 1)]);
+    }
+
+    function actionStatus(item, meta) {
+      var actionIds = item.actions && item.actions.length ? item.actions : [item.action];
+      var sequenceLabel = actionIds.length > 1
+        ? " · Action " + (actionIndex + 1) + " of " + actionIds.length
+        : "";
+      return item.title + sequenceLabel + (meta ? " · " + meta.label : "");
+    }
+
+    function clearActionTimer() {
+      if (actionTimer != null) window.clearTimeout(actionTimer);
+      actionTimer = null;
+    }
+
+    function canCycleActions() {
+      var item = items[current];
+      var actionIds = item && item.actions && item.actions.length ? item.actions : [];
+      return hasHuman && actionIds.length > 1 && currentView === "technique" && !paused &&
+        !document.hidden && root._damIntersecting !== false && !reducedMotionActive();
+    }
+
+    function scheduleActionCycle() {
+      clearActionTimer();
+      if (!canCycleActions()) return;
+      actionTimer = window.setTimeout(function () {
+        actionTimer = null;
+        if (!root.isConnected || !canCycleActions()) return;
+        var actionIds = items[current].actions;
+        selectAction((actionIndex + 1) % actionIds.length);
+      }, ACTION_DURATION);
+    }
+
+    function selectAction(index) {
+      if (!hasHuman) return;
+      clearActionTimer();
+      var item = items[current];
+      var actionIds = item.actions && item.actions.length ? item.actions : [item.action];
+      actionIndex = clamp(index, 0, actionIds.length - 1);
+      fillHuman(item);
+      setView(currentView);
+      restart();
+      scheduleActionCycle();
+    }
+
+    function fillCoach(item) {
+      coachList.innerHTML = "";
+      var cues = cleanStringList(drill && drill.cues);
+      cues.forEach(function (cue) {
+        var li = node("li", "drill-motion__coach-cue" + (cue === item.cue ? " is-current" : ""), cue);
+        coachList.appendChild(li);
+      });
+      coach.hidden = !cues.length;
+    }
+
+    function setView(view) {
+      currentView = hasHuman && view === "technique" ? "technique" : "court";
+      root.setAttribute("data-view", currentView);
+      if (techniqueView) techniqueView.hidden = currentView !== "technique";
+      courtView.hidden = currentView !== "court";
+      if (techniqueButton) {
+        var showingTechnique = currentView === "technique";
+        techniqueButton.classList.toggle("is-active", showingTechnique);
+        techniqueButton.setAttribute("aria-selected", showingTechnique ? "true" : "false");
+        techniqueButton.tabIndex = showingTechnique ? 0 : -1;
+        courtButton.classList.toggle("is-active", !showingTechnique);
+        courtButton.setAttribute("aria-selected", showingTechnique ? "false" : "true");
+        courtButton.tabIndex = showingTechnique ? -1 : 0;
+      }
+      legend.hidden = currentView !== "court" || !legend.children.length;
+      var item = items[current];
+      var meta = activeMeta(item);
+      phaseStatus.textContent = translated(currentView === "technique" && meta
+        ? actionStatus(item, meta)
+        : "Court movement · " + item.title);
+      title.textContent = currentView === "technique" && meta ? actionStatus(item, meta) : item.title;
+      viewport.setAttribute("aria-label", title.textContent + ". " + caption.textContent);
+    }
+
+    function preloadNext(index) {
+      if (!hasHuman || currentView !== "technique" || typeof Image === "undefined") return;
+      var assetIds = (items[index].actions || []).slice(1);
+      if (index + 1 < items.length) assetIds.push(items[index + 1].action);
+      window.setTimeout(function () {
+        if (!root.isConnected || root._damIntersecting === false || !root.getClientRects().length) return;
+        var seen = {};
+        assetIds.forEach(function (actionId) {
+          var meta = humanApi.assetFor(actionId);
+          if (!meta || seen[meta.asset]) return;
+          seen[meta.asset] = true;
+          var preload = new Image();
+          preload.decoding = "async";
+          preload.src = meta.asset;
+        });
+      }, 0);
+    }
+
     function updatePause() {
       root.classList.toggle("is-paused", paused);
       if (!pause) return;
@@ -1107,33 +1764,85 @@ RR.drillAnimation = (function () {
       root.classList.remove("is-resetting");
     }
     function show(index) {
-      current = (index + specs.length) % specs.length;
-      panels.forEach(function (panel, i) { panel.hidden = i !== current; });
-      title.textContent = titles[current];
-      caption.textContent = captions[current];
-      fillLegend(legend, specs[current].legend);
-      phaseStatus.textContent = translated(specs.length > 1
-        ? "Step " + (current + 1) + " of " + specs.length : "Live movement loop");
+      clearActionTimer();
+      current = clamp(index, 0, items.length - 1);
+      actionIndex = 0;
+      var item = items[current];
+      var spec = item.scene || specs[Math.min(current, specs.length - 1)] || {};
+      if (hasHuman && currentView === "technique") fillHuman(item);
+      var facts = courtFactsFor(drill, spec, item.instruction || realCaption(drill));
+      courtDiagram.innerHTML = renderSvg(spec, id + "-scene-" + current, facts);
+      fillCourtFacts(courtSummary, facts);
+      caption.textContent = item.instruction || realCaption(drill);
+      fillLegend(legend, spec.legend);
+      fillCoach(item);
+      viewport.setAttribute("aria-label", title.textContent + ". " + caption.textContent);
       dots.forEach(function (dot, i) {
         var active = i === current;
         dot.classList.toggle("is-active", active);
         dot.setAttribute("aria-current", active ? "step" : "false");
       });
       if (previous) previous.disabled = current === 0;
-      if (next) next.disabled = current === specs.length - 1;
+      if (next) next.disabled = current === items.length - 1;
+      setView(currentView);
+      preloadNext(current);
       restart();
+      scheduleActionCycle();
     }
 
-    if (pause) pause.addEventListener("click", function () { paused = !paused; updatePause(); });
+    function activateView(view, focus) {
+      var changed = currentView !== view;
+      if (view !== "technique") clearActionTimer();
+      if (hasHuman && view === "technique" && changed) fillHuman(items[current]);
+      setView(view);
+      if (changed) restart();
+      if (view === "technique") { preloadNext(current); scheduleActionCycle(); }
+      if (focus) (view === "technique" ? techniqueButton : courtButton).focus();
+    }
+    function viewKeydown(event) {
+      var nextView = null;
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp" || event.key === "Home") nextView = "technique";
+      if (event.key === "ArrowRight" || event.key === "ArrowDown" || event.key === "End") nextView = "court";
+      if (!nextView) return;
+      event.preventDefault();
+      activateView(nextView, true);
+    }
+    if (techniqueButton) {
+      techniqueButton.addEventListener("click", function () { activateView("technique", false); });
+      techniqueButton.addEventListener("keydown", viewKeydown);
+    }
+    if (courtButton) {
+      courtButton.addEventListener("click", function () { activateView("court", false); });
+      courtButton.addEventListener("keydown", viewKeydown);
+    }
+    if (pause) pause.addEventListener("click", function () {
+      paused = !paused;
+      updatePause();
+      if (paused) clearActionTimer();
+      else { restart(); scheduleActionCycle(); }
+    });
     if (replay) replay.addEventListener("click", function () {
+      clearActionTimer();
       paused = false;
+      actionIndex = 0;
+      if (hasHuman && currentView === "technique") fillHuman(items[current]);
+      setView(currentView);
       updatePause();
       restart();
+      scheduleActionCycle();
     });
     if (previous) previous.addEventListener("click", function () { if (current > 0) show(current - 1); });
-    if (next) next.addEventListener("click", function () { if (current < specs.length - 1) show(current + 1); });
+    if (next) next.addEventListener("click", function () { if (current < items.length - 1) show(current + 1); });
     show(0);
     updatePause();
+    root._damAutoPauseChanged = function (autoPaused) {
+      if (autoPaused) clearActionTimer();
+      else { restart(); scheduleActionCycle(); }
+    };
+    root._damMotionChanged = function (reduceMotion) {
+      if (reduceMotion) clearActionTimer();
+      else { restart(); scheduleActionCycle(); }
+    };
     registerVisibility(root);
     return root;
   }
@@ -1143,6 +1852,9 @@ RR.drillAnimation = (function () {
     scenesFor: scenesFor,
     deriveSpec: deriveSpec,
     isAuthored: isAuthored,
-    renderSvg: renderSvg
+    renderSvg: renderSvg,
+    courtFactsFor: courtFactsFor,
+    participantModelFor: participantModelFor,
+    defaultViewFor: defaultViewFor
   };
 })();

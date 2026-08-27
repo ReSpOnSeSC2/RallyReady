@@ -8,6 +8,8 @@
 //     reject and the WHOLE install fail — the app would never work offline);
 //   • every <script src> and <link rel="stylesheet"> in index.html is precached;
 //   • the manifest, its icons, and the preloaded fonts are precached;
+//   • all 15 human-motion atlases exist, are non-empty WebP files, and are
+//     precached so every drill demonstration remains available offline;
 //   • every js/*.js and css/*.css on disk is precached (a new module that loads
 //     fine online but was never added to APP_SHELL breaks ONLY offline — the
 //     worst kind of bug to spot in a gym with no signal).
@@ -82,6 +84,48 @@ const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.webmanifes
 fs.readdirSync(path.join(ROOT, "fonts")).forEach((f) => {
   if (!/\.woff2$/.test(f)) return;
   ok(!!inShell["fonts/" + f], "fonts/" + f + " is precached in APP_SHELL");
+});
+
+// ---- 6. Human-motion atlas pack is complete and offline-safe ----------------
+const expectedMotionAtlases = [
+  "attack-atlas.webp",
+  "band-atlas.webp",
+  "block-atlas.webp",
+  "cooldown-atlas.webp",
+  "defense-atlas.webp",
+  "footwork-atlas.webp",
+  "jump-atlas.webp",
+  "medicine-atlas.webp",
+  "pass-atlas.webp",
+  "recovery-atlas.webp",
+  "run-atlas.webp",
+  "serve-atlas.webp",
+  "set-atlas.webp",
+  "underhand-atlas.webp",
+  "warmup-atlas.webp"
+];
+const motionDir = path.join(ROOT, "images", "drill-motion");
+ok(fs.existsSync(motionDir), "human-motion atlas directory exists");
+const motionAtlases = fs.existsSync(motionDir)
+  ? fs.readdirSync(motionDir).filter((f) => /-atlas\.webp$/.test(f)).sort()
+  : [];
+ok(motionAtlases.length === expectedMotionAtlases.length,
+  `human-motion atlas directory contains exactly ${expectedMotionAtlases.length} WebP atlases`);
+ok(JSON.stringify(motionAtlases) === JSON.stringify(expectedMotionAtlases),
+  "human-motion atlas filenames match the reviewed offline pack");
+
+expectedMotionAtlases.forEach((f) => {
+  const rel = "images/drill-motion/" + f;
+  const abs = path.join(motionDir, f);
+  const exists = fs.existsSync(abs);
+  ok(exists, rel + " exists on disk");
+  if (exists) {
+    const bytes = fs.readFileSync(abs);
+    ok(bytes.length > 12, rel + " is non-empty");
+    ok(bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP",
+      rel + " has a valid WebP container header");
+  }
+  ok(!!inShell[rel], rel + " is precached in APP_SHELL");
 });
 
 console.log("──────────────────────────────────────────");

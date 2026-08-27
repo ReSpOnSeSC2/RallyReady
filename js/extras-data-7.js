@@ -44,13 +44,15 @@ RR.extras = RR.extras || {};
     (o.blockers || []).forEach(function (bx) {
       players.push({ x: bx, y: 1.5, label: "B", team: "b", note: "blocker" });
     });
+    (o.extraPlayers || []).forEach(function (player) { players.push(player); });
     var spec = {
       title: o.title, caption: o.caption,
       w: 9, h: 9.4, net: 2,
       court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
       zones: o.zones || [tgt("cross", "target")],
       players: players,
-      paths: [{ from: [takeX, 3.6], to: o.to || [6.8, 1], kind: "serve", label: o.label || "swing", curve: o.curve != null ? o.curve : 0.1 }],
+      paths: [{ from: [takeX, 3.6], to: o.to || [6.8, 1], kind: "serve", label: o.label || "swing", curve: o.curve != null ? o.curve : 0.1 }]
+        .concat(o.extraPaths || []),
       legend: [{ tone: "target", text: "Aim here" }]
     };
     if (o.blockers) spec.legend.push({ tone: "b", text: "Block" });
@@ -65,11 +67,11 @@ RR.extras = RR.extras || {};
       w: 9, h: 9.4, net: 2,
       court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
       players: [{ x: 2, y: 8.4, label: "H", team: "a", note: "start" }],
-      paths: [
-        { from: [2, 8], to: [2.4, 6.4], kind: "move", label: "R (small)", curve: 0.1 },
-        { from: [2.4, 6.4], to: [3, 4.8], kind: "move", label: "L (big), arms back", curve: -0.05 },
-        { from: [3, 4.8], to: [3.4, 3.8], kind: "move", label: "R-L plant & jump", curve: 0 }
-      ],
+      paths: [{
+        from: [2, 8], via: [[2.4, 6.4], [3, 4.8]], to: [3.4, 3.8],
+        kind: "move", label: "R small → L big / arms back → R-L plant & jump",
+        curve: 0, playerIndex: 0
+      }],
       legend: [{ tone: "move", text: "Approach footwork" }]
     }
   };
@@ -80,11 +82,11 @@ RR.extras = RR.extras || {};
       w: 9, h: 9.4, net: 2,
       court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
       players: [{ x: 3, y: 8.4, label: "H", team: "a", note: "walk it" }],
-      paths: [
-        { from: [3, 8], to: [3.4, 6.4], kind: "move", label: "left", curve: 0.08 },
-        { from: [3.4, 6.4], to: [4, 4.6], kind: "move", label: "right-left", curve: -0.05 },
-        { from: [4, 4.6], to: [4.3, 3.8], kind: "move", label: "small hop", curve: 0 }
-      ],
+      paths: [{
+        from: [3, 8], via: [[3.4, 6.4], [4, 4.6]], to: [4.3, 3.8],
+        kind: "move", label: "left → right-left → small hop",
+        curve: 0, playerIndex: 0
+      }],
       legend: [{ tone: "move", text: "Slow walk-through" }]
     }
   };
@@ -175,8 +177,7 @@ RR.extras = RR.extras || {};
         court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
         players: [{ x: 6, y: 3.4, label: "C", team: "coach", note: "high toss" }, { x: 3.6, y: 7, label: "H", team: "a", note: "start" }],
         paths: [
-          { from: [3.6, 6.6], to: [4.1, 5], kind: "move", label: "two-step", curve: 0.08 },
-          { from: [4.1, 5], to: [4.4, 3.9], kind: "move", label: "two-foot jump", curve: 0 },
+          { from: [3.6, 6.6], via: [[4.1, 5]], to: [4.4, 3.9], kind: "move", label: "two-step → two-foot jump", curve: 0.08, playerIndex: 1 },
           { from: [6, 3.6], to: [4.6, 3.7], kind: "ball", label: "toss", curve: 0.2 }
         ],
         legend: [{ tone: "coach", text: "Coach" }, { tone: "move", text: "Approach" }] },
@@ -188,8 +189,14 @@ RR.extras = RR.extras || {};
 
   E["hitting-lines"] = {
     diagrams: dk.seq(
-      dk.approachPath({ side: "outside", setter: true, title: "Approach off the feed", caption: "Hitters line up at the OUTSIDE. The coach/setter feeds a good, hittable ball to the left-side antenna; the front hitter runs the outside approach to the takeoff." }),
-      swingStep({ title: "Swing & shag", takeX: 2.4, to: [6.8, 1], label: "swing at a target", zones: [tgt("cross", "target")], caption: "Jump and swing at a target on the court, then chase your own ball to the back of the line. Track kills vs. errors and keep everyone getting lots of swings." })
+      dk.approachPath({ side: "outside", setter: true, queue: 1, title: "Approach off the feed", caption: "The front hitter leaves the outside line and approaches the setter's hittable ball; the next hitter waits behind the start." }),
+      swingStep({ title: "Swing & shag", takeX: 2.4, to: [6.8, 1], label: "swing at a target", zones: [tgt("cross", "target")],
+        extraPlayers: [
+          { x: 5.4, y: 3, label: "St", team: "a", note: "setter / feeder" },
+          { x: 1.55, y: 8.45, label: "Q", team: "n", note: "next hitter" }
+        ],
+        extraPaths: [{ from: [2.6, 3.8], to: [1.55, 8.1], via: [[7.4, 2.4], [8, 6.8]], kind: "move", label: "shag → back of line", playerIndex: 0 }],
+        caption: "The front hitter swings at the target, shags that ball, and returns to the back of the outside line while the next hitter steps in." })
     )
   };
 
@@ -215,7 +222,21 @@ RR.extras = RR.extras || {};
           { from: [5.4, 3.2], to: [2.6, 3.8], kind: "ball", label: "set outside", curve: 0.25 }
         ],
         legend: [{ tone: "coach", text: "Free ball" }, { tone: "a", text: "Your side" }] },
-      dk.approachPath({ side: "outside", setter: false, swing: true, title: "Approach & attack", caption: "The hitter approaches the outside set and attacks. Rotate every rep — passer to hitter line, hitter to shag, next in to pass — and run a set number of clean pass-set-hit reps." })
+      swingStep({
+        title: "Approach, attack & rotate", takeX: 2.4, to: [6.8, 1], label: "outside attack",
+        extraPlayers: [
+          { x: 5.4, y: 3.2, label: "St", team: "a", note: "setter" },
+          { x: 3, y: 8.4, label: "P", team: "a", note: "passer rotates to hit" },
+          { x: 7.5, y: 1.4, label: "Sh", team: "a", note: "shagger rotates to pass" },
+          { x: 4.5, y: 0.9, label: "C", team: "coach", note: "enters next free ball" }
+        ],
+        extraPaths: [
+          { from: [2.4, 4], to: [7.5, 1.6], kind: "move", label: "hitter → shag", curve: 0.25, playerIndex: 0 },
+          { from: [3, 8.4], to: [1.6, 9.4], kind: "move", label: "passer → hitter line", curve: 0.15, playerIndex: 2 },
+          { from: [7.5, 1.4], to: [3, 8.4], kind: "move", label: "shagger → pass", curve: -0.25, playerIndex: 3 }
+        ],
+        caption: "The hitter attacks the outside set, then everyone rotates one job: passer to hitter line, hitter to shag, shagger to pass. Run a set number of clean pass-set-hit reps."
+      })
     )
   };
 
@@ -238,7 +259,19 @@ RR.extras = RR.extras || {};
           { from: [5.2, 3.2], to: [4.4, 3.6], kind: "ball", label: "low quick set", curve: 0.12 }
         ],
         legend: [{ tone: "a", text: "Setter + middle" }] },
-      swingStep({ title: "Quick hit down", takeX: 4.4, to: [4.6, 1], label: "fast swing down", zones: [tgt("middle", "seam")], caption: "The middle hits the ball at full reach with a fast swing down. Run it off a steady pass first, then add small changes so the middle has to adjust the timing." })
+      swingStep({
+        title: "Pass, quick set & hit", takeX: 4.4, to: [4.6, 1], label: "fast swing down",
+        zones: [tgt("middle", "seam")],
+        extraPlayers: [
+          { x: 5.2, y: 3, label: "St", team: "a", note: "setter" },
+          { x: 7, y: 7.4, label: "P", team: "a", note: "steady passer" }
+        ],
+        extraPaths: [
+          { from: [7, 7.4], to: [5.2, 3.2], kind: "ball", label: "steady pass", curve: 0.2 },
+          { from: [5.2, 3.2], to: [4.4, 3.6], kind: "ball", label: "quick set", curve: 0.12 }
+        ],
+        caption: "A steady passer feeds the setter, the setter delivers the low quick, and the middle hits at full reach with a fast swing down. Then vary the pass so the middle adjusts."
+      })
     )
   };
 
@@ -248,8 +281,7 @@ RR.extras = RR.extras || {};
         court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
         players: [{ x: 5.2, y: 3, label: "St", team: "a", note: "setter" }, { x: 4, y: 5.6, label: "M", team: "a", note: "start" }],
         paths: [
-          { from: [4, 5.4], to: [6, 4.4], kind: "move", label: "curved run behind St", curve: -0.4 },
-          { from: [6, 4.4], to: [6.8, 3.8], kind: "move", label: "one-foot takeoff", curve: -0.15 },
+          { from: [4, 5.4], via: [[6, 4.4]], to: [6.8, 3.8], kind: "move", label: "curve behind St → one-foot takeoff", curve: -0.3, playerIndex: 1 },
           { from: [5.2, 3.2], to: [6.8, 3.6], kind: "ball", label: "back set", curve: -0.2 }
         ],
         legend: [{ tone: "a", text: "Setter + slide hitter" }] },
@@ -270,8 +302,7 @@ RR.extras = RR.extras || {};
         court: [{ x: 0, y: 0, w: 9, h: 10.4 }],
         players: [{ x: 5.2, y: 3, label: "St", team: "a", note: "setter" }, { x: 4.5, y: 8.6, label: "H", team: "a", note: "back row" }],
         paths: [
-          { from: [4.5, 8.2], to: [4.5, 6.2], kind: "move", label: "approach to the line", curve: 0 },
-          { from: [4.5, 6.2], to: [4.5, 5.8], kind: "move", label: "jump from behind", curve: 0 },
+          { from: [4.5, 8.2], via: [[4.5, 6.2]], to: [4.5, 5.8], kind: "move", label: "approach → jump behind line", curve: 0, playerIndex: 1 },
           { from: [5.2, 3.2], to: [4.6, 5.4], kind: "ball", label: "pipe set", curve: 0.15 }
         ],
         legend: [{ tone: "a", text: "Setter + pipe hitter" }, { tone: "move", text: "Takeoff behind 3m line" }] },
@@ -386,7 +417,7 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       { title: "Dig the entered ball", caption: "Hitters link defense to offense. The hitter starts in a defensive spot in the back court and digs a ball the coach enters over the net.", w: 9, h: 10.4, net: 2, lines: [{ y: 5.6 }],
         court: [{ x: 0, y: 0, w: 9, h: 10.4 }],
-        players: [{ x: 4.5, y: 0.9, label: "C", team: "coach", note: "enters ball" }, { x: 3, y: 8.4, label: "H", team: "a", note: "defender" }, { x: 6, y: 6.2, label: "St", team: "a", note: "setter" }],
+        players: [{ x: 4.5, y: 0.9, label: "C", team: "coach", note: "enters ball" }, { x: 3, y: 8.4, label: "H", team: "a", note: "defender" }, { x: 6, y: 6.2, label: "St", team: "a", note: "setter" }, { x: 7.5, y: 1.4, label: "Sh", team: "a", note: "shagger" }, { x: 1.6, y: 9.4, label: "Q", team: "a", note: "next hitter" }],
         paths: [
           { from: [4.5, 1.4], to: [3.2, 8], kind: "serve", label: "attack", curve: 0.1 },
           { from: [3, 8], to: [5.8, 6.4], kind: "ball", label: "dig", curve: 0.2 }
@@ -394,13 +425,22 @@ RR.extras = RR.extras || {};
         legend: [{ tone: "coach", text: "Coach" }, { tone: "a", text: "Your side" }] },
       { title: "Pull off the net", caption: "On the dig, the hitter pulls OFF the net out to the attack line to become a hitter, while the setter delivers a transition set.", w: 9, h: 10.4, net: 2, lines: [{ y: 5.6 }],
         court: [{ x: 0, y: 0, w: 9, h: 10.4 }],
-        players: [{ x: 6, y: 5, label: "St", team: "a", note: "transition set" }, { x: 3, y: 8, label: "H", team: "a", note: "pulls off" }],
+        players: [{ x: 6, y: 5, label: "St", team: "a", note: "transition set" }, { x: 3, y: 8, label: "H", team: "a", note: "pulls off" }, { x: 7.5, y: 1.4, label: "Sh", team: "a", note: "shagger" }, { x: 1.6, y: 9.4, label: "Q", team: "a", note: "next hitter" }],
         paths: [
           { from: [3, 7.8], to: [2.6, 6], kind: "move", label: "pull off to the line", curve: 0.1 },
           { from: [6, 5.2], to: [2.6, 5.4], kind: "ball", label: "transition set", curve: 0.25 }
         ],
         legend: [{ tone: "move", text: "Off the net" }, { tone: "a", text: "Your side" }] },
-      swingStep({ title: "Approach & attack", takeX: 2.4, to: [6.8, 1], label: "transition swing", zones: [tgt("cross", "target")], caption: "The hitter approaches the transition set and attacks. Repeat so players link defense, transition, and the attack every rep." })
+      swingStep({
+        title: "Approach & attack", takeX: 2.4, to: [6.8, 1], label: "transition swing",
+        zones: [tgt("cross", "target")],
+        extraPlayers: [
+          { x: 6, y: 5, label: "St", team: "a", note: "transition setter" },
+          { x: 7.5, y: 1.4, label: "Sh", team: "a", note: "shagger" },
+          { x: 1.6, y: 9.4, label: "Q", team: "a", note: "next hitter" }
+        ],
+        caption: "The setter delivers the transition set, the hitter approaches and attacks, the shagger retrieves, and the next hitter is ready so the defense-to-offense cycle keeps moving."
+      })
     )
   };
 

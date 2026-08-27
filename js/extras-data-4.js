@@ -65,7 +65,7 @@ RR.extras = RR.extras || {};
     diagram: serve({
       serverNote: "start mid-court, move back",
       serveLabel: "topspin drops", serveCurve: -0.18,
-      zones: [{ x: 1.5, y: 5.2, w: 6, h: 2.4, tone: "target", label: "drops in deep-court" }],
+      zones: [{ x: 1.5, y: 0.9, w: 6, h: 2.4, tone: "target", label: "drops in deep-court" }],
       caption: "Topspin serve: higher toss out front, load the arm like a spike, hit the lower-back of the ball and snap the wrist over the top so the spin pulls it DOWN into the court. Start mid-court, move back to the end line as it gets consistent."
     })
   };
@@ -124,11 +124,11 @@ RR.extras = RR.extras || {};
     diagram: serve({
       serverNote: "serves the called zone",
       serveLabel: "to called zone", serveCurve: 0.2,
-      cones: [{ x: 2, y: 9.6 }, { x: 7, y: 9.6 }, { x: 4.5, y: 8.4 }],
+      cones: [{ x: 2, y: 2.2 }, { x: 7, y: 2.2 }, { x: 4.5, y: 4.1 }],
       zones: [
-        { x: 0.5, y: 7.6, w: 3, h: 3, tone: "target", label: "1" },
-        { x: 5.5, y: 7.6, w: 3, h: 3, tone: "target", label: "5" },
-        { x: 3, y: 6.4, w: 3, h: 2.4, tone: "target", label: "6" }
+        { x: 0.5, y: 0.7, w: 3, h: 2.6, tone: "target", label: "1" },
+        { x: 5.5, y: 0.7, w: 3, h: 2.6, tone: "target", label: "5" },
+        { x: 3, y: 2.9, w: 3, h: 2.4, tone: "target", label: "6" }
       ],
       caption: "Serving to zones: cones/towels mark targets in zones 1, 5 and 6 on the far deep court. Call a zone before each serve; the server aims there and you track makes per zone over a set number, then rotate and compare accuracy to each spot."
     })
@@ -171,12 +171,13 @@ RR.extras = RR.extras || {};
     diagram: serve({
       serverNote: "make it or pay a price",
       serveLabel: "hit the called target", serveCurve: 0.22, aim: 1,
-      cones: [{ x: 2, y: 9.6 }, { x: 7, y: 9.6 }, { x: 4.5, y: 3.6 }],
+      extraPlayers: [{ x: 7.7, y: 3.9, label: "Sh", team: "n", note: "shags and calls the target" }],
+      cones: [{ x: 2, y: 2.1 }, { x: 7, y: 2.1 }, { x: 4.5, y: 4.4 }],
       zones: [
-        { x: 0.5, y: 7.8, w: 2.6, h: 3, tone: "target", label: "deep corner" },
-        { x: 5.9, y: 7.8, w: 2.6, h: 3, tone: "target", label: "deep corner" },
-        { x: 3.2, y: 3, w: 2.6, h: 2, tone: "good", label: "short middle" },
-        { x: 3.4, y: 6.2, w: 2.2, h: 1.4, tone: "avoid", label: "seam" }
+        { x: 0.5, y: 0.7, w: 2.6, h: 2.6, tone: "target", label: "deep corner" },
+        { x: 5.9, y: 0.7, w: 2.6, h: 2.6, tone: "target", label: "deep corner" },
+        { x: 3.2, y: 3.6, w: 2.6, h: 1.8, tone: "good", label: "short middle" },
+        { x: 3.4, y: 2.2, w: 2.2, h: 1.4, tone: "avoid", label: "seam" }
       ],
       legend: [{ tone: "target", text: "Tough targets" }, { tone: "avoid", text: "Seam" }, { tone: "a", text: "Server" }],
       caption: "Pressure serving: targets sit in the toughest spots — deep corners, short middle, the seams. Each server gets a set number of tries at a CALLED target; a miss costs a small price (sprint, or a point to the other group). Track makes under pressure vs. warm-up numbers."
@@ -190,7 +191,11 @@ RR.extras = RR.extras || {};
         court: [{ x: 0, y: 0.8, w: 9, h: 9 }],
         lines: [{ y: 5.2 }],
         players: [{ x: 4.5, y: 9.4, label: "S", team: "a", note: "sprint down & back" }],
-        paths: [{ from: [4.5, 9], to: [4.5, 1.6], kind: "move", curve: 0 }, { from: [4.9, 1.6], to: [4.9, 9], kind: "move", curve: 0 }],
+        paths: [{
+          from: [4.5, 9], via: [[4.5, 1.6]], to: [4.5, 9],
+          kind: "move", label: "sprint down → back", curve: 0,
+          playerIndex: 0
+        }],
         legend: [{ tone: "move", text: "Down and back" }]
       },
       serve({
@@ -236,14 +241,14 @@ RR.extras = RR.extras || {};
       serve({
         title: "Mark & hit the seam", serverNote: "aim float or topspin",
         serveLabel: "at the seam", serveCurve: 0.05, aim: 1,
-        cones: [{ x: 3.4, y: 8.6 }, { x: 5.6, y: 8.6 }],
+        cones: [{ x: 3.4, y: 2.8 }, { x: 5.6, y: 2.8 }],
         extraPlayers: [
-          { x: 2.4, y: 8.6, label: "", team: "n", note: "passer spot" },
-          { x: 6.6, y: 8.6, label: "", team: "n", note: "passer spot" }
+          { x: 2.4, y: 2.8, label: "", team: "n", note: "passer spot" },
+          { x: 6.6, y: 2.8, label: "", team: "n", note: "passer spot" }
         ],
         zones: [
           { x: 0.5, y: 0.7, w: 3, h: 2.4, tone: "good", label: "deep corner" },
-          { x: 3.5, y: 7.4, w: 2, h: 2, tone: "target", label: "SEAM" }
+          { x: 3.5, y: 1.8, w: 2, h: 2, tone: "target", label: "SEAM" }
         ],
         legend: [{ tone: "target", text: "Seam" }, { tone: "good", text: "Deep corner" }, { tone: "a", text: "Server" }],
         caption: "Cones (or two passer spots) mark the SEAM between passing zones. Servers aim float or topspin serves at the called seam or a deep corner. Track which seams a server can hit consistently — aggressive, smart serving, not just getting it in."
@@ -252,14 +257,14 @@ RR.extras = RR.extras || {};
         title: "Add a live passer", serverNote: "attack the seam",
         serveLabel: "tough seam serve", serveCurve: 0.05, aim: 0,
         extraPlayers: [
-          { x: 2.4, y: 8.6, label: "P", team: "b", note: "passer" },
-          { x: 6.6, y: 8.6, label: "P", team: "b", note: "passer" },
-          { x: 6.6, y: 6.4, label: "St", team: "b", note: "target" }
+          { x: 2.4, y: 2.8, label: "P", team: "b", note: "passer" },
+          { x: 6.6, y: 2.8, label: "P", team: "b", note: "passer" },
+          { x: 6.6, y: 4.8, label: "St", team: "b", note: "setter target" }
         ],
-        zones: [{ x: 3.5, y: 7.4, w: 2, h: 2, tone: "target", label: "SEAM" }],
+        zones: [{ x: 3.5, y: 1.8, w: 2, h: 2, tone: "target", label: "SEAM" }],
         paths: [
-          { from: [4.5, 11.9], to: [4.5, 7.9], kind: "serve", label: "serve the seam", curve: 0.05 },
-          { from: [4.5, 8], to: [2.7, 8.4], kind: "ball", label: "who takes it?", curve: 0.2 }
+          { from: [4.5, 11.9], to: [4.5, 2.8], kind: "serve", label: "serve the seam", curve: 0.05 },
+          { from: [4.5, 2.8], to: [6.3, 4.6], kind: "ball", label: "pass to target", curve: 0.2 }
         ],
         legend: [{ tone: "target", text: "Seam" }, { tone: "b", text: "Passers" }, { tone: "a", text: "Server" }],
         caption: "Now add live passers either side of the seam. A tough seam serve splits them — both hesitate, the pass to the setter target breaks down — so servers SEE the trouble a good seam serve causes."
@@ -304,12 +309,12 @@ RR.extras = RR.extras || {};
       serverNote: "same look, different serve",
       paths: [
         { from: [4.2, 11.9], to: [2.2, 1.9], kind: "serve", label: "deep float", curve: 0.2 },
-        { from: [4.5, 11.9], to: [4.5, 5.4], kind: "serve", label: "hard topspin", curve: -0.2 },
+        { from: [4.5, 11.9], to: [4.5, 4.7], kind: "serve", label: "hard topspin", curve: -0.2 },
         { from: [4.8, 11.9], to: [6.6, 3.4], kind: "serve", label: "short float", curve: 0.2 }
       ],
       zones: [
         { x: 0.5, y: 0.7, w: 3, h: 2.4, tone: "target", label: "deep float" },
-        { x: 3, y: 4.4, w: 3, h: 2, tone: "good", label: "hard topspin" },
+        { x: 3, y: 3.8, w: 3, h: 1.8, tone: "good", label: "hard topspin" },
         { x: 5.5, y: 2.6, w: 3, h: 2, tone: "target", label: "short float" }
       ],
       legend: [{ tone: "target", text: "Float targets" }, { tone: "good", text: "Topspin" }, { tone: "a", text: "Server" }],

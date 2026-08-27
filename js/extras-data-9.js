@@ -128,10 +128,10 @@ RR.extras = RR.extras || {};
         w: 9, h: 8,
         players: [
           { x: 4.5, y: 2, label: "F", team: "coach" },
-          { x: 2.4, y: 6, label: "D", team: "a", note: "moved over" }
+          { x: 4.4, y: 6, label: "D", team: "a", note: "starts centered" }
         ],
         paths: [
-          { from: [4.4, 6], to: [2.6, 6], kind: "move", label: "shuffle", curve: 0 },
+          { from: [4.4, 6], to: [2.6, 6], kind: "move", label: "shuffle behind ball", curve: 0, playerIndex: 1 },
           { from: [2.4, 5.6], to: [4.3, 2.6], kind: "ball", label: "dig up", curve: 0.2 }
         ]
       }
@@ -189,13 +189,13 @@ RR.extras = RR.extras || {};
         w: 9, h: 8,
         players: [
           { x: 4.5, y: 5.8, label: "D", team: "a", note: "reached out" },
-          { x: 6.6, y: 6.4, label: "", team: "n", note: "roll/sprawl out" },
-          { x: 5.4, y: 5, label: "D", team: "a", note: "back to ready" }
+          { x: 6.6, y: 6.4, label: "", team: "n", note: "roll/sprawl out" }
         ],
-        paths: [
-          { from: [4.7, 5.9], to: [6.4, 6.3], kind: "move", label: "extend & roll", curve: 0.2 },
-          { from: [6.4, 6.2], to: [5.5, 5.2], kind: "move", label: "pop up", curve: 0.2 }
-        ],
+        paths: [{
+          from: [4.7, 5.9], via: [[6.4, 6.3]], to: [5.5, 5.2],
+          kind: "move", label: "extend & roll → pop up", curve: 0,
+          playerIndex: 0
+        }],
         legend: [{ tone: "a", text: "Player" }, { tone: "n", text: "Floor move" }]
       }
     )
@@ -216,9 +216,9 @@ RR.extras = RR.extras || {};
         title: "Pancake & pop up", caption: "The player reaches out and slides one flat HAND to the floor under the ball so it bounces up off the back of the hand, then pops right back to ready. Practice both hands and toss farther over time.",
         w: 9, h: 8,
         players: [
-          { x: 4.5, y: 5.8, label: "D", team: "a", note: "slides hand under" },
-          { x: 3.4, y: 4.6, label: "", team: "n", note: "ball pops up" }
+          { x: 4.5, y: 5.8, label: "D", team: "a", note: "slides hand under" }
         ],
+        balls: [{ x: 3.4, y: 4.6 }],
         paths: [
           { from: [4.5, 5.6], to: [3.8, 4.8], kind: "move", label: "reach & slide", curve: 0.15 },
           { from: [3.6, 4.7], to: [3.4, 3.6], kind: "ball", label: "pops up", curve: 0 }
@@ -323,13 +323,13 @@ RR.extras = RR.extras || {};
         title: "Chase, save & send over", caption: "D1 sprints it down and plays it up — often while facing AWAY from the net. D2 tracks that ball and sends it back over the net. Rotate so everyone chases and covers.",
         w: 9, h: 11, net: 2, lines: [{ y: 5.2 }], court: [{ x: 0, y: 2, w: 9, h: 8.6 }],
         players: [
-          { x: 2.3, y: 9.4, label: "D1", team: "a", note: "saves facing away" },
-          { x: 4.5, y: 7, label: "D2", team: "a", note: "tracks it" }
+          { x: 4.5, y: 6.7, label: "D1", team: "a", note: "chases the wild ball" },
+          { x: 6.4, y: 7.4, label: "D2", team: "a", note: "tracks the save" }
         ],
         paths: [
-          { from: [4.5, 6.7], to: [2.5, 9.2], kind: "move", label: "sprint & save", curve: 0.2 },
-          { from: [2.4, 9.2], to: [4.4, 7], kind: "ball", label: "play up", curve: 0.2 },
-          { from: [4.5, 6.8], to: [5, 2.4], kind: "serve", label: "send over", curve: 0.1 }
+          { from: [4.5, 6.7], to: [2.5, 9.2], kind: "move", label: "sprint & save", curve: 0.2, playerIndex: 0 },
+          { from: [2.4, 9.2], to: [6.2, 7.4], kind: "ball", label: "play up", curve: 0.2 },
+          { from: [6.4, 7.2], to: [5, 2.4], kind: "serve", label: "send over", curve: 0.1 }
         ],
         legend: [{ tone: "a", text: "Defenders" }]
       }
@@ -369,8 +369,18 @@ RR.extras = RR.extras || {};
   E["youth-team-defense-positions"] = {
     diagram: dk.basePositions({
       labels: ["B", "B", "M", "L", "", "R"],
+      feederX: 2.1,
       feederNote: "attacks slowly from a pin",
-      caption: "A first, walkable look at team defense: players stand in simple base spots (two block at the net, one middle, three deep) and each spot is named. The coach attacks slowly from a pin and the team moves to their read spots TOGETHER — walking through who covers tips, who covers the deep ball, and who backs up."
+      caption: "A first, walkable look at team defense: players stand in simple base spots (two block at the net, one middle, three deep) and each spot is named. The coach attacks slowly from a pin and the team moves to their read spots TOGETHER — walking through who covers tips, who covers the deep ball, and who backs up.",
+      paths: [
+        { from: [2.1, 1.25], to: [6.8, 8.2], kind: "serve", label: "slow pin attack", curve: 0.14 },
+        { from: [2.6, 3.4], to: [2.3, 3.25], kind: "move", label: "set block", playerIndex: 1 },
+        { from: [6.4, 3.4], to: [3.35, 3.35], kind: "move", label: "close", playerIndex: 2 },
+        { from: [4.5, 5.8], to: [2.8, 5.25], kind: "move", label: "tip cover", playerIndex: 3 },
+        { from: [1.5, 8.4], to: [1.15, 7.65], kind: "move", label: "line", playerIndex: 4 },
+        { from: [4.5, 9.2], to: [4.65, 8.55], kind: "move", label: "deep angle", playerIndex: 5 },
+        { from: [7.5, 8.4], to: [7.8, 8.75], kind: "move", label: "deep cross", playerIndex: 6 }
+      ]
     })
   };
   E["perimeter-defense-system"] = {
@@ -390,12 +400,14 @@ RR.extras = RR.extras || {};
           { x: 7, y: 3.4, label: "B", team: "a" },
           { x: 7.4, y: 8.2, label: "RB", team: "a", note: "line" },
           { x: 1.4, y: 8.4, label: "LB", team: "a", note: "deep cross" },
-          { x: 2.6, y: 5.6, label: "MB", team: "a", note: "off-blocker: angle/tip" }
+          { x: 2.6, y: 4.2, label: "MB", team: "a", note: "off-blocker pulls to angle/tip" },
+          { x: 4.5, y: 9, label: "CB", team: "a", note: "deep middle / seam" }
         ],
         paths: [
-          { from: [7.4, 8.2], to: [7.4, 8.6], kind: "move", curve: 0 },
-          { from: [1.4, 8.4], to: [1.4, 8.6], kind: "move", curve: 0 },
-          { from: [2.6, 4.2], to: [2.6, 5.4], kind: "move", label: "pull off net", curve: 0 },
+          { from: [7.4, 8.2], to: [7.4, 8.6], kind: "move", label: "hold line", curve: 0, playerIndex: 3 },
+          { from: [1.4, 8.4], to: [1.4, 8.6], kind: "move", label: "hold deep cross", curve: 0, playerIndex: 4 },
+          { from: [2.6, 4.2], to: [2.6, 5.4], kind: "move", label: "pull off net", curve: 0, playerIndex: 5 },
+          { from: [4.5, 9], to: [4.7, 8.65], kind: "move", label: "deep seam", curve: 0, playerIndex: 6 },
           { from: [6.8, 1.4], to: [2, 8], kind: "serve", label: "cross attack", curve: 0.1 }
         ],
         legend: [{ tone: "coach", text: "Attack" }, { tone: "good", text: "Edges to cover" }, { tone: "a", text: "Defenders" }]
@@ -459,10 +471,14 @@ RR.extras = RR.extras || {};
         w: 9, h: 10, net: 2, lines: [{ y: 5.2 }], court: [{ x: 0, y: 2, w: 9, h: 7.6 }],
         players: [
           { x: 4.5, y: 1, label: "C", team: "coach" },
-          { x: 4.5, y: 5.6, label: "MB", team: "a", note: "ran up to tip" }
+          { x: 3.8, y: 3.4, label: "B", team: "a", note: "block" },
+          { x: 5.2, y: 3.4, label: "B", team: "a", note: "block" },
+          { x: 2.4, y: 8, label: "LB", team: "a", note: "holds hard swing" },
+          { x: 4.5, y: 8.2, label: "MB", team: "a", note: "reads then sprints" },
+          { x: 6.6, y: 8, label: "RB", team: "a", note: "holds hard swing" }
         ],
         paths: [
-          { from: [4.5, 8.2], to: [4.5, 6], kind: "move", label: "sprint forward", curve: 0 },
+          { from: [4.5, 8.2], to: [4.5, 6], kind: "move", label: "sprint forward", curve: 0, playerIndex: 4 },
           { from: [4.5, 5.8], to: [6, 4.4], kind: "ball", label: "play up", curve: 0.2 }
         ],
         legend: [{ tone: "coach", text: "Attack" }, { tone: "a", text: "Defender" }]
@@ -520,6 +536,8 @@ RR.extras = RR.extras || {};
         title: "Set & counter-attack", caption: "The setter sets the dug ball and a hitter TRANSITIONS off the net to attack the counter. Only score the rally if the dig led to a controlled counter-attack. Rotate so everyone digs, sets, and attacks.",
         w: 9, h: 10, net: 2, lines: [{ y: 5.2 }], court: [{ x: 0, y: 2, w: 9, h: 7.6 }],
         players: [
+          { x: 4.5, y: 1.2, label: "C", team: "coach", note: "entered attack" },
+          { x: 4.5, y: 8.2, label: "D", team: "a", note: "made the dig" },
           { x: 6.6, y: 4, label: "St", team: "a", note: "setter" },
           { x: 2.4, y: 5.8, label: "H", team: "a", note: "transitions in" }
         ],

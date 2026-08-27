@@ -35,6 +35,15 @@ RR.extras = RR.extras || {};
     diagram: dk.pairsRows({
       pairs: 3,
       topLabel: "A", botLabel: "B",
+      noBall: true,
+      paths: [
+        { from: [1.4, 2.4], to: [1.4, 3.2], kind: "move", label: "assist · switch", playerIndex: 0 },
+        { from: [1.4, 9.6], to: [1.4, 8.8], kind: "move", playerIndex: 1 },
+        { from: [5, 2.4], to: [5, 3.2], kind: "move", label: "assist · switch", playerIndex: 2 },
+        { from: [5, 9.6], to: [5, 8.8], kind: "move", playerIndex: 3 },
+        { from: [8.6, 2.4], to: [8.6, 3.2], kind: "move", label: "assist · switch", playerIndex: 4 },
+        { from: [8.6, 9.6], to: [8.6, 8.8], kind: "move", playerIndex: 5 }
+      ],
       caption: "Players pair off and face each other with a little space, moving together through calf, hamstring, quad, and shoulder stretches — each partner helping the other balance. Between holds they trade one thing that went well and one thing to work on."
     })
   };

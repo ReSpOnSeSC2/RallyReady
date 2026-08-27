@@ -59,6 +59,226 @@
     "Still preview": "Previzualizare statică",
     "Animation is off because reduced motion is enabled on this device.":
       "Animația este oprită deoarece mișcarea redusă este activată pe acest dispozitiv.",
+    "Human technique": "Demonstrație tehnică",
+    "Human demonstration needed": "Este necesară o demonstrație cu sportiv",
+    "Edit this drill and choose a human demonstration before using the example. RallyReady will not guess from your notes.":
+      "Editează acest exercițiu și alege o demonstrație cu sportiv înainte să folosești exemplul. RallyReady nu va ghici mișcarea din notițele tale.",
+    "Demonstration view": "Vizualizarea demonstrației",
+    "Technique": "Tehnică",
+    "Court movement": "Mișcare pe teren",
+    "Techniques in this step": "Tehnicile din acest pas",
+    "Technique phases and body cues": "Fazele tehnicii și indicațiile pentru corp",
+    "Coach this": "Indicații de antrenor",
+    "Players & mechanics": "Jucători și mecanică",
+    "Court participant and movement details": "Detalii despre jucători și mișcarea pe teren",
+    "Positioned": "Poziționați",
+    "Grouped marker": "Marcaj de grup",
+    "Coach / support": "Antrenor / ajutor",
+    "support role": "rol de ajutor",
+    "Saved minimum": "Minim salvat",
+    "Waiting / line": "În așteptare / la rând",
+    "Parallel / grouped": "În paralel / grupați",
+    "Rotating roles": "Roluri prin rotație",
+    "Not individually plotted": "Nereprezentați individual",
+    "Position map": "Harta pozițiilor",
+    "Participants": "Participanți",
+    "Unlabeled court marker": "Marcaj fără etichetă pe teren",
+    "Authored routes": "Trasee definite",
+    "ball path": "traseu al mingii",
+    "ball paths": "trasee ale mingii",
+    "player path": "traseu al jucătorului",
+    "player paths": "trasee ale jucătorilor",
+    "No authored ball path in this step.": "Niciun traseu al mingii nu este definit în acest pas.",
+    "No authored player path in this step.": "Niciun traseu al jucătorului nu este definit în acest pas.",
+    "Current step": "Pasul curent",
+    "this drill": "acest exercițiu",
+
+    // ---- human drill actions, phases + body cues ----
+    "Forearm pass": "Preluare cu antebrațele",
+    "Overhead set": "Ridicare de sus",
+    "Overhand serve": "Serviciu de sus",
+    "Attack approach": "Elan de atac",
+    "Block and press": "Blocaj și presare",
+    "Floor defense": "Apărare la sol",
+    "Athletic footwork": "Deplasare atletică",
+    "Dynamic warm-up": "Încălzire dinamică",
+    "Resistance-band form": "Execuție cu banda elastică",
+    "Medicine-ball power": "Putere cu mingea medicinală",
+    "Recovery position": "Poziție de recuperare",
+    "Jump and landing": "Săritură și aterizare",
+    "Running stride": "Pas de alergare",
+    "Underhand serve": "Serviciu de jos",
+    "Cooldown sequence": "Secvență de revenire",
+
+    "Ready": "Pregătire",
+    "Build the platform": "Formează platforma",
+    "Contact": "Contact",
+    "Hold the target": "Menține direcția",
+    "Read": "Citește jocul",
+    "Get underneath": "Intră sub minge",
+    "Finger contact": "Contact cu degetele",
+    "Extend": "Extinde",
+    "Stance": "Poziție",
+    "Toss + load": "Aruncare + armare",
+    "Transfer": "Transfer",
+    "Load": "Încărcare",
+    "Reach + contact": "Întindere + contact",
+    "Land": "Aterizare",
+    "Press": "Presează",
+    "Land + reset": "Aterizează + revino",
+    "Move": "Deplasare",
+    "Dig safely": "Preluare sigură",
+    "Recover": "Revino",
+    "Base": "Poziție de bază",
+    "Push": "Împingere",
+    "Travel": "Deplasează-te",
+    "Plant": "Fixare",
+    "Easy jog": "Alergare ușoară",
+    "High knees": "Genunchii sus",
+    "Lunge + rotate": "Fandare + rotație",
+    "Lateral lunge": "Fandare laterală",
+    "Set posture": "Fixează postura",
+    "Rotate": "Rotește",
+    "Pull apart": "Depărtează brațele",
+    "Y raise": "Ridicare în Y",
+    "Reach": "Întinde-te",
+    "Drive": "Propulsie",
+    "Hamstring": "Ischiogambieri",
+    "Figure four": "Poziția cifrei patru",
+    "Leg roll": "Rularea piciorului",
+    "Upper back": "Partea superioară a spatelui",
+    "Take off": "Desprindere",
+    "Stick the landing": "Fixează aterizarea",
+    "Flight": "Zbor",
+    "Foot strike": "Contact cu solul",
+    "Backswing": "Balans înapoi",
+    "Follow through": "Finalizare",
+    "Recovery walk": "Mers de revenire",
+    "Diaphragmatic breath": "Respirație diafragmatică",
+    "Reflect": "Reflecție",
+    "Child's pose": "Poziția copilului",
+
+    "Step the opposite foot forward and support the ball below the waist.":
+      "Pășește înainte cu piciorul opus și susține mingea sub nivelul taliei.",
+    "Keep the ball still while the straight hitting arm swings behind the hip.":
+      "Ține mingea nemișcată în timp ce brațul de lovire întins se balansează în spatele șoldului.",
+    "Step and strike the bottom-back of the ball with a firm fist or hand heel.":
+      "Pășește și lovește partea de jos-spate a mingii cu pumnul ferm sau podul palmei.",
+    "Swing the hitting arm toward the target and transfer weight forward.":
+      "Balansează brațul de lovire spre țintă și transferă greutatea înainte.",
+    "Walk easily until breathing and heart rate begin returning toward normal.":
+      "Mergi ușor până când respirația și pulsul încep să revină la normal.",
+    "Breathe into the lower ribs, then make the exhale longer than the inhale.":
+      "Inspiră în partea de jos a cutiei toracice, apoi expiră mai lung decât inspiri.",
+    "Sit comfortably, relax the shoulders, and name one useful team takeaway.":
+      "Așază-te confortabil, relaxează umerii și spune un lucru util învățat de echipă.",
+    "Sink the hips toward the heels, reach long, and keep the breath relaxed.":
+      "Coboară șoldurile spre călcâie, întinde brațele și păstrează respirația relaxată.",
+
+    "Feet wider than hips; knees soft; shoulders forward.":
+      "Picioarele mai depărtate decât șoldurile; genunchii flexați; umerii înainte.",
+    "Join the hands early and keep both forearms straight.":
+      "Unește mâinile din timp și ține ambele antebrațe întinse.",
+    "Meet the middle of the ball in front of the body.":
+      "Ia contact cu mijlocul mingii în fața corpului.",
+    "Finish balanced with the platform facing the target.":
+      "Încheie echilibrat, cu platforma orientată spre țintă.",
+    "Track the ball early and move before raising the hands.":
+      "Urmărește mingea din timp și deplasează-te înainte să ridici mâinile.",
+    "Balance the feet and show a clean window above the forehead.":
+      "Echilibrează picioarele și formează o fereastră clară deasupra frunții.",
+    "Use relaxed, spread fingers and contact both sides evenly.":
+      "Ține degetele relaxate și răsfirate și atinge uniform ambele laturi ale mingii.",
+    "Drive through the legs and finish both hands toward the target.":
+      "Împinge din picioare și încheie cu ambele mâini spre țintă.",
+    "Start balanced and staggered with the ball in front of the hitting shoulder.":
+      "Pornește echilibrat, cu picioarele decalate și mingea în fața umărului de lovire.",
+    "Keep the toss repeatable while the hitting elbow loads high.":
+      "Aruncă mingea constant și armează sus cotul brațului de lovire.",
+    "Reach tall and strike the center of the ball with a firm open hand.":
+      "Întinde-te sus și lovește centrul mingii cu palma fermă și deschisă.",
+    "Move body weight through the ball and finish inside the court.":
+      "Transferă greutatea corpului prin minge și încheie în interiorul terenului.",
+    "Stay available and time the first step from the set.":
+      "Rămâi pregătit și sincronizează primul pas după ridicare.",
+    "Use a long penultimate step and swing both arms behind the hips.":
+      "Fă un penultim pas lung și balansează ambele brațe în spatele șoldurilor.",
+    "Jump vertically and contact high in front of the hitting shoulder.":
+      "Sari vertical și contactează mingea sus, în fața umărului de lovire.",
+    "Absorb the landing on two feet and recover for the next play.":
+      "Amortizează aterizarea pe ambele picioare și revino pentru faza următoare.",
+    "Stay square to the net with hands high and knees loaded.":
+      "Rămâi paralel cu fileul, cu mâinile sus și genunchii flexați.",
+    "Move along the net without drifting or turning the shoulders.":
+      "Deplasează-te de-a lungul fileului fără să te îndepărtezi sau să rotești umerii.",
+    "Reach up, then press strong hands forward over the net.":
+      "Întinde-te în sus, apoi presează mâinile ferme înainte, peste fileu.",
+    "Land on two feet, regain balance, and show the hands again.":
+      "Aterizează pe ambele picioare, recapătă echilibrul și ridică din nou mâinile.",
+    "Keep the hips low, weight forward, and hands available.":
+      "Ține șoldurile jos, greutatea în față și mâinile pregătite.",
+    "Push from the outside foot and keep the shoulders behind the ball.":
+      "Împinge din piciorul exterior și păstrează umerii în spatele mingii.",
+    "Angle a stable platform and let low momentum continue safely.":
+      "Ține platforma stabilă la unghiul corect și lasă mișcarea joasă să continue în siguranță.",
+    "Get back to the feet quickly and return to a balanced base.":
+      "Ridică-te repede și revino într-o poziție de bază echilibrată.",
+    "Start low enough to move in any direction without an extra step.":
+      "Pornește suficient de jos ca să te poți deplasa în orice direcție fără un pas în plus.",
+    "Drive from the outside leg; do not reach with the lead foot.":
+      "Împinge din piciorul exterior; nu întinde piciorul din față.",
+    "Keep the hips level and the feet active without clicking together.":
+      "Ține șoldurile la același nivel și picioarele active, fără să le apropii până se ating.",
+    "Stop under control, face the play, and be ready to reverse.":
+      "Oprește-te controlat, întoarce-te spre joc și fii gata să schimbi direcția.",
+    "Use relaxed posture and an easy rhythm to raise body temperature.":
+      "Păstrează o postură relaxată și un ritm ușor ca să încălzești corpul.",
+    "Drive opposite arm and knee while landing under the hips.":
+      "Ridică brațul și genunchiul opus și aterizează cu piciorul sub șolduri.",
+    "Track the front knee over the toes and rotate through the chest.":
+      "Ține genunchiul din față aliniat peste degetele piciorului și rotește toracele.",
+    "Sit the hips back while the long leg stays extended.":
+      "Împinge șoldurile înapoi și ține piciorul opus întins.",
+    "Stand tall with ribs down and the working shoulder relaxed.":
+      "Stai drept, ține coastele coborâte și umărul care lucrează relaxat.",
+    "Keep the elbow pinned while the forearm moves under control.":
+      "Ține cotul lipit de corp și mișcă antebrațul controlat.",
+    "Keep straight wrists and squeeze the shoulder blades together.":
+      "Ține încheieturile drepte și apropie omoplații.",
+    "Lift up and out without shrugging or arching the back.":
+      "Ridică brațele în sus și în afară fără să înalți umerii sau să arcuiești spatele.",
+    "Use an athletic stance and brace before moving the ball.":
+      "Adoptă o poziție atletică și încordează trunchiul înainte să miști mingea.",
+    "Extend tall with the ball controlled in both hands.":
+      "Întinde-te sus, păstrând mingea sub control în ambele mâini.",
+    "Snap the trunk and direct force through the intended target.":
+      "Accelerează trunchiul și direcționează forța spre ținta dorită.",
+    "Stay balanced and retrieve the rebound with safe posture.":
+      "Rămâi echilibrat și recuperează mingea ricoșată cu o postură sigură.",
+    "Keep a long spine and move only to a comfortable stretch.":
+      "Menține coloana alungită și mergi doar până la o întindere confortabilă.",
+    "Relax the shoulders and keep the crossed foot flexed.":
+      "Relaxează umerii și ține laba piciorului încrucișat trasă spre tine.",
+    "Support the body and roll slowly through the working tissue.":
+      "Sprijină corpul și rulează lent peste zona lucrată.",
+    "Support the head and keep the roller off the neck and low back.":
+      "Sprijină capul și nu lăsa rola pe gât sau pe zona lombară.",
+    "Load the ankles, knees, and hips while keeping the chest controlled.":
+      "Încarcă gleznele, genunchii și șoldurile, păstrând trunchiul controlat.",
+    "Swing both arms and leave the floor from a balanced base.":
+      "Balansează ambele brațe și desprinde-te dintr-o bază echilibrată.",
+    "Stay tall through the trunk and reach without drifting sideways.":
+      "Ține trunchiul alungit și întinde-te fără să te abați lateral.",
+    "Land quietly on two feet with knees tracking over toes.":
+      "Aterizează silențios pe ambele picioare, cu genunchii aliniați peste degete.",
+    "Lean slightly from the ankles and push the floor behind you.":
+      "Înclină-te ușor din glezne și împinge podeaua în spatele tău.",
+    "Drive the front knee while the opposite arm moves forward.":
+      "Ridică energic genunchiul din față în timp ce brațul opus se mișcă înainte.",
+    "Land softly under the hips instead of reaching the foot ahead.":
+      "Aterizează ușor sub șolduri, fără să întinzi piciorul înainte.",
+    "Pull the heel through quickly and flow into the next push-off.":
+      "Trage rapid călcâiul pe sub corp și treci cursiv în următoarea propulsie.",
     "How it moves": "Cum se mișcă",
     "Controlled resistance": "Rezistență controlată",
     "Recovery sequence": "Secvență de revenire",
@@ -402,8 +622,14 @@
     "Mats": "Saltele",
     "e.g. Queen of the Court": "ex. Regina terenului",
     "Give your drill a name and pick a skill.": "Dă-i un nume exercițiului și alege o tehnică.",
+    "Choose a human demonstration…": "Alege o demonstrație cu sportiv…",
+    "Give your drill a name, human demonstration, and at least one step.":
+      "Dă-i un nume exercițiului, alege o demonstrație cu sportiv și adaugă cel puțin un pas.",
     "Drill name": "Numele exercițiului",
     "Which category it belongs to.": "Din ce categorie face parte.",
+    "Human demonstration": "Demonstrație cu sportiv",
+    "Choose the movement the athlete should demonstrate. RallyReady will not guess from your notes.":
+      "Alege mișcarea pe care trebuie să o demonstreze sportivul. RallyReady nu va ghici din notițele tale.",
     "Youngest age": "Vârsta minimă",
     "Oldest age": "Vârsta maximă",
     "1 = beginner, 5 = advanced.": "1 = începător, 5 = avansat.",
@@ -418,6 +644,10 @@
     "Save changes": "Salvează modificările",
     "Add drill": "Adaugă exercițiul",
     "Edit your drill": "Editează exercițiul tău",
+    "Give your drill a name and choose a valid human demonstration.":
+      "Dă-i un nume exercițiului și alege o demonstrație cu sportiv validă.",
+    "Add at least one step so the demonstration can follow your drill.":
+      "Adaugă cel puțin un pas pentru ca demonstrația să poată urma exercițiul.",
     "Slow it down or shorten it.": "Încetinește-l sau scurtează-l.",
     "Add a target, a score, or game speed.": "Adaugă o țintă, un scor sau ritm de joc.",
     "Drill updated.": "Exercițiu actualizat.",
@@ -810,11 +1040,26 @@
     { re: /^Find the right activity for any skill — tuned to (.+)\.$/,
       ro: function (m) { return "Găsește activitatea potrivită pentru orice tehnică — adaptat pentru " + t(m[1]) + "."; } },
     { re: /^Delete "(.+)" from your drills\?$/, ro: function (m) { return 'Ștergi „' + m[1] + '” din exercițiile tale?'; } },
+    { re: /^Step (\d+) of (\d+)(?: · Action (\d+) of (\d+))? · (.+)$/,
+      ro: function (m) {
+        return "Pasul " + m[1] + " din " + m[2] +
+          (m[3] ? " · Acțiunea " + m[3] + " din " + m[4] : "") + " · " + t(m[5]);
+      } },
+    { re: /^Court movement · Step (\d+) of (\d+)$/,
+      ro: function (m) { return "Mișcare pe teren · Pasul " + m[1] + " din " + m[2]; } },
     { re: /^Step (\d+) of (\d+)$/, ro: function (m) { return "Pasul " + m[1] + " din " + m[2]; } },
     { re: /^Show step (\d+)$/, ro: function (m) { return "Arată pasul " + m[1]; } },
-    { re: /^Animated example for (.+)$/, ro: function (m) { return "Exemplu animat pentru " + m[1]; } },
+    { re: /^Show (.+) technique$/, ro: function (m) { return "Arată tehnica: " + t(m[1]); } },
+    { re: /^Human demonstration for (.+)$/,
+      ro: function (m) { return "Demonstrație cu sportiv pentru " + t(m[1]); } },
+    { re: /^Human demonstration selection needed for (.+)$/,
+      ro: function (m) { return "Trebuie aleasă demonstrația cu sportiv pentru " + t(m[1]); } },
+    { re: /^Animated example for (.+)$/, ro: function (m) { return "Exemplu animat pentru " + t(m[1]); } },
     { re: /^Saved minimum: (\d+) player$/, ro: function (m) { return "Minim salvat: " + m[1] + " jucător"; } },
     { re: /^Saved minimum: (\d+) players$/, ro: function (m) { return "Minim salvat: " + m[1] + " jucători"; } },
+    { re: /^Ball route (\d+)$/, ro: function (m) { return "Traseul mingii " + m[1]; } },
+    { re: /^Serve route (\d+)$/, ro: function (m) { return "Traseul serviciului " + m[1]; } },
+    { re: /^Player route (\d+)$/, ro: function (m) { return "Traseul jucătorului " + m[1]; } },
 
     // team.js — summary hero dates
     { re: /^Starts · (.+)$/, ro: function (m) { return "Începe · " + m[1]; } },

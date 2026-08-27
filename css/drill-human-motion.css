@@ -1,0 +1,677 @@
+/* drill-human-motion.css — detailed human technique stage.
+ *
+ * One decoded atlas powers the visible written step. The current human pose,
+ * body-mechanics cues, real drill instruction, and progress bar share a single
+ * 6.4-second loop. The original court renderer remains available as a second
+ * tab for spacing and team movement. */
+
+/* ============================== View switch ============================== */
+.drill-motion__reduced { display: none; }
+.drill-motion__viewbar {
+  display: flex;
+  gap: 4px;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.drill-motion__view-button {
+  min-height: var(--tap-min);
+  padding: 0 var(--sp-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  cursor: pointer;
+}
+.drill-motion__view-button.is-active {
+  border-color: var(--field-border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+.drill-motion__view-button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.drill-motion__human-required {
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border-block: 1px solid var(--border);
+  background: color-mix(in srgb, var(--coral) 10%, var(--surface));
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+/* ============================ Technique stage ============================ */
+.drill-motion[data-human-demo="true"] .drill-motion__viewport {
+  aspect-ratio: auto;
+  min-height: 520px;
+  padding: var(--sp-3);
+  place-items: stretch;
+}
+.drill-motion__technique,
+.drill-motion__court-view {
+  position: absolute;
+  inset: var(--sp-3);
+  min-width: 0;
+  min-height: 0;
+}
+.drill-motion__technique[hidden],
+.drill-motion__court-view[hidden] { display: none; }
+.drill-motion__court-view {
+  display: grid;
+  overflow: hidden;
+  grid-template-rows: minmax(245px, 1.15fr) minmax(190px, 0.85fr);
+  gap: var(--sp-2);
+  place-items: stretch;
+}
+.drill-motion__court-diagram {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--field-border) 70%, transparent);
+  border-radius: calc(var(--radius-card) - 5px);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+.drill-motion__court-diagram .dam-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ======================= Court people + mechanics ======================= */
+.drill-motion.has-court-details .drill-motion__viewport {
+  aspect-ratio: auto;
+  min-height: 520px;
+}
+.drill-motion__court-summary {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-card) - 5px);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  scrollbar-width: thin;
+}
+.drill-motion__court-summary:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+.drill-motion__court-summary-title {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 850;
+  line-height: 1.2;
+}
+.drill-motion__court-metrics {
+  display: grid;
+  grid-auto-columns: minmax(82px, 1fr);
+  grid-auto-flow: column;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+.drill-motion__court-metrics::-webkit-scrollbar,
+.drill-motion__court-tokens::-webkit-scrollbar,
+.drill-motion__court-route-list::-webkit-scrollbar { display: none; }
+.drill-motion__court-metric {
+  display: flex;
+  min-width: 0;
+  min-height: 48px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.drill-motion__court-metric--additional {
+  border-color: color-mix(in srgb, var(--coral) 44%, var(--border));
+  background: color-mix(in srgb, var(--coral) 9%, var(--surface));
+}
+.drill-motion__court-metric-value {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  font-weight: 900;
+  line-height: 1;
+}
+.drill-motion__court-metric-label {
+  overflow: hidden;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.drill-motion__court-participants,
+.drill-motion__court-mechanics { margin-top: 10px; }
+.drill-motion__court-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.055em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.drill-motion__court-tokens,
+.drill-motion__court-route-list {
+  display: flex;
+  min-width: 0;
+  gap: 5px;
+  overflow-x: auto;
+  margin: 0;
+  padding: 0 0 2px;
+  overscroll-behavior-inline: contain;
+  list-style: none;
+  scrollbar-width: none;
+}
+.drill-motion__court-route-list {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  padding-bottom: 0;
+}
+.drill-motion__court-token {
+  display: inline-flex;
+  min-height: 28px;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+.drill-motion__court-token--a { --dam-avatar: var(--coral); }
+.drill-motion__court-token--b { --dam-avatar: var(--teal); }
+.drill-motion__court-token--coach { --dam-avatar: var(--i-taper); }
+.drill-motion__court-token--n { --dam-avatar: var(--slate); }
+.drill-motion__court-token--additional {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--coral) 44%, var(--border));
+  background: color-mix(in srgb, var(--coral) 7%, var(--surface));
+}
+.drill-motion__court-token--support {
+  border-style: dotted;
+  background: color-mix(in srgb, var(--i-taper) 8%, var(--surface));
+}
+.drill-motion__court-avatars {
+  display: inline-flex;
+  flex: none;
+  align-items: flex-end;
+  padding-left: 1px;
+}
+.drill-motion__court-avatar {
+  position: relative;
+  width: 9px;
+  height: 15px;
+  flex: none;
+  margin-left: -1px;
+}
+.drill-motion__court-avatar::before {
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--surface);
+  border-radius: 50%;
+  background: var(--dam-avatar, var(--slate));
+  content: "";
+}
+.drill-motion__court-avatar::after {
+  position: absolute;
+  bottom: 0;
+  left: 1px;
+  width: 8px;
+  height: 9px;
+  border: 1px solid var(--surface);
+  border-radius: 5px 5px 3px 3px;
+  background: var(--dam-avatar, var(--slate));
+  content: "";
+}
+.drill-motion__court-token-note {
+  color: var(--text-muted);
+  font-weight: 650;
+}
+.drill-motion__court-route {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 74px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding-block: 3px;
+}
+.drill-motion__court-route-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+.drill-motion__court-route-label strong {
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 900;
+}
+.drill-motion__court-route-chip {
+  display: inline-flex;
+  min-height: 26px;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: 1px dashed var(--field-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+.drill-motion__court-route-arrow { color: var(--coral); font-weight: 900; }
+.drill-motion__court-route-empty {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.25;
+}
+.drill-motion__court-operation {
+  display: grid;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding: 9px 0 0;
+  border-top: 1px solid var(--border);
+}
+.drill-motion__court-fact {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 7px;
+}
+.drill-motion__court-fact-label,
+.drill-motion__court-fact-copy { margin: 0; }
+.drill-motion__court-fact-label {
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1.3;
+}
+.drill-motion__court-fact-copy {
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.drill-motion__court-fact--step .drill-motion__court-fact-copy {
+  color: var(--text);
+  font-weight: 650;
+}
+.dam-mover--bound .dam-mover__halo {
+  fill: var(--surface);
+  fill-opacity: 0.82;
+  stroke: var(--field-border);
+  stroke-width: 1.5;
+}
+.dam-mover--bound .dam-player {
+  filter: drop-shadow(0 2px 2px color-mix(in srgb, var(--navy) 24%, transparent));
+}
+.dam-human-demo {
+  display: grid;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: minmax(248px, 1fr) auto;
+  gap: var(--sp-3);
+}
+.dam-human-visual {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--field-border) 72%, transparent);
+  border-radius: calc(var(--radius-card) - 4px);
+  background:
+    radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--surface) 92%, transparent) 0 35%, transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--teal) 7%, var(--surface-2)) 0 64%, var(--surface-2) 64% 100%);
+  isolation: isolate;
+}
+.dam-human-visual::before {
+  position: absolute;
+  inset: auto 8% 19% 8%;
+  height: 1px;
+  background: var(--field-border);
+  content: "";
+  opacity: 0.62;
+}
+.dam-human-floor {
+  position: absolute;
+  bottom: 14%;
+  left: 50%;
+  width: min(54%, 250px);
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--navy) 18%, transparent);
+  filter: blur(7px);
+  opacity: 0.46;
+  transform: translateX(-50%);
+}
+.dam-human-crop {
+  --dam-atlas-ratio: 1 / 1;
+  --dam-poster-x: 0%;
+  --dam-poster-y: 0%;
+  position: relative;
+  z-index: 1;
+  width: min(92%, 310px);
+  max-height: 94%;
+  overflow: hidden;
+  aspect-ratio: var(--dam-atlas-ratio);
+  transform-origin: center bottom;
+}
+.dam-human-atlas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 200%;
+  height: 200%;
+  max-width: none;
+  max-height: none;
+  object-fit: fill;
+  transform: translate(0, 0);
+  transform-origin: top left;
+}
+.dam-human-crop[data-mode="sequence"] .dam-human-atlas {
+  animation: dam-human-frames 6.4s steps(1, end) infinite;
+}
+.dam-human-crop[data-mode="catalog"] .dam-human-atlas {
+  transform: translate(var(--dam-poster-x), var(--dam-poster-y));
+}
+.dam-human-crop[data-mode="catalog"] {
+  animation: dam-catalog-motion 3.2s ease-in-out infinite;
+}
+@keyframes dam-human-frames {
+  0%, 24.99% { transform: translate(0, 0); }
+  25%, 49.99% { transform: translate(-50%, 0); }
+  50%, 74.99% { transform: translate(0, -50%); }
+  75%, 99.99% { transform: translate(-50%, -50%); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes dam-catalog-motion {
+  0%, 100% { transform: translateY(1px) scale(0.995); }
+  50% { transform: translateY(-3px) scale(1); }
+}
+.dam-human-label {
+  position: absolute;
+  z-index: 2;
+  top: var(--sp-2);
+  left: var(--sp-2);
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--field-border);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 850;
+  backdrop-filter: blur(7px);
+}
+
+/* ============================= Phase guide =============================== */
+.dam-human-guide {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.dam-human-actions {
+  display: flex;
+  min-height: 28px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.dam-human-action {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+}
+button.dam-human-action { cursor: pointer; }
+button.dam-human-action:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.dam-human-action.is-primary {
+  border-color: var(--field-border);
+  background: color-mix(in srgb, var(--coral) 14%, var(--surface));
+  color: var(--text);
+}
+.dam-human-phases {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dam-human-phase {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-card) - 6px);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  opacity: 1;
+}
+.dam-human-phase__number {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+.dam-human-phase__words {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+.dam-human-phase__label {
+  color: var(--text);
+  font-size: var(--fs-xs);
+  line-height: 1.2;
+}
+.dam-human-phase__cue {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.28;
+}
+.drill-motion__technique[data-mode="catalog"] .dam-human-phase {
+  border-color: var(--field-border);
+  opacity: 1;
+}
+.drill-motion__technique[data-mode="sequence"] .dam-human-phase:nth-child(1) { animation: dam-phase-1 6.4s steps(1, end) infinite; }
+.drill-motion__technique[data-mode="sequence"] .dam-human-phase:nth-child(2) { animation: dam-phase-2 6.4s steps(1, end) infinite; }
+.drill-motion__technique[data-mode="sequence"] .dam-human-phase:nth-child(3) { animation: dam-phase-3 6.4s steps(1, end) infinite; }
+.drill-motion__technique[data-mode="sequence"] .dam-human-phase:nth-child(4) { animation: dam-phase-4 6.4s steps(1, end) infinite; }
+@keyframes dam-phase-1 { 0%, 24.99% { border-color: var(--coral); background: var(--surface); } 25%, 100% { border-color: var(--border); background: color-mix(in srgb, var(--surface) 86%, transparent); } }
+@keyframes dam-phase-2 { 0%, 24.99%, 50%, 100% { border-color: var(--border); background: color-mix(in srgb, var(--surface) 86%, transparent); } 25%, 49.99% { border-color: var(--coral); background: var(--surface); } }
+@keyframes dam-phase-3 { 0%, 49.99%, 75%, 100% { border-color: var(--border); background: color-mix(in srgb, var(--surface) 86%, transparent); } 50%, 74.99% { border-color: var(--coral); background: var(--surface); } }
+@keyframes dam-phase-4 { 0%, 74.99%, 100% { border-color: var(--border); background: color-mix(in srgb, var(--surface) 86%, transparent); } 75%, 99.99% { border-color: var(--coral); background: var(--surface); } }
+
+/* ======================= Thorough instruction panel ====================== */
+.drill-motion[data-human-demo="true"] .drill-motion__progress-fill { animation-duration: 6.4s; }
+.drill-motion[data-human-demo="true"] .drill-motion__caption {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+.drill-motion__coach {
+  min-width: 0;
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-card) - 5px);
+  background: var(--surface-2);
+}
+.drill-motion__coach[hidden] { display: none; }
+.drill-motion__coach-title {
+  margin: 0 0 var(--sp-2);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: 900;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+.drill-motion__coach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.drill-motion__coach-cue {
+  position: relative;
+  padding-left: 14px;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.35;
+}
+.drill-motion__coach-cue::before {
+  position: absolute;
+  top: 0.48em;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--field-border);
+  content: "";
+}
+.drill-motion__coach-cue.is-current { color: var(--text); font-weight: 750; }
+.drill-motion__coach-cue.is-current::before { background: var(--coral); }
+.drill-motion[data-human-demo="true"] .drill-motion__dots {
+  max-width: min(48vw, 220px);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+.drill-motion[data-human-demo="true"] .drill-motion__dots::-webkit-scrollbar { display: none; }
+.drill-motion[data-human-demo="true"] .drill-motion__dot:focus-visible { outline-offset: -1px; }
+
+/* ============================ Motion states ============================== */
+.drill-motion.is-paused .dam-human-atlas,
+.drill-motion.is-auto-paused .dam-human-atlas,
+.drill-motion.is-paused .dam-human-crop,
+.drill-motion.is-auto-paused .dam-human-crop,
+.drill-motion.is-paused .dam-human-phase,
+.drill-motion.is-auto-paused .dam-human-phase { animation-play-state: paused !important; }
+.drill-motion.is-resetting .dam-human-atlas,
+.drill-motion.is-resetting .dam-human-crop,
+.drill-motion.is-resetting .dam-human-phase { animation: none !important; }
+
+/* =============================== Responsive ============================= */
+@media (min-width: 760px) {
+  .drill-motion[data-human-demo="true"] .drill-motion__viewport { min-height: 460px; }
+  .drill-motion__court-view {
+    grid-template-columns: minmax(0, 1.25fr) minmax(250px, 0.75fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .dam-human-demo {
+    grid-template-columns: minmax(0, 1.18fr) minmax(250px, 0.82fr);
+    grid-template-rows: 1fr;
+    align-items: stretch;
+  }
+  .dam-human-phases { grid-template-columns: 1fr; }
+  .dam-human-phase { padding: 10px; }
+  .drill-motion[data-human-demo="true"] .drill-motion__info {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.75fr) auto;
+    align-items: start;
+  }
+}
+@media (min-width: 900px) {
+  body:has(#screen .drill-detail) { --app-max: 960px; }
+  .drill-detail > .drill-motion { margin-inline: calc(var(--sp-2) * -1); }
+}
+@media (max-width: 759px) {
+  .drill-motion[data-human-demo="true"] .drill-motion__info {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .drill-motion[data-human-demo="true"] .drill-motion__steps { align-self: stretch; justify-content: space-between; }
+}
+@media (max-width: 380px) {
+  .drill-motion[data-human-demo="true"] .drill-motion__viewport { min-height: 540px; padding: var(--sp-2); }
+  .drill-motion__technique,
+  .drill-motion__court-view { inset: var(--sp-2); }
+  .dam-human-demo { grid-template-rows: minmax(226px, 1fr) auto; gap: var(--sp-2); }
+  .dam-human-phase { padding: 6px; grid-template-columns: 22px minmax(0, 1fr); }
+  .dam-human-phase__number { width: 22px; height: 22px; }
+  .dam-human-phase__cue { font-size: 10px; }
+  .drill-motion__court-view {
+    grid-template-rows: minmax(235px, 1.08fr) minmax(200px, 0.92fr);
+  }
+  .drill-motion__court-summary { padding: 8px; }
+  .drill-motion__court-route { grid-template-columns: 68px minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drill-motion__reduced { display: inline-flex; }
+  .drill-motion__pause,
+  .drill-motion__replay { display: none !important; }
+  .dam-human-crop,
+  .dam-human-atlas,
+  .dam-human-phase { animation: none !important; }
+  .dam-human-crop[data-mode="sequence"] .dam-human-atlas { transform: translate(0, -50%); }
+  .dam-human-crop[data-mode="catalog"] .dam-human-atlas {
+    transform: translate(var(--dam-poster-x), var(--dam-poster-y));
+  }
+  .dam-human-phase { opacity: 1; }
+}
+
+@media print {
+  .drill-motion__viewbar { display: none !important; }
+  .drill-motion[data-human-demo="true"] .drill-motion__viewport { min-height: 360px; }
+  .drill-motion__technique { display: block !important; }
+  .drill-motion__court-view { display: none !important; }
+  .dam-human-crop,
+  .dam-human-atlas,
+  .dam-human-phase { animation: none !important; }
+  .dam-human-crop[data-mode="sequence"] .dam-human-atlas { transform: translate(0, -50%); }
+}

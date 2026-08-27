@@ -72,6 +72,8 @@
   <link rel="stylesheet" href="css/diagram.css" />
   <!-- Responsive, data-driven motion examples shown at the top of drill details. -->
   <link rel="stylesheet" href="css/drill-animation.css" />
+  <!-- Human pose atlases, synchronized technique phases, and responsive detail stage. -->
+  <link rel="stylesheet" href="css/drill-human-motion.css" />
   <!-- Ideas feed (the new Practice home): scrollable coaching inspiration. -->
   <link rel="stylesheet" href="css/feed.css" />
   <!-- Print-only stylesheet (a coach's carry sheet). -->
@@ -231,8 +233,10 @@
   <script defer src="js/extras-data-10.js"></script>
   <script defer src="js/extras-data-11.js"></script>
   <script defer src="js/extras-data-12.js"></script>
-  <!-- Compiles each drill's real court spec into a responsive animated example;
-       reviewed uncovered drills and factual custom fields cover the remainder. -->
+  <!-- Human motion library maps every saved drill step to reviewed athlete pose
+       sequences; the animation engine pairs that technique view with the real
+       court spec so coaches see both body mechanics and drill organization. -->
+  <script defer src="js/drill-human-motion.js"></script>
   <script defer src="js/drill-animation.js"></script>
   <script defer src="js/ui.js"></script>
   <!-- Player photo pipeline + store (separate localStorage key). Loads before the

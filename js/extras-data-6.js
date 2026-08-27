@@ -155,7 +155,8 @@ RR.extras = RR.extras || {};
         paths: [],
         legend: [{ tone: "a", text: "Setter" }, { tone: "b", text: "Feeder" }] },
       { title: "Run to the right-front spot", caption: "As the feeder tosses, the setter runs to the setting spot at the right-front, getting there EARLY and turning so the hips face the left sideline.", w: 9, h: 9, net: 1.6, court: [{ x: 0, y: 0, w: 9, h: 9 }],
-        players: [{ x: 4.5, y: 7, label: "P", team: "b" }, { x: 4.5, y: 5, label: "St", team: "a", note: "release" }, { x: 6, y: 2.8, label: "•", team: "n", note: "spot" }],
+        rings: [{ x: 6, y: 2.8, r: 0.52, tone: "target" }],
+        players: [{ x: 4.5, y: 7, label: "P", team: "b" }, { x: 4.5, y: 5, label: "St", team: "a", note: "release" }],
         paths: [{ from: [4.5, 5], to: [6, 3.1], kind: "move", label: "run early", curve: 0.2 }, { from: [4.5, 7], to: [5.8, 3.3], kind: "ball", label: "toss", curve: 0.15 }],
         legend: [{ tone: "a", text: "Setter" }, { tone: "n", text: "Setting spot" }] },
       setRep({ title: "Set the called ball", both: true, setterX: 6, feederX: 4.5, feederY: 7, setLabel: "front or back", caption: "Square at the spot and set the called ball — a front set to the LEFT antenna or a back set to the RIGHT — then jog back to middle and repeat, beating the ball to the spot every time." })
@@ -195,12 +196,22 @@ RR.extras = RR.extras || {};
   E["transition-setting-back-row"] = {
     diagrams: dk.seq(
       { title: "Setter in back-row base", caption: "The setter starts in a back-row defensive spot — their real starting job in a rally — as a coach prepares to send a dug ball up.", w: 9, h: 9, net: 1.6, court: [{ x: 0, y: 0, w: 9, h: 9 }],
-        players: [{ x: 3, y: 5, label: "C", team: "coach", note: "sends dig up" }, { x: 6.4, y: 7.4, label: "St", team: "a", note: "back-row base" }],
+        players: [
+          { x: 3, y: 5, label: "C", team: "coach", note: "sends dig up" },
+          { x: 6.4, y: 7.4, label: "St", team: "a", note: "back-row base" },
+          { x: 2, y: 2.6, label: "H", team: "a", note: "outside target" },
+          { x: 7, y: 2.6, label: "H", team: "a", note: "right-side target" }
+        ],
         paths: [],
         legend: [{ tone: "coach", text: "Coach" }, { tone: "a", text: "Setter" }] },
       { title: "Sprint to the net & set", caption: "On the dug ball, the setter SPRINTS to the setting target, squares up, and sets a hittable outside ball. Change where the dig comes from so the release starts from different spots.", w: 9, h: 9, net: 1.6, court: [{ x: 0, y: 0, w: 9, h: 9 }],
         zones: [{ x: 1.4, y: 2, w: 1.6, h: 1.4, tone: "target", label: "4" }],
-        players: [{ x: 3, y: 5, label: "C", team: "coach" }, { x: 6.4, y: 7.4, label: "St", team: "a", note: "transitions" }],
+        players: [
+          { x: 3, y: 5, label: "C", team: "coach", note: "sends the dug ball" },
+          { x: 6.4, y: 7.4, label: "St", team: "a", note: "transitions" },
+          { x: 2, y: 2.6, label: "H", team: "a", note: "takes the outside set" },
+          { x: 7, y: 2.6, label: "H", team: "a", note: "alternate target" }
+        ],
         paths: [{ from: [6.4, 7.4], to: [6, 3.2], kind: "move", label: "sprint", curve: 0.18 }, { from: [3, 5], to: [5.8, 3.4], kind: "ball", label: "dig", curve: 0.12 }, { from: [6, 3.1], to: [2, 2.6], kind: "ball", label: "set", curve: 0.2 }],
         legend: [{ tone: "coach", text: "Dig" }, { tone: "a", text: "Setter" }, { tone: "target", text: "Outside (4)" }] }
     )
@@ -228,7 +239,12 @@ RR.extras = RR.extras || {};
         legend: [{ tone: "coach", text: "Off-target toss" }, { tone: "a", text: "Setter" }] },
       { title: "Chase, square, deliver", caption: "The setter SPRINTS to the ball, gets as square as they can, and sets a hittable ball. When it can't be hand-set cleanly, they bump-set a safe, high ball instead. Count how many bad passes still become a hittable set.", w: 9, h: 9, net: 1.6, court: [{ x: 0, y: 0, w: 9, h: 9 }],
         zones: [{ x: 1.4, y: 2, w: 1.6, h: 1.4, tone: "target", label: "4" }],
-        players: [{ x: 7, y: 6, label: "St", team: "a", note: "chases" }, { x: 4, y: 5, label: "•", team: "n", note: "ball" }],
+        balls: [{ x: 4, y: 5 }],
+        players: [
+          { x: 4.5, y: 6.4, label: "C", team: "coach", note: "off-target toss" },
+          { x: 7, y: 6, label: "St", team: "a", note: "chases" },
+          { x: 2, y: 2.6, label: "H", team: "a", note: "hitter target" }
+        ],
         paths: [{ from: [7, 6], to: [4.3, 5.1], kind: "move", label: "chase", curve: 0.15 }, { from: [4, 4.8], to: [2, 2.6], kind: "ball", label: "hittable set", curve: 0.2 }],
         legend: [{ tone: "a", text: "Setter" }, { tone: "target", text: "Outside (4)" }] }
     )
@@ -303,17 +319,17 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       { title: "Quick to the middle", caption: "Off a tossed pass, set a LOW, fast quick set just in front of you for the middle hitter.", w: 9, h: 9, net: 1.6, court: [{ x: 0, y: 0, w: 9, h: 9 }],
         zones: [{ x: 3.7, y: 2, w: 1.6, h: 1.2, tone: "target", label: "quick" }],
-        players: [{ x: 4.5, y: 7, label: "P", team: "b", note: "passes" }, { x: 6.2, y: 3.4, label: "St", team: "a" }],
+        players: [{ x: 4.5, y: 7, label: "P", team: "b", note: "passes" }, { x: 6.2, y: 3.4, label: "St", team: "a" }, { x: 4.5, y: 2.55, label: "M", team: "a", note: "quick hitter" }],
         paths: [{ from: [4.5, 7], to: [6, 3.8], kind: "ball", label: "pass", curve: 0.12 }, { from: [6, 3.4], to: [4.6, 3], kind: "ball", label: "quick", curve: -0.1 }],
         legend: [{ tone: "target", text: "Quick" }, { tone: "a", text: "Setter" }] },
       { title: "Shoot to the pin", caption: "On the next ball, push a fast, FLAT 'shoot' set out to the antenna so the outside hitter swings on it quickly.", w: 9, h: 9, net: 1.6, court: [{ x: 0, y: 0, w: 9, h: 9 }],
         zones: [{ x: 1.4, y: 2, w: 1.6, h: 1.2, tone: "target", label: "shoot" }],
-        players: [{ x: 4.5, y: 7, label: "P", team: "b" }, { x: 6.2, y: 3.4, label: "St", team: "a" }],
+        players: [{ x: 4.5, y: 7, label: "P", team: "b" }, { x: 6.2, y: 3.4, label: "St", team: "a" }, { x: 2, y: 2.55, label: "OH", team: "a", note: "pin hitter" }],
         paths: [{ from: [4.5, 7], to: [6, 3.8], kind: "ball", label: "pass", curve: 0.12 }, { from: [6, 3.3], to: [2, 2.6], kind: "ball", label: "fast & flat", curve: 0.05 }],
         legend: [{ tone: "target", text: "Shoot (pin)" }, { tone: "a", text: "Setter" }] },
       { title: "High ball outside", caption: "Then set a HIGH, loopy outside ball that lets a hitter take a full approach. Have the coach call the speed at the last second so the setter has to adjust.", w: 9, h: 9, net: 1.6, court: [{ x: 0, y: 0, w: 9, h: 9 }],
         zones: [{ x: 1.4, y: 2, w: 1.6, h: 1.2, tone: "target", label: "high" }],
-        players: [{ x: 4.5, y: 7, label: "P", team: "b" }, { x: 6.2, y: 3.4, label: "St", team: "a" }],
+        players: [{ x: 4.5, y: 7, label: "P", team: "b" }, { x: 6.2, y: 3.4, label: "St", team: "a" }, { x: 2, y: 2.55, label: "OH", team: "a", note: "outside hitter" }],
         paths: [{ from: [4.5, 7], to: [6, 3.8], kind: "ball", label: "pass", curve: 0.12 }, { from: [6, 3.3], to: [2, 2.6], kind: "ball", label: "high & loopy", curve: 0.3 }],
         legend: [{ tone: "target", text: "High outside" }, { tone: "a", text: "Setter" }] }
     )
@@ -324,12 +340,27 @@ RR.extras = RR.extras || {};
   E["setter-live-read-options"] = {
     diagrams: dk.seq(
       { title: "Live first ball", caption: "Run a live first ball so the setter gets DIFFERENT passes — in-system and out. The setter releases to the net and reads as the ball comes.", w: 9, h: 9, net: 1.6, court: [{ x: 0, y: 0, w: 9, h: 9 }],
-        players: [{ x: 3, y: 6.6, label: "P", team: "b", note: "live pass" }, { x: 6.4, y: 3.4, label: "St", team: "a", note: "reads pass" }],
+        players: [
+          { x: 3, y: 6.6, label: "P", team: "b", note: "live pass" },
+          { x: 6.4, y: 3.4, label: "St", team: "a", note: "reads pass" },
+          { x: 2, y: 2.55, label: "OH", team: "a", note: "pin option" },
+          { x: 4.5, y: 2.55, label: "M", team: "a", note: "quick option" },
+          { x: 6.8, y: 2.55, label: "RS", team: "a", note: "back-set option" },
+          { x: 4.5, y: 5.75, label: "BR", team: "a", note: "pipe option" }
+        ],
         paths: [{ from: [3, 6.6], to: [6.1, 3.8], kind: "ball", label: "varied pass", curve: 0.15 }],
         legend: [{ tone: "b", text: "Passer" }, { tone: "a", text: "Setter" }] },
       { title: "Read block, pick the option", caption: "The setter reads where the other team's block is and how good the pass is, then chooses the set — quick, pin, back set, or pipe — that gives the best matchup. Talk through the choices afterward.", w: 9, h: 9, net: 1.6, court: [{ x: 0, y: 0, w: 9, h: 9 }],
         zones: [{ x: 1.4, y: 2, w: 1.5, h: 1.2, tone: "target", label: "4" }, { x: 3.8, y: 2, w: 1.5, h: 1.2, tone: "target", label: "quick" }, { x: 6.1, y: 2, w: 1.5, h: 1.2, tone: "target", label: "2" }, { x: 3.8, y: 5.4, w: 1.5, h: 1.2, tone: "target", label: "pipe" }],
-        players: [{ x: 6.4, y: 3.4, label: "St", team: "a", note: "chooses" }, { x: 2.4, y: 1.6, label: "Bl", team: "b", note: "block" }, { x: 4.5, y: 1.6, label: "Bl", team: "b" }],
+        players: [
+          { x: 6.4, y: 3.4, label: "St", team: "a", note: "chooses" },
+          { x: 2.4, y: 1.6, label: "Bl", team: "b", note: "block" },
+          { x: 4.5, y: 1.6, label: "Bl", team: "b" },
+          { x: 2, y: 2.55, label: "OH", team: "a", note: "pin" },
+          { x: 4.5, y: 2.55, label: "M", team: "a", note: "quick" },
+          { x: 6.8, y: 2.55, label: "RS", team: "a", note: "back set" },
+          { x: 4.5, y: 5.75, label: "BR", team: "a", note: "pipe" }
+        ],
         paths: [{ from: [6.2, 3.3], to: [2, 2.5], kind: "ball", label: "pin", curve: 0.18 }, { from: [6.2, 3.4], to: [4.5, 2.5], kind: "ball", label: "quick", curve: 0 }, { from: [6.3, 3.5], to: [4.5, 5.8], kind: "ball", label: "pipe", curve: 0.1 }, { from: [6.4, 3.2], to: [6.8, 2.5], kind: "ball", label: "back", curve: -0.1 }],
         legend: [{ tone: "target", text: "Set options" }, { tone: "b", text: "Block to read" }, { tone: "a", text: "Setter" }] }
     )

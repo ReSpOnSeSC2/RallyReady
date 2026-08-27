@@ -658,7 +658,7 @@ window.RR = window.RR || {};
       equipment: ["balls", "net"],
       setup: "Full-team Queen of the Court: 6-player teams rotate through the scoring side, winning to stay and score or crossing over to challenge. It brings the win-to-stay energy of Queen of the Court to full-sided play.",
       steps: [
-        "One six-player team holds the scoring side. Another challenges, with more teams waiting.",
+        "One six-player team holds the scoring side and another challenges. If more teams are available, they wait behind the challenger side.",
         "Put a serve or free ball in play, and play the rally out six on six.",
         "Win on the scoring side to earn a point and stay. Lose and rotate off.",
         "Winning challengers cross over to become the new scoring team. Play to a target."

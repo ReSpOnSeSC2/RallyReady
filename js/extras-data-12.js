@@ -41,8 +41,9 @@ RR.extras = RR.extras || {};
         { x: 0.5, y: 0.6, w: 2.3, h: 2.3, tone: "good", label: "5 pts" },
         { x: 6.2, y: 0.6, w: 2.3, h: 2.3, tone: "good", label: "5 pts" },
         { x: 3.3, y: 0.9, w: 2.4, h: 2.0, tone: "target", label: "3 pts" },
-        { x: 1.4, y: 5.4, w: 6.2, h: 2.2, tone: "neutral", label: "1 pt — anywhere in" }
+        { x: 1.4, y: 3.4, w: 6.2, h: 2.0, tone: "neutral", label: "1 pt — anywhere in" }
       ],
+      aim: 0,
       caption: "Numbered hoops: deep corners score most, the seam less, anywhere in is one. Teams take turns serving and race to a target score — a missed serve can hand the other team a point."
     })
   };
@@ -51,9 +52,11 @@ RR.extras = RR.extras || {};
   E["pass-to-the-hoop-target"] = {
     diagram: dk.feedLine({
       net: 6,
-      feederLabel: "S", feederNote: "server",
+      feederLabel: "S", feederNote: "server behind end line", feederY: 0.35, feederTeam: "b",
       activeLabel: "P", action: "high pass to hoop",
-      targetLabel: "◎",
+      targetObject: "ring", queue: 0,
+      moveTo: [4.5, 0.65], moveLabel: "rotate roles after 10",
+      court: [{ x: 0, y: 0.8, w: 9, h: 10.2 }],
       caption: "A hoop sits on the floor at the setter's target in right-front. The server sends a ball over; the passer plays a high, soft pass that drops into the hoop's airspace. Count passes that find the hoop, then rotate."
     })
   };
@@ -160,9 +163,9 @@ RR.extras = RR.extras || {};
         { x: 7.4, y: 4.6, label: "T", team: "a", note: "dig target" }
       ],
       paths: [
-        { from: [4.5, 9.8], to: [4.5, 4.4], kind: "move", label: "quick feet", curve: 0 },
+        { from: [4.5, 9.8], via: [[4.5, 4.4]], to: [6.1, 4.2], kind: "move", label: "quick feet → read → break", curve: 0.08, playerIndex: 1 },
         { from: [4.5, 1.6], to: [6.3, 4.0], kind: "ball", label: "ball wide", curve: 0.2 },
-        { from: [4.7, 4.1], to: [7, 4.6], kind: "ball", label: "dig to target", curve: 0.25 }
+        { from: [6.3, 4.0], to: [7, 4.6], kind: "ball", label: "dig to target", curve: 0.25 }
       ],
       legend: [{ tone: "neutral", text: "Ladder" }, { tone: "coach", text: "Tosser" }, { tone: "a", text: "Player + target" }]
     }

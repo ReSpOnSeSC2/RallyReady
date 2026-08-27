@@ -112,8 +112,10 @@ RR.extras = RR.extras || {};
         { x: 3, y: 6.8, label: "B", team: "a", note: "digger" }
       ],
       paths: [
-        { from: [2.6, 6.4], to: [2.6, 4.4], kind: "ball", label: "dig up", curve: -0.3 },
-        { from: [2.7, 6.6], to: [1, 1.8], kind: "serve", label: "hit to called zone", curve: 0.12 }
+        { from: [3, 3.3], to: [3, 6.4], kind: "serve", label: "controlled hit", curve: 0.12 },
+        { from: [3, 6.4], to: [3, 4.8], kind: "ball", label: "dig up", curve: -0.2 },
+        { from: [3, 4.8], to: [3, 3.3], kind: "ball", label: "set back", curve: 0.18 },
+        { from: [3, 3.3], to: [1, 1.8], kind: "serve", label: "hit called zone", curve: 0.12 }
       ],
       legend: [{ tone: "target", text: "Called target" }]
     }
@@ -253,7 +255,10 @@ RR.extras = RR.extras || {};
         players: [
           { x: 4.5, y: 8.4, label: "P", team: "a", note: "passer" },
           { x: 6.4, y: 7, label: "St", team: "a", note: "setter" },
-          { x: 2.6, y: 7, label: "H", team: "a", note: "hitter" }
+          { x: 2.6, y: 7, label: "H", team: "a", note: "hitter" },
+          { x: 4.5, y: 7.75, label: "C", team: "a", note: "attack cover" },
+          { x: 1.6, y: 9.6, label: "L", team: "a", note: "left-back cover" },
+          { x: 7.4, y: 9.6, label: "R", team: "a", note: "right-back cover" }
         ],
         paths: [
           { from: [4.5, 8.2], to: [6.3, 7.1], kind: "ball", label: "pass", curve: 0.15 },
@@ -269,24 +274,28 @@ RR.extras = RR.extras || {};
         players: [
           { x: 4.5, y: 1.2, label: "C", team: "coach", note: "tosses in" },
           { x: 2, y: 8.6, label: "", team: "a" }, { x: 4.5, y: 9.2, label: "", team: "a" }, { x: 7, y: 8.6, label: "", team: "a" },
-          { x: 3, y: 7, label: "", team: "a" }, { x: 6, y: 7, label: "", team: "a" },
+          { x: 3, y: 7, label: "H", team: "a", note: "left-side hitter" }, { x: 6, y: 7, label: "H", team: "a", note: "right-side hitter" },
           { x: 6.6, y: 7, label: "St", team: "a", note: "setter" }
         ],
         paths: [
           { from: [4.5, 1.6], to: [4.5, 8.8], kind: "ball", label: "toss", curve: 0.12 },
-          { from: [4.5, 8.8], to: [6.5, 7.2], kind: "ball", label: "pass to setter", curve: 0.2 }
+          { from: [4.5, 8.8], to: [6.5, 7.2], kind: "ball", label: "pass to setter", curve: 0.2 },
+          { from: [6.5, 7.2], to: [3.2, 6.8], kind: "ball", label: "planned set", curve: 0.2 },
+          { from: [3, 6.8], to: [4.5, 1.8], kind: "serve", label: "planned attack", curve: 0.1 }
         ],
         legend: [{ tone: "coach", text: "Coach" }, { tone: "a", text: "Serve-receive" }] },
       { title: "Rotate through all six", caption: "After running each rotation, everyone rotates one spot clockwise to the next rotation's formation and repeats — working through all six, fixing overlaps and who-does-what along the way.", w: 9, h: 11, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0.6, w: 9, h: 9.6 }],
         players: [
-          { x: 2.6, y: 7, label: "", team: "a" }, { x: 4.5, y: 7, label: "", team: "a" }, { x: 6.4, y: 7, label: "", team: "a" },
-          { x: 2.6, y: 9.4, label: "", team: "a" }, { x: 4.5, y: 9.4, label: "", team: "a" }, { x: 6.4, y: 9.4, label: "", team: "a" }
+          { x: 2.6, y: 7, label: "4", team: "a" }, { x: 4.5, y: 7, label: "3", team: "a" }, { x: 6.4, y: 7, label: "2", team: "a" },
+          { x: 2.6, y: 9.4, label: "5", team: "a" }, { x: 4.5, y: 9.4, label: "6", team: "a" }, { x: 6.4, y: 9.4, label: "1", team: "a" }
         ],
         paths: [
-          { from: [4.5, 7], to: [6.4, 7], kind: "move", curve: 0.3, label: "rotate" },
-          { from: [6.4, 7.2], to: [6.4, 9.2], kind: "move", curve: 0.3 },
-          { from: [6.4, 9.4], to: [2.6, 9.4], kind: "move", curve: 0.3 },
-          { from: [2.6, 9.2], to: [2.6, 7.2], kind: "move", curve: 0.3 }
+          { from: [2.6, 7], to: [4.5, 7], kind: "move", curve: 0.2, label: "rotate clockwise", playerIndex: 0 },
+          { from: [4.5, 7], to: [6.4, 7], kind: "move", curve: 0.2, playerIndex: 1 },
+          { from: [6.4, 7.2], to: [6.4, 9.2], kind: "move", curve: 0.2, playerIndex: 2 },
+          { from: [6.4, 9.4], to: [4.5, 9.4], kind: "move", curve: 0.2, playerIndex: 5 },
+          { from: [4.5, 9.4], to: [2.6, 9.4], kind: "move", curve: 0.2, playerIndex: 4 },
+          { from: [2.6, 9.2], to: [2.6, 7.2], kind: "move", curve: 0.2, playerIndex: 3 }
         ],
         legend: [{ tone: "move", text: "Rotate to next rotation" }] }
     )

@@ -404,6 +404,28 @@
   font-weight: 700;
   stroke-width: 3px;
 }
+.dam-staging {
+  fill: color-mix(in srgb, var(--slate) 7%, var(--surface));
+  stroke: color-mix(in srgb, var(--slate) 38%, var(--border));
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.dam-staging-label {
+  fill: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+.dam-staged-person__head { fill: var(--slate); }
+.dam-staged-person__body {
+  fill: none;
+  stroke: var(--slate);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
 .dam-player-focus {
   fill: none;
   stroke: var(--coral);

@@ -91,6 +91,10 @@ RR.extras = RR.extras || {};
         blockers: [{ x: 5.8, label: "B", note: "jumps & presses" }],
         hitter: { x: 5.8, label: "L", note: "jumps" },
         balls: [{ x: 5.8, y: 3.6 }],
+        paths: [
+          { from: [5.8, 4.6], to: [5.8, 3.85], kind: "move", label: "mirror jump & press", curve: 0, playerIndex: 0 },
+          { from: [5.8, 2.6], to: [5.8, 3.35], kind: "move", label: "leader jumps", curve: 0, playerIndex: 1 }
+        ],
         legend: [{ tone: "a", text: "Mirror" }, { tone: "b", text: "Leader" }]
       })
     )
@@ -108,11 +112,12 @@ RR.extras = RR.extras || {};
       netBlock({
         title: "Back to middle, then the other pin",
         caption: "Shuffle back to the middle, then over to the other pin. Keep your hands up and your body parallel to the net the whole time.",
-        blockers: [{ x: 4.5, label: "B", note: "middle" }],
-        paths: [
-          { from: [2.4, 4.6], to: [4.5, 4.6], kind: "move", label: "back to middle", curve: 0 },
-          { from: [4.5, 4.6], to: [6.6, 4.6], kind: "move", label: "to other pin", curve: 0 }
-        ],
+        blockers: [{ x: 2.4, label: "B", note: "starts at first pin" }],
+        paths: [{
+          from: [2.4, 4.6], via: [[4.5, 4.6]], to: [6.6, 4.6],
+          kind: "move", label: "back to middle → other pin", curve: 0,
+          playerIndex: 0
+        }],
         legend: [{ tone: "move", text: "Shuffle steps" }]
       })
     )
@@ -124,10 +129,11 @@ RR.extras = RR.extras || {};
         title: "Open & crossover",
         caption: "Advanced swing-block to the pin. Start balanced with hands LOW and ready (not already up). Open with a directional step, then a big crossover toward the pin, swinging your arms back like an approach.",
         blockers: [{ x: 4.5, label: "B", note: "hands low, ready" }],
-        paths: [
-          { from: [4.5, 4.8], to: [5.6, 4.8], kind: "move", label: "open step", curve: 0 },
-          { from: [5.6, 4.8], to: [7.2, 4.8], kind: "move", label: "big crossover", curve: 0 }
-        ],
+        paths: [{
+          from: [4.5, 4.8], via: [[5.6, 4.8]], to: [7.2, 4.8],
+          kind: "move", label: "open step → big crossover", curve: 0,
+          playerIndex: 0
+        }],
         legend: [{ tone: "move", text: "Swing-block footwork" }]
       }),
       netBlock({
@@ -152,8 +158,8 @@ RR.extras = RR.extras || {};
       netBlock({
         title: "Crossover to the other pin",
         caption: "Move to the other pin with a CROSSOVER step and block-jump there. Keep going pin to pin, staying square each time. Rest fully, then repeat — good footwork matters more than getting tired.",
-        blockers: [{ x: 6.8, label: "B", note: "block-jump here" }],
-        paths: [{ from: [2.2, 4.6], to: [6.8, 4.6], kind: "move", label: "crossover across", curve: 0 }],
+        blockers: [{ x: 2.2, label: "B", note: "starts after first block" }],
+        paths: [{ from: [2.2, 4.6], to: [6.8, 4.6], kind: "move", label: "crossover across → block-jump", curve: 0, playerIndex: 0 }],
         balls: [{ x: 6.8, y: 3.6 }],
         legend: [{ tone: "move", text: "Footwork" }, { tone: "a", text: "Blocker" }]
       })
@@ -175,8 +181,12 @@ RR.extras = RR.extras || {};
       netBlock({
         title: "Close to the pin",
         caption: "On a set to the pin, the middle uses a quick CROSSOVER to close to the outside blocker. Both jump together and seal the gap between their hands — no space. Reset to the middle and repeat to the other pin.",
-        blockers: [{ x: 6.2, label: "M", note: "closed in" }, { x: 7.4, label: "O", note: "outside" }],
-        paths: [{ from: [4.5, 4.6], to: [6, 4.6], kind: "move", label: "crossover to close", curve: 0 }],
+        blockers: [{ x: 4.5, label: "M", note: "starts middle" }, { x: 7.4, label: "O", note: "outside" }],
+        hitter: { x: 6.4, label: "St", note: "sets to pin" },
+        paths: [
+          { from: [4.5, 4.6], to: [6, 4.6], kind: "move", label: "crossover to close", curve: 0, playerIndex: 0 },
+          { from: [6.4, 2.6], to: [7, 3.5], kind: "ball", label: "set to pin", curve: 0.1 }
+        ],
         balls: [{ x: 6.8, y: 3.6 }],
         legend: [{ tone: "move", text: "Close the gap" }, { tone: "a", text: "Blockers" }]
       })
@@ -190,14 +200,20 @@ RR.extras = RR.extras || {};
         caption: "The OUTSIDE blocker sets the block at the pin first, taking away the hitter's line and marking the spot the middle will close to.",
         blockers: [{ x: 7.2, label: "O", note: "sets the spot" }, { x: 4.5, label: "M", note: "starts middle" }],
         hitter: { x: 7.2, label: "H", note: "hitter" },
+        extra: [{ x: 4.5, y: 6.1, label: "D", team: "a", note: "defends deflection" }],
+        paths: [{ from: [7.2, 2.6], to: [7.2, 3.7], kind: "serve", label: "live swing", curve: 0 }],
         legend: [{ tone: "a", text: "Blockers" }, { tone: "b", text: "Hitter" }]
       }),
       netBlock({
         title: "Middle closes & seals",
         caption: "The MIDDLE closes in and presses inside hands together with the outside — no gap between them. Both reach over and angle hands to send the ball to the defenders. Then repeat against a live hitter.",
-        blockers: [{ x: 6.1, label: "M", note: "closes the gap" }, { x: 7.4, label: "O", note: "outside" }],
+        blockers: [{ x: 4.5, label: "M", note: "closes to the outside" }, { x: 7.4, label: "O", note: "sets the pin" }],
         hitter: { x: 7.2, label: "H", note: "hitter" },
-        paths: [{ from: [4.5, 4.6], to: [5.9, 4.6], kind: "move", label: "close & seal", curve: 0 }],
+        extra: [{ x: 4.5, y: 6.1, label: "D", team: "a", note: "reads deflection" }],
+        paths: [
+          { from: [4.5, 4.6], to: [6.1, 4.6], kind: "move", label: "close & seal", curve: 0, playerIndex: 0 },
+          { from: [7.2, 2.6], to: [4.7, 5.8], via: [[6.8, 3.6]], kind: "serve", label: "swing → sealed block", curve: 0 }
+        ],
         balls: [{ x: 6.8, y: 3.6 }],
         legend: [{ tone: "move", text: "Seal the gap" }, { tone: "a", text: "Blockers" }, { tone: "b", text: "Hitter" }]
       })
@@ -221,6 +237,10 @@ RR.extras = RR.extras || {};
         blockers: [{ x: 4.5, label: "B", note: "jumps with hitter" }],
         hitter: { x: 4.5, label: "H", note: "quick attack" },
         balls: [{ x: 4.5, y: 3.6 }],
+        paths: [
+          { from: [4.5, 4.6], to: [4.5, 3.85], kind: "move", label: "commit & press", curve: 0, playerIndex: 0 },
+          { from: [4.5, 2.8], to: [4.5, 3.65], kind: "serve", label: "quick attack", curve: 0 }
+        ],
         legend: [{ tone: "a", text: "Blocker" }, { tone: "b", text: "Hitter" }]
       })
     )
@@ -240,6 +260,10 @@ RR.extras = RR.extras || {};
           { x: 4.5, y: 3.4, label: "B", team: "a", note: "blocks" }
         ],
         balls: [{ x: 4.5, y: 2.4 }],
+        paths: [
+          { from: [4.5, 1.3], to: [4.5, 2.4], kind: "ball", label: "coach feed", curve: 0 },
+          { from: [4.5, 3.4], to: [4.5, 2.55], kind: "move", label: "jump & press", curve: 0, playerIndex: 1 }
+        ],
         legend: [{ tone: "coach", text: "Coach" }, { tone: "a", text: "Blocker" }]
       },
       {
@@ -248,13 +272,12 @@ RR.extras = RR.extras || {};
         w: 9, h: 10, net: 2.2, lines: [{ y: 5.2 }],
         court: [{ x: 0, y: 0, w: 9, h: 10 }],
         players: [
-          { x: 4.5, y: 6.4, label: "B", team: "a", note: "transitions to hit" },
+          { x: 4.5, y: 3.6, label: "B", team: "a", note: "lands, transitions, then attacks" },
           { x: 6.6, y: 3.2, label: "St", team: "a", note: "sets" }
         ],
         paths: [
-          { from: [4.5, 3.6], to: [4.5, 6], kind: "move", label: "drop off the net", curve: 0 },
+          { from: [4.5, 3.6], via: [[4.5, 6]], to: [4.5, 3.6], kind: "move", label: "drop off → approach back in", curve: 0, playerIndex: 0 },
           { from: [6.4, 3.2], to: [4.8, 3.8], kind: "ball", label: "set", curve: 0.2 },
-          { from: [4.5, 5.8], to: [4.5, 3.6], kind: "move", label: "approach & hit", curve: 0 }
         ],
         legend: [{ tone: "move", text: "Transition footwork" }, { tone: "a", text: "Hitter + setter" }]
       }
@@ -280,11 +303,15 @@ RR.extras = RR.extras || {};
       blockers: [{ x: 4.5, label: "B", note: "watch the arm, then jump" }],
       hitter: { x: 4.5, label: "H", note: "holds ball on box" },
       balls: [{ x: 4.5, y: 3.5 }],
-      extra: [
-        { x: 2.4, y: 2.6, label: "", team: "n", note: "left spot" },
-        { x: 6.6, y: 2.6, label: "", team: "n", note: "right spot" }
+      zones: [
+        { x: 1.9, y: 2.1, w: 1, h: 1, tone: "neutral", label: "LEFT" },
+        { x: 6.1, y: 2.1, w: 1, h: 1, tone: "neutral", label: "RIGHT" }
       ],
-      legend: [{ tone: "a", text: "Blocker" }, { tone: "b", text: "Hitter on box" }, { tone: "n", text: "Other contact spots" }]
+      paths: [
+        { from: [4.5, 4.6], to: [4.5, 4.05], kind: "move", label: "jump + press", playerIndex: 0 },
+        { from: [4.5, 3.5], to: [4.5, 2.8], kind: "ball", label: "seal down", curve: 0 }
+      ],
+      legend: [{ tone: "a", text: "Blocker" }, { tone: "b", text: "Hitter on box" }, { tone: "neutral", text: "Change contact spot" }]
     })
   };
 
@@ -292,10 +319,11 @@ RR.extras = RR.extras || {};
     diagram: netBlock({
       caption: "Safe two-foot block mechanics. Start square to the net, hands up in front of the chest. Bend the knees and jump STRAIGHT UP, pressing hands over the net, then land softly on two feet in the SAME spot, knees bent and balanced. Repeat slowly, body square, landing controlled.",
       blockers: [{ x: 4.5, label: "B", note: "jump straight up & land same spot" }],
-      paths: [
-        { from: [4.2, 4.6], to: [4.2, 3.8], kind: "move", label: "up", curve: 0 },
-        { from: [4.8, 3.8], to: [4.8, 4.6], kind: "move", label: "land soft", curve: 0 }
-      ],
+      paths: [{
+        from: [4.5, 4.6], via: [[4.5, 3.8]], to: [4.5, 4.6],
+        kind: "move", label: "jump up → land soft", curve: 0,
+        playerIndex: 0
+      }],
       legend: [{ tone: "move", text: "Straight up & down" }, { tone: "a", text: "Blocker" }]
     })
   };

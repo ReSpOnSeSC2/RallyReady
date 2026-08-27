@@ -36,11 +36,14 @@ RR.dk = (function () {
     var players = spread(servers, 1.5, 7.5).map(function (x) {
       return { x: x, y: 12.5, label: "S", team: "a" };
     });
+    (opt.extraPlayers || []).forEach(function (player) { players.push(player); });
     var zones = opt.zones || [
       { x: 0.5, y: 0.7, w: 3, h: 2.4, tone: "target", label: "1" },
       { x: 5.5, y: 0.7, w: 3, h: 2.4, tone: "target", label: "5" }
     ];
-    var midX = players[Math.floor(players.length / 2)].x;
+    var midX = players[Math.floor(servers / 2)].x;
+    var targetIndex = opt.aim != null ? opt.aim : 0;
+    var target = zones[Math.max(0, Math.min(zones.length - 1, targetIndex))];
     return {
       caption: opt.caption,
       w: 9, h: 13.4, net: 6,
@@ -48,12 +51,83 @@ RR.dk = (function () {
       court: [{ x: 0, y: 0, w: 9, h: 12 }],
       zones: zones,
       players: players,
-      paths: [{ from: [midX, 12.2], to: [zones[zones.length - 1].x + zones[zones.length - 1].w / 2, zones[zones.length - 1].y + 1], kind: "serve", curve: 0.25 }],
+      paths: [{ from: [midX, 12.2], to: [target.x + target.w / 2, target.y + target.h / 2], kind: "serve", curve: 0.25 }],
       legend: [{ tone: "target", text: "Aim here" }, { tone: "a", text: "Servers" }]
     };
   }
 
   // ---- Two fixed teams across the net --------------------------------------
+  // Reviewed single-ball routes used by live-game diagrams. Coordinates are
+  // fractions of the actual court width, so narrow/short courts keep every
+  // contact inside their marked lane. One path (with intermediate contacts)
+  // means the animation follows one ball instead of spawning unrelated balls.
+  function acrossNetMotion(kind, cx0, cw) {
+    function p(x, y) { return [cx0 + cw * x, y]; }
+    var route;
+    switch (kind) {
+      case "serve-three":
+        route = { points: [p(0.5, 0.65), p(0.28, 9.6), p(0.72, 7.7), p(0.25, 7.7), p(0.68, 3.4)],
+          label: "SERVE · PASS · SET · HIT", kind: "serve" };
+        break;
+      case "free-three":
+        route = { points: [p(0.75, 3.4), p(0.3, 9.6), p(0.72, 7.7), p(0.25, 7.7), p(0.65, 3.4)],
+          label: "FREE · PASS · SET · HIT", kind: "ball" };
+        break;
+      case "two-touch":
+        route = { points: [p(0.5, 4.3), p(0.28, 9.3), p(0.72, 7.7), p(0.5, 4.3)],
+          label: "PASS · SEND", kind: "ball" };
+        break;
+      case "newcomb":
+        route = { points: [p(0.5, 4.3), p(0.25, 9.2), p(0.5, 7.7), p(0.75, 9.2), p(0.5, 4.3)],
+          label: "CATCH · PASS · THROW", kind: "ball" };
+        break;
+      case "bounce":
+        route = { points: [p(0.5, 4.3), p(0.28, 9.5), p(0.7, 7.8), p(0.5, 4.3)],
+          label: "BOUNCE · TOUCH · SEND", kind: "ball" };
+        break;
+      case "wash-two":
+        route = { points: [p(0.5, 0.65), p(0.25, 9.6), p(0.7, 7.7), p(0.3, 4.3),
+          p(0.72, 9.2), p(0.28, 7.7), p(0.65, 3.4)],
+          label: "RALLY 1 · RESET · RALLY 2", kind: "serve" };
+        break;
+      case "reentry":
+        route = { points: [p(0.25, 4.3), p(0.7, 9.3), p(0.35, 7.7), p(0.72, 4.3),
+          p(0.22, 9.1), p(0.68, 7.7), p(0.35, 4.3)],
+          label: "RESET · NEXT BALL NOW", kind: "ball" };
+        break;
+      case "bonus":
+        route = { points: [p(0.3, 4.3), p(0.7, 9.2), p(0.28, 7.7), p(0.7, 4.3),
+          p(0.2, 9.1), p(0.65, 7.7), p(0.4, 4.3)],
+          label: "RALLY · SURPRISE BONUS", kind: "ball" };
+        break;
+      case "cooperative":
+        route = { points: [p(0.3, 4.3), p(0.68, 9.2), p(0.32, 4.3), p(0.7, 9.2), p(0.35, 4.3)],
+          label: "COUNT EVERY CROSSING", kind: "ball" };
+        break;
+      case "streak":
+        route = { points: [p(0.3, 4.3), p(0.7, 9.2), p(0.28, 4.3), p(0.72, 9.2), p(0.35, 4.3)],
+          label: "WIN 3 · THEN SERVE", kind: "ball" };
+        break;
+      case "narrow":
+        route = { points: [p(0.5, 4.3), p(0.5, 9.2), p(0.5, 7.7), p(0.5, 3.4)],
+          label: "LINE-ONLY RALLY", kind: "ball" };
+        break;
+      case "rally":
+      default:
+        route = { points: [p(0.3, 4.3), p(0.68, 9.2), p(0.3, 7.7), p(0.7, 4.3), p(0.35, 2.4), p(0.68, 7.7)],
+          label: "LIVE RALLY", kind: "ball" };
+        break;
+    }
+    return {
+      from: route.points[0],
+      via: route.points.slice(1, -1),
+      to: route.points[route.points.length - 1],
+      kind: route.kind,
+      label: route.label,
+      curve: 0
+    };
+  }
+
   function acrossNet(opt) {
     opt = opt || {};
     var size = opt.teamSize || 3;
@@ -69,17 +143,34 @@ RR.dk = (function () {
     }
     place("b", 4.3, 2.4);
     place("a", 7.7, 9.6);
+    if (opt.sequence === "serve-three" || opt.sequence === "wash-two") {
+      var serverIndex = size > 1 ? Math.ceil(size / 2) : 0;
+      players[serverIndex].x = cx0 + cw * 0.5;
+      players[serverIndex].y = 0.35;
+      players[serverIndex].label = "S";
+      players[serverIndex].note = "serves behind end line";
+    }
     var spec = {
       caption: opt.caption,
       w: 9, h: 12, net: 6,
       lines: [{ y: 3 }, { y: 9 }],
-      court: [{ x: cx0, y: 0, w: cw, h: 12 }],
+      court: [{ x: cx0, y: 0.8, w: cw, h: 10.4 }],
+      zones: opt.zones || [],
       players: players,
-      legend: TEAM_LEGEND.slice()
+      legend: opt.legend ? opt.legend.slice() : TEAM_LEGEND.slice()
     };
     if (opt.wait) {
-      for (var i = 0; i < opt.wait; i++) players.push({ x: cx0 - 0.1 + i * 0.7, y: 11.4, label: "", team: "n" });
+      var waitY = opt.waitSide === "far" ? 0.35 : 11.55;
+      for (var i = 0; i < opt.wait; i++) players.push({
+        x: cx0 + 0.55 + i * 0.7, y: waitY, label: "Q", team: "n",
+        note: "waits behind end line"
+      });
       spec.legend.push({ tone: "n", text: "Waiting" });
+    }
+    if (opt.sequence) {
+      var motion = acrossNetMotion(opt.sequence, cx0, cw);
+      spec.paths = [motion];
+      spec.legend.push({ tone: motion.kind, text: motion.label });
     }
     return spec;
   }
@@ -88,12 +179,65 @@ RR.dk = (function () {
   function rotateIn(opt) {
     opt = opt || {};
     var size = opt.teamSize || 2;
-    var qx = spread(size, 2, 7);
-    var players = qx.map(function (x) { return { x: x, y: 8.6, label: "", team: "a" }; })
-      .concat(qx.map(function (x) { return { x: x, y: 3.4, label: "", team: "b" }; }));
+    var queenPositions, challengerPositions;
+    if (size === 6) {
+      // A full team needs a real three-front / three-back volleyball shape.
+      var teamXs = spread(3, 1.6, 7.4);
+      queenPositions = teamXs.map(function (x) { return [x, 7.7]; })
+        .concat(teamXs.map(function (x) { return [x, 9.6]; }));
+      challengerPositions = teamXs.map(function (x) { return [x, 4.3]; })
+        .concat(teamXs.map(function (x) { return [x, 2.4]; }));
+    } else {
+      var qx = spread(size, 2, 7);
+      queenPositions = qx.map(function (x) { return [x, 8.6]; });
+      challengerPositions = qx.map(function (x) { return [x, 3.4]; });
+    }
+    var players = queenPositions.map(function (point) {
+      return { x: point[0], y: point[1], label: "", team: "a" };
+    }).concat(challengerPositions.map(function (point) {
+      return { x: point[0], y: point[1], label: "", team: "b" };
+    }));
     // Waiting teams queued behind the challenger side.
-    var waitN = opt.wait || 3;
+    var waitN = opt.wait != null ? Math.max(0, Math.floor(opt.wait)) : 3;
     for (var i = 0; i < waitN; i++) players.push({ x: 1 + i * 0.8, y: 0.5, label: "", team: "n" });
+    var paths = [];
+    var exitStart = waitN ? Math.min(7.2, 1.8 + waitN * 0.8) : 1;
+    var exitXs = spread(size, exitStart, 8);
+    var positionNames = size === 6 ? ["front-left", "front-middle", "front-right", "back-left", "back-middle", "back-right"] : [];
+    queenPositions.forEach(function (point, index) {
+      var sidelineX = point[0] <= 4.5 ? 0.35 : 8.65;
+      var exitTarget = waitN ? [exitXs[index], 0.55] : challengerPositions[index].slice();
+      var role = positionNames[index] || "player " + (index + 1);
+      paths.push({
+        from: point.slice(), via: [[sidelineX, point[1]], [sidelineX, exitTarget[1]]],
+        to: exitTarget, kind: "move", curve: 0, hideLabel: true,
+        label: "Queen " + role + (waitN ? " exits" : " rotates around"), playerIndex: index
+      });
+    });
+    challengerPositions.forEach(function (point, index) {
+      var role = positionNames[index] || "player " + (index + 1);
+      paths.push({
+        from: point.slice(), to: queenPositions[index].slice(), kind: "move", hideLabel: true,
+        curve: (index - (size - 1) / 2) * 0.04,
+        label: "Challenger " + role + " crosses",
+        playerIndex: size + index
+      });
+    });
+    if (waitN >= size) {
+      for (var waitingIndex = 0; waitingIndex < size; waitingIndex++) {
+        var waitingPlayerIndex = size * 2 + waitingIndex;
+        var waitingPlayer = players[waitingPlayerIndex];
+        paths.push({
+          from: [waitingPlayer.x, waitingPlayer.y], to: challengerPositions[waitingIndex].slice(),
+          kind: "move", curve: (waitingIndex - (size - 1) / 2) * -0.08, hideLabel: true,
+          label: "Waiting player " + (waitingIndex + 1) + " enters challenger side",
+          playerIndex: waitingPlayerIndex
+        });
+      }
+    }
+    var legend = [{ tone: "a", text: "Kings/Queens" }, { tone: "b", text: "Challengers" }];
+    if (waitN) legend.push({ tone: "n", text: "Waiting teams" });
+    legend.push({ tone: "move", text: waitN ? "Winning team crosses · losing team exits" : "Winning team crosses · teams swap sides" });
     return {
       caption: opt.caption,
       w: 9, h: 11, net: 6,
@@ -101,11 +245,8 @@ RR.dk = (function () {
       court: [{ x: 0, y: 1.4, w: 9, h: 9 }],
       zones: [{ x: 0.2, y: 6.2, w: 8.6, h: 4, tone: "good", label: "Score only here" }],
       players: players,
-      paths: [
-        { from: [8, 3.4], to: [8, 8.6], kind: "move", curve: -0.5, label: "win → cross over" },
-        { from: [1.3, 8.6], to: [1.3, 0.7], kind: "move", curve: 0.5, label: "lose → back of line" }
-      ],
-      legend: [{ tone: "a", text: "Kings/Queens" }, { tone: "b", text: "Challengers" }, { tone: "n", text: "Waiting teams" }]
+      paths: paths,
+      legend: legend
     };
   }
 
@@ -140,8 +281,9 @@ RR.dk = (function () {
     xs.forEach(function (x) {
       players.push({ x: x, y: yTop, label: opt.topLabel || "F", team: "b" });
       players.push({ x: x, y: yBot, label: opt.botLabel || "P", team: "a" });
-      paths.push({ from: [x, yBot - 0.6], to: [x, yTop + 0.6], kind: "ball", curve: 0.18 });
+      if (!opt.noBall) paths.push({ from: [x, yBot - 0.6], to: [x, yTop + 0.6], kind: "ball", curve: 0.18 });
     });
+    if (Array.isArray(opt.paths)) paths = opt.paths;
     var spec = { caption: opt.caption, w: 10, h: 12, players: players, paths: paths };
     if (opt.net) { spec.net = 6; spec.court = [{ x: 0.4, y: 1.5, w: 9.2, h: 9 }]; spec.lines = [{ y: 3 }, { y: 9 }]; }
     return spec;
@@ -160,17 +302,39 @@ RR.dk = (function () {
       zones.push({ x: x, y: y, w: bw, h: bh, tone: "neutral", label: lab });
       centers.push([x + bw / 2, y + bh / 2]);
     });
+    var players = [], stationSlots = [];
+    var playersPerStation = opt.playersPerStation || 0;
+    centers.forEach(function (center) {
+      var slots = [];
+      spread(playersPerStation, center[0] - 0.7, center[0] + 0.7).forEach(function (x) {
+        slots.push({ playerIndex: players.length, x: x, y: center[1] + 0.7 });
+        players.push({ x: x, y: center[1] + 0.7, label: "", team: "a", note: "station group" });
+      });
+      stationSlots.push(slots);
+    });
     var paths = [];
     for (var i = 0; i < centers.length; i++) {
-      paths.push({ from: centers[i], to: centers[(i + 1) % centers.length], kind: "move", curve: 0.3 });
+      if (!playersPerStation) {
+        paths.push({ from: centers[i], to: centers[(i + 1) % centers.length], kind: "move", curve: 0.3 });
+        continue;
+      }
+      var nextSlots = stationSlots[(i + 1) % stationSlots.length];
+      stationSlots[i].forEach(function (slot, memberIndex) {
+        var next = nextSlots[memberIndex];
+        paths.push({
+          from: [slot.x, slot.y], to: [next.x, next.y], kind: "move", curve: 0.3,
+          label: memberIndex === 0 ? "group rotates" : "", playerIndex: slot.playerIndex
+        });
+      });
     }
     var rows = Math.ceil(labels.length / cols);
     return {
       caption: opt.caption,
       w: 0.6 * 2 + cols * bw + (cols - 1) * gapX,
       h: 0.6 * 2 + rows * bh + (rows - 1) * gapY,
-      zones: zones, paths: paths,
-      legend: [{ tone: "move", text: "Rotate this way" }]
+      zones: zones, players: players, paths: paths,
+      legend: [{ tone: "a", text: playersPerStation ? playersPerStation + " players per station" : "Station group" },
+        { tone: "move", text: "Rotate this way" }]
     };
   }
 
@@ -179,18 +343,27 @@ RR.dk = (function () {
     opt = opt || {};
     var n = opt.defenders || 3;
     var xs = spread(n, 1.6, 7.4);
-    var players = [{ x: 4.5, y: 0.9, label: "C", team: "coach", note: opt.sourceNote || "coach feeds" }];
+    var sourceTeam = opt.sourceTeam || "coach";
+    var players = [{
+      x: 4.5, y: 0.9,
+      label: opt.sourceLabel || (sourceTeam === "coach" ? "C" : "F"),
+      team: sourceTeam,
+      note: opt.sourceNote || (sourceTeam === "coach" ? "coach feeds" : "player feeds")
+    }];
     var paths = [];
     xs.forEach(function (x, i) {
       players.push({ x: x, y: 8.6, label: "D", team: "a" });
       if (i % 2 === 0) paths.push({ from: [4.5, 1.4], to: [x, 8.1], kind: "ball", curve: 0.12 });
     });
+    (opt.extraPlayers || []).forEach(function (player) { players.push(player); });
+    (opt.extraPaths || []).forEach(function (path) { paths.push(path); });
     return {
       caption: opt.caption, w: 9, h: 10, net: 2.2,
       lines: [{ y: 5.2 }],
       court: [{ x: 0, y: 2.2, w: 9, h: 7.4 }],
       players: players, paths: paths,
-      legend: [{ tone: "coach", text: "Coach" }, { tone: "a", text: "Defenders" }]
+      legend: [{ tone: sourceTeam, text: opt.sourceLegend || (sourceTeam === "coach" ? "Coach" : "Feeder") }, { tone: "a", text: "Defenders" }]
+        .concat(opt.extraLegend || [])
     };
   }
 
@@ -219,23 +392,32 @@ RR.dk = (function () {
   // to a target and jogs to the back of the line.
   function feedLine(opt) {
     opt = opt || {};
+    var feederY = opt.feederY != null ? opt.feederY : 1.4;
+    var feederTeam = opt.feederTeam || "coach";
     var players = [
-      { x: 4.5, y: 1.4, label: opt.feederLabel || "C", team: "coach", note: opt.feederNote || "feeder" },
+      { x: 4.5, y: feederY, label: opt.feederLabel || "C", team: feederTeam, note: opt.feederNote || "feeder" },
       { x: 4.4, y: 6.2, label: opt.activeLabel || "1", team: "a", note: "your turn" }
     ];
-    if (opt.target !== false) players.push({ x: 7, y: 4.4, label: opt.targetLabel || "T", team: "a", note: "target" });
+    if (opt.target !== false && opt.targetObject !== "ring") {
+      players.push({ x: 7, y: 4.4, label: opt.targetLabel || "T", team: "a", note: "target" });
+    }
     // The waiting queue, stacked at the back corner.
-    var q = opt.queue || 3;
+    var q = opt.queue != null ? opt.queue : 3;
     for (var i = 0; i < q; i++) players.push({ x: 1.4, y: 9 + (i % 3) * 0.7, label: "", team: "n" });
-    var paths = [{ from: [4.5, 1.8], to: [4.4, 5.8], kind: "ball", label: "feed", curve: 0.12 }];
+    var paths = [{ from: [4.5, feederY + 0.4], to: [4.4, 5.8], kind: "ball", label: "feed", curve: 0.12 }];
     if (opt.target !== false) paths.push({ from: [4.4, 6.2], to: [6.7, 4.6], kind: "ball", label: opt.action || "play it", curve: 0.18 });
-    paths.push({ from: [4, 6.6], to: [1.7, 9], kind: "move", label: "to back of line", curve: 0.3 });
+    var moveTo = opt.moveTo || [1.7, 9];
+    paths.push({
+      from: [4, 6.6], to: moveTo, kind: "move",
+      label: opt.moveLabel || "to back of line", curve: 0.3, playerIndex: 1
+    });
     return titleable(opt, {
       caption: opt.caption,
       w: 9, h: 11, net: opt.net != null ? opt.net : null,
       court: opt.court || [{ x: 0, y: 0, w: 9, h: 11 }],
       players: players, paths: paths,
-      legend: [{ tone: "coach", text: "Feeder" }, { tone: "a", text: "Worker + target" }, { tone: "n", text: "Line waits" }]
+      rings: opt.targetObject === "ring" ? [{ x: 7, y: 4.4, r: 0.55, tone: "target" }] : [],
+      legend: [{ tone: feederTeam, text: "Feeder" }, { tone: "a", text: "Worker" }, { tone: "target", text: "Target" }, { tone: "n", text: "Line waits" }]
     });
   }
 
@@ -263,12 +445,16 @@ RR.dk = (function () {
     var startX = opt.side === "middle" ? 4.5 : (opt.side === "right" ? 7 : 2);
     var takeX = opt.side === "middle" ? 4.5 : (opt.side === "right" ? 6.6 : 2.4);
     var players = [{ x: startX, y: 8.4, label: "H", team: "a", note: "start" }];
+    for (var qi = 0; qi < (opt.queue || 0); qi++) {
+      players.push({ x: startX - 0.55 + qi * 0.55, y: 9.05,
+        label: "Q", team: "n", note: "hitter line" });
+    }
     if (opt.setter !== false) players.push({ x: 5.4, y: 3, label: "St", team: "a", note: "setter" });
     // Three step segments (slow-slow-quick-quick) up to the takeoff.
-    var paths = [
-      { from: [startX, 8], to: [takeX - 0.4, 6], kind: "move", curve: 0.1 },
-      { from: [takeX - 0.4, 6], to: [takeX, 4.2], kind: "move", curve: -0.1, label: "approach" }
-    ];
+    var paths = [{
+      from: [startX, 8], via: [[takeX - 0.4, 6]], to: [takeX, 4.2],
+      kind: "move", curve: 0, label: "approach", playerIndex: 0
+    }];
     if (opt.setter !== false) paths.push({ from: [5.4, 3], to: [takeX, 3.6], kind: "ball", label: "set", curve: 0.2 });
     if (opt.swing) paths.push({ from: [takeX, 3.4], to: [opt.side === "right" ? 2.2 : 6.6, 1.4], kind: "serve", label: "swing", curve: 0.1 });
     return titleable(opt, {
@@ -291,15 +477,18 @@ RR.dk = (function () {
     var players = spots.map(function (p, i) { return { x: p[0], y: p[1], label: L[i] || "", team: "a" }; });
     var legend = [{ tone: "a", text: "Base spots" }];
     if (opt.feeder !== false) {
-      players.unshift({ x: 4.5, y: 0.9, label: opt.feederLabel || "C", team: "coach", note: opt.feederNote || "coach attacks" });
+      players.unshift({ x: opt.feederX != null ? opt.feederX : 4.5, y: 0.9,
+        label: opt.feederLabel || "C", team: "coach", note: opt.feederNote || "coach attacks" });
       legend.unshift({ tone: "coach", text: "Attack" });
     }
-    return titleable(opt, {
+    var spec = titleable(opt, {
       caption: opt.caption,
       w: 9, h: 10, net: 2, lines: [{ y: 5.2 }],
       court: [{ x: 0, y: 2, w: 9, h: 7.6 }],
       players: players, legend: legend
     });
+    if (opt.paths) spec.paths = opt.paths;
+    return spec;
   }
 
   // Copy an optional title onto a spec (so builders can carry a step heading).

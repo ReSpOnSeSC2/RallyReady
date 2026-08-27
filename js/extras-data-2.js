@@ -21,7 +21,15 @@ RR.extras = RR.extras || {};
       tracking: "You can only score ON the queen side. Each team keeps its own running score; the coach confirms crossings and keeps the line moving.",
       aim: "First team to a target score (e.g. 10) as queens wins; play 15–20 min."
     },
-    diagram: dk.rotateIn({ teamSize: 2, wait: 3, caption: "Win on the challenger side to cross over and become queens; lose as queens and rotate to the back of the line. Points score only on the queen side." })
+    diagrams: dk.seq(
+      dk.acrossNet({
+        teamSize: 2, wait: 2, waitSide: "far", sequence: "serve-three",
+        zones: [{ x: 0.2, y: 6.2, w: 8.6, h: 4.8, tone: "good", label: "Queen side scores" }],
+        legend: [{ tone: "a", text: "Queens" }, { tone: "b", text: "Challengers" }],
+        caption: "Two queens receive against two challengers while one waiting pair queues behind the challenger side. Serve → pass → set → attack, with points only for the queens."
+      }),
+      dk.rotateIn({ teamSize: 2, wait: 2, caption: "If queens win, they score and stay. If queens lose and challengers win, both challengers cross to the queen side, both former queens rotate off, and both waiting partners enter together. Continue to the target score or time; most points wins." })
+    )
   };
 
   // Hand-built "run the whole play" scene — uses the dedicated free-ball
@@ -29,7 +37,7 @@ RR.extras = RR.extras || {};
   // the rare SVG fallback if the picture is ever unavailable.
   E["free-ball-mini-game"] = {
     diagram: Object.assign(
-      dk.acrossNet({ teamSize: 3, wait: 2, caption: "A three-on-three free-ball rally: the coach tosses a free ball and your side runs pass → set → hit. Switch which side gets the free ball each rally." }),
+      dk.acrossNet({ teamSize: 3, wait: 2, sequence: "free-three", caption: "A three-on-three free-ball rally: the coach tosses a free ball and your side runs pass → set → hit. Switch which side gets the free ball each rally." }),
       { img: "freeball" }
     )
   };
@@ -41,17 +49,34 @@ RR.extras = RR.extras || {};
       tracking: "Only the king side scores. Teams self-track; coach keeps the rotation honest.",
       aim: "First doubles team to the target as kings; 15 min."
     },
-    diagram: dk.rotateIn({ teamSize: 2, wait: 3, caption: "Doubles version: hold the king side to score; challengers who win cross over and take the throne." })
+    diagrams: dk.seq(
+      dk.acrossNet({
+        teamSize: 2, wait: 2, waitSide: "far", sequence: "serve-three",
+        zones: [{ x: 0.2, y: 6.2, w: 8.6, h: 4.8, tone: "good", label: "King side scores" }],
+        legend: [{ tone: "a", text: "Kings" }, { tone: "b", text: "Challengers" }],
+        caption: "The minimum six-player setup is three doubles pairs: kings, challengers, and one waiting pair. The active pairs play serve → pass → set → attack."
+      }),
+      dk.rotateIn({ teamSize: 2, wait: 2, caption: "If challengers win, both partners cross to become kings, the former kings exit together, and both waiting partners enter the challenger side." })
+    )
   };
 
   E["six-on-six-queen-of-the-court"] = {
     format: {
-      grouping: "Full teams of 6. One team on the queen side, one challenging, extra team(s) waiting to rotate in.",
-      flow: "Full-rotation 6v6 rallies, one at a time. Queens score and stay on a win; a loss sends a team off and rotates the next in.",
+      grouping: "Two full teams of 6 are required: one on the queen side and one challenging. If additional teams are available, they wait behind the challenger side.",
+      flow: "Play one full 6v6 rally at a time. Queens score and stay on a win; after a queen-side loss, challengers cross over and the losing team rotates around to challenge again (or leaves for an optional waiting team).",
       tracking: "Points only on the queen side. Each team keeps its score; coach manages rotations and confirms the result.",
       aim: "Race to a target as queens; great in-season competitive block, 20 min."
     },
-    diagram: dk.rotateIn({ teamSize: 6, wait: 2, caption: "Full 6v6 rotate-in: win as queens to stay and score; challengers who win cross over." })
+    diagrams: dk.seq(
+      dk.acrossNet({
+        teamSize: 6,
+        sequence: "serve-three",
+        zones: [{ x: 0.2, y: 6.2, w: 8.6, h: 4.8, tone: "good", label: "Queen side scores" }],
+        legend: [{ tone: "a", text: "Kings/Queens" }, { tone: "b", text: "Challengers" }],
+        caption: "The challenger serves from behind the end line. Both six-player teams run the rally through serve → pass → set → attack; only the queen side can score."
+      }),
+      dk.rotateIn({ teamSize: 6, wait: 0, caption: "After a queen-side loss, all six challengers cross into the matching 3-front/3-back queen positions while all six former queens rotate around the sideline to the vacated challenger positions." })
+    )
   };
 
   // ---- 6v6 / WASH / SCORING GAMES ------------------------------------------
@@ -63,7 +88,7 @@ RR.extras = RR.extras || {};
       tracking: "Coach runs the wash scoring and calls the big points out loud; teams rotate on each sideout.",
       aim: "First team to 5–7 big points; 15–20 min."
     },
-    diagram: dk.acrossNet({ teamSize: 6, caption: "Full 6v6 in rotation; win two rallies in a row to 'wash' and bank a big point." })
+    diagram: dk.acrossNet({ teamSize: 6, sequence: "wash-two", caption: "Full 6v6 in rotation; win two rallies in a row to 'wash' and bank a big point." })
   };
 
   E["serve-receive-wash-game"] = {
@@ -73,7 +98,7 @@ RR.extras = RR.extras || {};
       tracking: "Coach tracks the side-out count and washes; receivers self-organize their formation.",
       aim: "Win the side-out battle to a target; 12–15 min."
     },
-    diagram: dk.acrossNet({ teamSize: 5, caption: "One team serves, the other must side out a set number of times before roles switch." })
+    diagram: dk.acrossNet({ teamSize: 5, sequence: "serve-three", caption: "One team serves, the other must side out a set number of times before roles switch." })
   };
 
   E["transition-wash-game"] = {
@@ -83,7 +108,7 @@ RR.extras = RR.extras || {};
       tracking: "Coach feeds the transition ball and tallies washes; teams play their normal positions.",
       aim: "First to the wash target; 15–20 min."
     },
-    diagram: dk.acrossNet({ teamSize: 6, caption: "Serve/receive, then the coach feeds a transition ball — win both to bank the point." })
+    diagram: dk.acrossNet({ teamSize: 6, sequence: "wash-two", caption: "Serve/receive, then the coach feeds a transition ball — win both to bank the point." })
   };
 
   E["sideout-scoring-game"] = {
@@ -93,7 +118,7 @@ RR.extras = RR.extras || {};
       tracking: "Coach keeps score and rotates teams on each side-out; players run normal rotations.",
       aim: "First to the target side-outs; 15–20 min."
     },
-    diagram: dk.acrossNet({ teamSize: 6, caption: "Side-out scoring: only the receiving team can score, so serve-receive is everything." })
+    diagram: dk.acrossNet({ teamSize: 6, sequence: "serve-three", caption: "Side-out scoring: only the receiving team can score, so serve-receive is everything." })
   };
 
   E["comeback-pressure-game"] = {
@@ -103,7 +128,7 @@ RR.extras = RR.extras || {};
       tracking: "Coach sets the deficit and keeps score aloud; teams rotate normally.",
       aim: "Can the trailing team complete the comeback before time? 12–15 min."
     },
-    diagram: dk.acrossNet({ teamSize: 6, caption: "One team starts behind and must string points together to come back — match-pressure reps." })
+    diagram: dk.acrossNet({ teamSize: 6, sequence: "rally", caption: "One team starts behind and must string points together to come back — match-pressure reps." })
   };
 
   E["bonus-ball-scramble"] = {
@@ -113,7 +138,7 @@ RR.extras = RR.extras || {};
       tracking: "Coach feeds bonus balls and keeps score; bonus-ball points may count double.",
       aim: "First to the target; 10–12 min."
     },
-    diagram: dk.acrossNet({ teamSize: 4, caption: "After each rally the coach tosses a surprise bonus ball — scramble and keep playing." })
+    diagram: dk.acrossNet({ teamSize: 4, sequence: "bonus", caption: "After each rally the coach tosses a surprise bonus ball — scramble and keep playing." })
   };
 
   E["speedball"] = {
@@ -123,17 +148,17 @@ RR.extras = RR.extras || {};
       tracking: "Coach feeds balls and keeps the tempo and score; teams self-organize.",
       aim: "Most points in a fast 6–8 min block."
     },
-    diagram: dk.acrossNet({ teamSize: 4, wait: 2, caption: "Fast-feed game: a new ball enters the second the last one dies, with quick subs." })
+    diagram: dk.acrossNet({ teamSize: 4, wait: 2, sequence: "reentry", caption: "Fast-feed game: a new ball enters the second the last one dies, with quick subs." })
   };
 
   E["bingo-bango-bongo"] = {
     format: {
       grouping: "Two full teams of 6 (ages 15–18).",
-      flow: "Score three ways in one rally: 'bingo' (pass), 'bango' (set), 'bongo' (kill). A clean three-contact point is worth the most, rewarding running a full offense.",
-      tracking: "Coach scores the bingo/bango/bongo bonuses; teams play normal rotations.",
+      flow: "Build a streak across consecutive rallies: win one for Bingo, two in a row for Bango, and three in a row for Bongo. Then serve for the real point; a loss resets that team's streak.",
+      tracking: "Coach calls each team's Bingo/Bango/Bongo streak and awards the point after the Bongo serve; teams rotate normally.",
       aim: "First to the target; 15 min."
     },
-    diagram: dk.acrossNet({ teamSize: 6, caption: "Reward the full pass–set–hit: a clean three-contact point scores the most." })
+    diagram: dk.acrossNet({ teamSize: 6, sequence: "streak", caption: "Win one rally for Bingo, two straight for Bango, and three straight for Bongo; then win the Bongo serve to score the real point. A loss resets the streak." })
   };
 
   E["first-ball-kill-game"] = {
@@ -143,7 +168,7 @@ RR.extras = RR.extras || {};
       tracking: "Coach awards the point only for a first-ball kill, then feeds the next; teams rotate.",
       aim: "Most first-ball kills in the block; 12–15 min."
     },
-    diagram: dk.acrossNet({ teamSize: 5, caption: "Receive and terminate the FIRST ball — pass, set, kill. No drawn-out rallies." })
+    diagram: dk.acrossNet({ teamSize: 5, sequence: "serve-three", caption: "Receive and terminate the FIRST ball — pass, set, kill. No drawn-out rallies." })
   };
 
   // ---- SERVE-RECEIVE / PASSING GAMES ---------------------------------------
@@ -168,13 +193,18 @@ RR.extras = RR.extras || {};
     diagram: {
       caption: "Servers fire a gauntlet from across the net; the receiving group must side out several times in a row.",
       w: 9, h: 12, net: 6, lines: [{ y: 3 }, { y: 9 }],
-      court: [{ x: 0, y: 0, w: 9, h: 12 }],
+      court: [{ x: 0, y: 0.8, w: 9, h: 10.4 }],
       players: [
-        { x: 2, y: 1.4, label: "S", team: "b" }, { x: 4.5, y: 1.4, label: "S", team: "b" }, { x: 7, y: 1.4, label: "S", team: "b" },
+        { x: 2, y: 0.35, label: "S", team: "b", note: "server line behind end line" }, { x: 4.5, y: 0.35, label: "S", team: "b", note: "serves now behind end line" }, { x: 7, y: 0.35, label: "S", team: "b", note: "server line behind end line" },
         { x: 2, y: 8.6, label: "P", team: "a" }, { x: 4.5, y: 9.2, label: "P", team: "a" }, { x: 7, y: 8.6, label: "P", team: "a" },
-        { x: 6, y: 7, label: "St", team: "a" }, { x: 3, y: 7, label: "H", team: "a" }
+        { x: 6.4, y: 7, label: "St", team: "a", note: "setter" }, { x: 1.5, y: 6.8, label: "H", team: "a", note: "left-side hitter" }, { x: 7.5, y: 6.8, label: "H", team: "a", note: "right-side hitter" }
       ],
-      paths: [{ from: [4.5, 1.8], to: [4.5, 8.4], kind: "serve", curve: 0.2 }],
+      paths: [
+        { from: [4.5, 0.7], to: [4.5, 8.8], kind: "serve", label: "serve", curve: 0.2 },
+        { from: [4.5, 8.8], to: [6.2, 7.2], kind: "ball", label: "pass", curve: 0.15 },
+        { from: [6.4, 7], to: [1.8, 6.6], kind: "ball", label: "set", curve: 0.22 },
+        { from: [1.5, 6.6], to: [3, 2], kind: "serve", label: "attack", curve: 0.12 }
+      ],
       legend: [{ tone: "b", text: "Servers" }, { tone: "a", text: "Receiving team" }]
     }
   };
@@ -183,12 +213,53 @@ RR.extras = RR.extras || {};
 
   E["mini-volley-stations-tournament"] = {
     format: {
-      grouping: "Several small teams (2–3 each), one team per station/mini-court running at the same time.",
-      flow: "All stations play at once for a set time, then everyone rotates to the next station/opponent — a round-robin tournament feel.",
+      grouping: "Minimum setup: four teams of 2, with two opposing teams on each of two mini-courts. Add courts or increase teams to 3–4 players for larger groups.",
+      flow: "Both mini-courts play at once. After each short game, the lower-court winner moves up and the upper-court non-winner moves down; the teams at the two ladder ends hold their court.",
       tracking: "Each station self-scores its mini-game; the coach blows a whistle to rotate and tracks standings on a sheet.",
       aim: "Most station wins by the end; 20+ min."
     },
-    diagram: dk.stations({ labels: ["Court 1", "Court 2", "Court 3", "Court 4"], cols: 2, caption: "Every station plays at once for a timed round; whistle, then everyone rotates to the next." })
+    diagrams: dk.seq(
+      {
+        title: "Split into two complete 2v2 mini-courts",
+        caption: "Split the gym into two small courts; lowered nets or ropes work fine. At the eight-player minimum, make four even teams of 2 and put two opposing teams on each court. Both courts play short rally-scoring games at the same time.",
+        w: 10, h: 8,
+        court: [{ x: 0.4, y: 0.6, w: 4.2, h: 6.8 }, { x: 5.4, y: 0.6, w: 4.2, h: 6.8 }],
+        zones: [{ x: 0.55, y: 0.75, w: 3.9, h: 6.5, tone: "neutral", label: "COURT 1" }, { x: 5.55, y: 0.75, w: 3.9, h: 6.5, tone: "neutral", label: "COURT 2" }],
+        lines: [{ y: 4 }],
+        players: [
+          { x: 1.5, y: 2.4, label: "1A", team: "b", note: "Court 1 team" }, { x: 3.5, y: 2.4, label: "1A", team: "b", note: "Court 1 teammate" },
+          { x: 1.5, y: 5.6, label: "1B", team: "a", note: "Court 1 opponent" }, { x: 3.5, y: 5.6, label: "1B", team: "a", note: "Court 1 teammate" },
+          { x: 6.5, y: 2.4, label: "2A", team: "b", note: "Court 2 team" }, { x: 8.5, y: 2.4, label: "2A", team: "b", note: "Court 2 teammate" },
+          { x: 6.5, y: 5.6, label: "2B", team: "a", note: "Court 2 opponent" }, { x: 8.5, y: 5.6, label: "2B", team: "a", note: "Court 2 teammate" }
+        ],
+        paths: [
+          { from: [1.5, 5.3], via: [[3.4, 2.7], [1.7, 2.7]], to: [3.5, 5.3], kind: "ball", label: "Court 1 live rally", curve: 0 },
+          { from: [6.5, 5.3], via: [[8.4, 2.7], [6.7, 2.7]], to: [8.5, 5.3], kind: "ball", label: "Court 2 live rally", curve: 0 }
+        ],
+        legend: [{ tone: "a", text: "Near-side teams" }, { tone: "b", text: "Far-side teams" }, { tone: "ball", text: "Games run simultaneously" }]
+      },
+      {
+        title: "Winner up, other team down",
+        caption: "When time is called, the two-player winner from lower Court 1 moves up to Court 2, while the two-player non-winner from upper Court 2 moves down to Court 1. The top winner and bottom non-winner hold their end court; add up results across rounds for the tournament standing.",
+        w: 10, h: 8,
+        court: [{ x: 0.4, y: 0.6, w: 4.2, h: 6.8 }, { x: 5.4, y: 0.6, w: 4.2, h: 6.8 }],
+        zones: [{ x: 0.55, y: 0.75, w: 3.9, h: 6.5, tone: "neutral", label: "COURT 1 · LOWER" }, { x: 5.55, y: 0.75, w: 3.9, h: 6.5, tone: "good", label: "COURT 2 · UPPER" }],
+        lines: [{ y: 4 }],
+        players: [
+          { x: 1.5, y: 2.4, label: "H", team: "b", note: "holds" }, { x: 3.5, y: 2.4, label: "H", team: "b", note: "holds" },
+          { x: 1.5, y: 5.6, label: "W↑", team: "a", note: "moves up" }, { x: 3.5, y: 5.6, label: "W↑", team: "a", note: "moves up" },
+          { x: 6.5, y: 2.4, label: "H", team: "b", note: "holds" }, { x: 8.5, y: 2.4, label: "H", team: "b", note: "holds" },
+          { x: 6.5, y: 5.6, label: "L↓", team: "a", note: "moves down" }, { x: 8.5, y: 5.6, label: "L↓", team: "a", note: "moves down" }
+        ],
+        paths: [
+          { from: [1.5, 5.6], to: [6.5, 5.6], kind: "move", label: "Court 1 winner moves up", curve: -0.18, playerIndex: 2, hideLabel: true },
+          { from: [3.5, 5.6], to: [8.5, 5.6], kind: "move", label: "winning teammate moves up", curve: -0.18, playerIndex: 3, hideLabel: true },
+          { from: [6.5, 5.6], to: [1.5, 5.6], kind: "move", label: "Court 2 non-winner moves down", curve: 0.18, playerIndex: 6, hideLabel: true },
+          { from: [8.5, 5.6], to: [3.5, 5.6], kind: "move", label: "teammate moves down", curve: 0.18, playerIndex: 7, hideLabel: true }
+        ],
+        legend: [{ tone: "move", text: "Teams swap together" }, { tone: "b", text: "End-court teams hold" }]
+      }
+    )
   };
 
   E["camp-skills-circuit"] = {
@@ -198,7 +269,9 @@ RR.extras = RR.extras || {};
       tracking: "Each station has a coach/helper running it; players self-count reps within the station.",
       aim: "Everyone touches every station; 3–5 min per station."
     },
-    diagram: dk.stations({ labels: ["Serve", "Pass", "Set", "Hit"], cols: 2, caption: "Skill stations run at once; whistle and rotate so every group hits every skill." })
+    diagram: dk.stations({ labels: ["Serve", "Pass", "Set", "Hit"], cols: 2,
+      playersPerStation: 2,
+      caption: "Four pairs work simultaneously at Serve, Pass, Set, and Hit; on the whistle every pair follows the arrows to the next skill." })
   };
 
   // ---- YOUTH GAMES ----------------------------------------------------------
@@ -253,8 +326,9 @@ RR.extras = RR.extras || {};
       ],
       paths: [
         { from: [2.6, 2], to: [6.4, 2], kind: "ball", label: "set", curve: 0.25 },
-        { from: [7, 2.5], to: [7, 4.4], kind: "move", curve: -0.4 },
-        { from: [2, 4.4], to: [2, 2.6], kind: "move", curve: 0.4 }
+        { from: [2, 2.2], to: [7, 4.7], kind: "move", label: "follow your set", curve: -0.35, playerIndex: 0 },
+        { from: [6.4, 2], to: [2.6, 2], kind: "ball", label: "set back", curve: -0.25 },
+        { from: [7, 2.2], to: [2, 4.7], kind: "move", label: "follow across", curve: 0.35, playerIndex: 3 }
       ],
       legend: [{ tone: "a", text: "Line A" }, { tone: "b", text: "Line B" }]
     }
@@ -269,7 +343,15 @@ RR.extras = RR.extras || {};
       tracking: "Group counts catchable digs; it's cooperative, building a high, playable dig.",
       aim: "Most clean catches; rotate so everyone digs equally."
     },
-    diagram: dk.coachFeed({ defenders: 1, sourceNote: "tosser/hitter", caption: "Hitter sends a ball, the digger digs it high, a catcher catches it — then rotate roles." })
+    diagram: dk.coachFeed({
+      defenders: 1,
+      sourceTeam: "b", sourceLabel: "F", sourceLegend: "Tosser / hitter",
+      sourceNote: "tosser/hitter",
+      extraPlayers: [{ x: 7.1, y: 6.2, label: "Ca", team: "b", note: "catches the dig" }],
+      extraPaths: [{ from: [4.5, 8.2], to: [6.8, 6.4], kind: "ball", label: "high dig", curve: 0.18 }],
+      extraLegend: [{ tone: "b", text: "Catcher / target" }],
+      caption: "Hitter sends a controlled ball to the digger; the digger plays it high to the catcher. Rotate digger → catcher → hitter."
+    })
   };
 
   E["defensive-ready-reaction-game"] = {
@@ -279,7 +361,10 @@ RR.extras = RR.extras || {};
       tracking: "Count good reads/saves per turn; coach can make it a quick contest between groups.",
       aim: "Fast reactions from a low base; rotate roles every 30–45 sec."
     },
-    diagram: dk.coachFeed({ defenders: 1, sourceNote: "feeder", caption: "Feeder surprises the defender side to side; stay low and react. Rotate react → feed → shag." })
+    diagram: dk.coachFeed({ defenders: 1, sourceTeam: "b", sourceLabel: "F", sourceLegend: "Feeder", sourceNote: "feeder",
+      extraPlayers: [{ x: 7.2, y: 8.8, label: "Sh", team: "n", note: "shags next ball" }],
+      extraLegend: [{ tone: "n", text: "Shagger / next feeder" }],
+      caption: "Feeder surprises the defender side to side while the third player shags; rotate react → feed → shag." })
   };
 
 })(window.RR);

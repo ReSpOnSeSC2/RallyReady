@@ -46,28 +46,47 @@ RR.extras = RR.extras || {};
       players: [{ x: 4.5, y: 4.5, label: o.label || "P", team: "a", note: o.note || "start centered" }]
         .concat(o.caller ? [{ x: 4.5, y: 0.6, label: "C", team: "coach", note: "calls a corner" }] : []),
       paths: [
-        { from: [4.5, 4.5], to: [2.2, 2.2], kind: "move", label: o.label1 || "react out", curve: 0.1 },
-        { from: [2.4, 2.4], to: [4.5, 4.5], kind: "move", label: "back to middle", curve: -0.1 },
-        { from: [4.5, 4.5], to: [6.8, 7], kind: "move", curve: -0.1 }
+        { from: [4.5, 4.5], via: [[2.2, 2.2]], to: [4.5, 4.5], kind: "move", label: o.label1 || "called corner → touch → recover", curve: 0.1, playerIndex: 0 }
       ],
       legend: [{ tone: "move", text: "React & recover" }]
     };
+  }
+
+  // Keep every plotted lane athlete on one factual down/back route. Separate
+  // outbound and return paths render as simultaneous duplicate movers, so a
+  // round trip is authored as one continuous path with an explicit actor.
+  function movementLanes(o) {
+    o = o || {};
+    var spec = dk.lanes(o);
+    spec.paths = (spec.players || []).map(function (player, index) {
+      var x = player.x;
+      var path = {
+        from: [x, 9], to: [x, 1.4], kind: "move", curve: 0,
+        label: o.back ? "down → back" : "move this way", playerIndex: index
+      };
+      if (o.back) {
+        path.via = [[x, 1.4], [x + 0.35, 1.6]];
+        path.to = [x + 0.35, 9];
+      }
+      return path;
+    });
+    return spec;
   }
 
   // ---- Dynamic movement down the court (multi-phase lane series) ------------
 
   E["dynamic-movement-warmup"] = {
     diagrams: dk.seq(
-      dk.lanes({ title: "Easy jog down & back", caption: "Line up on the end line with room to the attack line. Jog down at an easy pace and back to get the blood moving." }),
-      dk.lanes({ title: "High knees / butt-kicks", back: true, caption: "Down the floor with high knees, then come back kicking your heels up to your backside." }),
-      dk.lanes({ title: "Lunges & grapevine", back: true, caption: "Walking lunges down twisting your chest over the front leg, side lunges back. Then grapevine (carioca) facing one sideline down, the other sideline back." }),
-      dk.lanes({ title: "Build-up runs", caption: "Finish with two or three runs at about three-quarter speed down the floor to wake the legs up." })
+      movementLanes({ title: "Easy jog down & back", back: true, caption: "Line up on the end line with room to the attack line. Jog down at an easy pace and back to get the blood moving." }),
+      movementLanes({ title: "High knees / butt-kicks", back: true, caption: "Down the floor with high knees, then come back kicking your heels up to your backside." }),
+      movementLanes({ title: "Lunges & grapevine", back: true, caption: "Walking lunges down twisting your chest over the front leg, side lunges back. Then grapevine (carioca) facing one sideline down, the other sideline back." }),
+      movementLanes({ title: "Build-up runs", caption: "Finish with two or three runs at about three-quarter speed down the floor to wake the legs up." })
     )
   };
   E["animal-movement-warmup"] = {
     diagrams: dk.seq(
-      dk.lanes({ title: "Bear crawl & crab walk", back: true, caption: "Bear crawl (hands and feet, hips low) down to the line, then crab walk (belly up, push through the heels) back the other way." }),
-      dk.lanes({ title: "Frog hops & inchworms", caption: "Frog hops down the floor — squat low and hop forward with a soft landing — then finish with inchworms, walking the hands out to a plank and back." })
+      movementLanes({ title: "Bear crawl & crab walk", back: true, caption: "Bear crawl (hands and feet, hips low) down to the line, then crab walk (belly up, push through the heels) back the other way." }),
+      movementLanes({ title: "Frog hops & inchworms", caption: "Frog hops down the floor — squat low and hop forward with a soft landing — then finish with inchworms, walking the hands out to a plank and back." })
     )
   };
 
@@ -79,11 +98,11 @@ RR.extras = RR.extras || {};
       w: 9, h: 11,
       zones: dk.spread(8, 2.2, 2.2).map(function (x, i) { return { x: 3.6, y: 1.2 + i * 0.9, w: 1.8, h: 0.8, tone: "neutral", label: "" }; }),
       players: [{ x: 4.5, y: 9, label: "P", team: "a", note: "line up here" }, { x: 1.6, y: 9.4, label: "", team: "n" }, { x: 1.6, y: 10.1, label: "", team: "n" }],
-      paths: [
-        { from: [4.5, 8.6], to: [4.5, 1.4], kind: "move", label: "footwork down ladder", curve: 0 },
-        { from: [4.5, 1.2], to: [4.5, 0.4], kind: "serve", label: "sprint out", curve: 0 },
-        { from: [4, 8.8], to: [1.9, 9.4], kind: "move", label: "back to line", curve: 0.3 }
-      ],
+      paths: [{
+        from: [4.5, 8.6], via: [[4.5, 1.4], [4.5, 0.4]], to: [1.9, 9.4],
+        kind: "move", label: "footwork → sprint out → back to line", curve: 0,
+        playerIndex: 0
+      }],
       legend: [{ tone: "neutral", text: "Ladder" }, { tone: "move", text: "Quick feet" }, { tone: "n", text: "Line waits" }]
     }
   };
@@ -101,14 +120,16 @@ RR.extras = RR.extras || {};
   E["line-touch-conditioning"] = {
     diagram: {
       caption: "Court-line sprints (suicides): start on the end line, sprint to the near attack line and touch it low, back; then center line and back; far attack line and back; far end line and back. Sharp changes of direction, full rest between rounds.",
-      w: 9, h: 13.4, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
+      w: 9, h: 13.4, lines: [{ y: 3 }, { y: 6 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
       players: [{ x: 4.5, y: 12.4, label: "P", team: "a", note: "start on end line" }],
-      paths: [
-        { from: [3.6, 12.2], to: [3.6, 9], kind: "move", label: "near attack & back", curve: 0 },
-        { from: [4.2, 12.2], to: [4.2, 6], kind: "move", label: "center & back", curve: 0 },
-        { from: [4.8, 12.2], to: [4.8, 3], kind: "move", label: "far attack & back", curve: 0 },
-        { from: [5.4, 12.2], to: [5.4, 0.4], kind: "move", label: "far end & back", curve: 0 }
-      ],
+      paths: [{
+        from: [4.5, 12.2],
+        via: [[4.5, 9], [4.5, 12.2], [4.5, 6], [4.5, 12.2],
+          [4.5, 3], [4.5, 12.2], [4.5, 0.4]],
+        to: [4.5, 12.2], kind: "move",
+        label: "near attack → center → far attack → far end · back each time",
+        curve: 0, playerIndex: 0
+      }],
       legend: [{ tone: "move", text: "Touch every line" }]
     }
   };
@@ -119,7 +140,7 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       { title: "Squat jumps, soft landings", caption: "Start with squat jumps in place, landing soft with the knees tracking over the toes. Stick each landing for a full second before the next.", w: 9, h: 9,
         players: [{ x: 4.5, y: 5, label: "P", team: "a", note: "land soft & stick" }],
-        paths: [{ from: [4.5, 5], to: [4.5, 2.6], kind: "move", label: "jump up", curve: 0 }, { from: [4.9, 2.8], to: [4.9, 5], kind: "move", label: "land & hold", curve: 0 }],
+        paths: [{ from: [4.5, 5], via: [[4.5, 2.6]], to: [4.5, 5], kind: "move", label: "jump up → land & hold", curve: 0, playerIndex: 0 }],
         legend: [{ tone: "move", text: "Up & stick" }] },
       dk.approachPath({ title: "Last two steps into a jump", side: "middle", setter: false, caption: "Add the last two steps of the hitting approach (right-left) into a two-foot jump straight up, swinging both arms and sticking the landing." }),
       dk.approachPath({ title: "Full approach jump", side: "middle", setter: false, swing: true, caption: "Build up to a full approach jump, reaching up with the hitting hand. Do small sets of 5 or 6 with full rest — quality over fatigue." })
@@ -186,9 +207,8 @@ RR.extras = RR.extras || {};
       w: 9, h: 8,
       players: [{ x: 3, y: 3, label: "L", team: "b", note: "leader" }, { x: 3, y: 5, label: "M", team: "a", note: "mirrors" }],
       paths: [
-        { from: [3, 3], to: [6.2, 3], kind: "move", label: "leads side to side", curve: 0 },
-        { from: [3, 5], to: [6.2, 5], kind: "move", label: "mirrors across", curve: 0 },
-        { from: [1.8, 3], to: [1.8, 5], kind: "move", curve: 0 }
+        { from: [3, 3], to: [6.2, 3], kind: "move", label: "leads side to side", curve: 0, playerIndex: 0 },
+        { from: [3, 5], to: [6.2, 5], kind: "move", label: "mirrors across", curve: 0, playerIndex: 1 }
       ],
       legend: [{ tone: "b", text: "Leader" }, { tone: "a", text: "Mirror" }, { tone: "move", text: "Match the move" }]
     }

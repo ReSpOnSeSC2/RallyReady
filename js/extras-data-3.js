@@ -41,15 +41,19 @@ RR.extras = RR.extras || {};
     else if (n === 2) px = [[2.8, 8.8], [6.4, 8.8]];
     else if (n === 3) px = [[2, 8.8], [4.5, 9.2], [7, 8.8]];
     else px = [[1.7, 9.2], [4.5, 9.6], [7.3, 9.2], [3, 7.2], [6, 7.2]]; // five-player W
-    var players = [{ x: 4.5, y: 1.4, label: o.serverLabel || "S", team: "b", note: o.serverNote || "server" }];
+    var serverY = o.serverY != null ? o.serverY : 0.35;
+    var players = [{ x: 4.5, y: serverY, label: o.serverLabel || "S", team: "b", note: o.serverNote || "server behind end line" }];
+    for (var qi = 0; qi < (o.serverQueue || 0); qi++) {
+      players.push({ x: 2.9 + qi * 3.2, y: 0.35, label: "Q", team: "n", note: "server queue behind end line" });
+    }
     px.forEach(function (p) { players.push({ x: p[0], y: p[1], label: "", team: "a" }); });
     players.push({ x: 6.4, y: 6.4, label: "St", team: "a", note: "setter target" });
     var t = px[Math.floor(px.length / 2)];
-    var paths = [{ from: [4.5, 1.8], to: [t[0], t[1] - 0.4], kind: "serve", label: o.serveLabel || "serve", curve: o.serveCurve != null ? o.serveCurve : 0.15 }];
+    var paths = [{ from: [4.5, serverY + 0.35], to: [t[0], t[1] - 0.4], kind: "serve", label: o.serveLabel || "serve", curve: o.serveCurve != null ? o.serveCurve : 0.15 }];
     if (o.pass !== false) paths.push({ from: [t[0], t[1] - 0.4], to: [6.2, 6.6], kind: "ball", label: "pass", curve: 0.2 });
     var spec = {
       title: o.title, caption: o.caption, w: 9, h: 12, net: 6,
-      lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
+      lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0.8, w: 9, h: 10.4 }],
       players: players, paths: paths,
       legend: [{ tone: "b", text: "Server" }, { tone: "a", text: "Passers + setter" }]
     };
@@ -105,8 +109,8 @@ RR.extras = RR.extras || {};
         players: [{ x: 3.5, y: 1.6, label: "F", team: "b", note: "feeder" }, { x: 3.5, y: 6, label: "P", team: "a", note: "starts here" }],
         paths: [{ from: [3.5, 2], to: [5.6, 5.4], kind: "ball", label: "toss wide", curve: 0.15 }] },
       { title: "Shuffle & square up", caption: "The passer shuffles behind the ball, STOPS, squares to the feeder, and passes with still arms. Then switch sides.", w: 7, h: 8,
-        players: [{ x: 3.5, y: 1.6, label: "F", team: "b" }, { x: 5.6, y: 6, label: "P", team: "a", note: "moved over" }],
-        paths: [{ from: [3.5, 6], to: [5.4, 6], kind: "move", label: "shuffle", curve: 0 }, { from: [5.6, 5.6], to: [3.7, 2], kind: "ball", label: "pass", curve: 0.18 }] }
+        players: [{ x: 3.5, y: 1.6, label: "F", team: "b" }, { x: 3.5, y: 6, label: "P", team: "a", note: "starts centered" }],
+        paths: [{ from: [3.5, 6], to: [5.4, 6], kind: "move", label: "shuffle behind ball", curve: 0, playerIndex: 1 }, { from: [5.6, 5.6], to: [3.7, 2], kind: "ball", label: "pass", curve: 0.18 }] }
     )
   };
   E["platform-angle-passing"] = {
@@ -156,7 +160,7 @@ RR.extras = RR.extras || {};
   // ---- Serve-receive systems ------------------------------------------------
 
   E["serve-receive-intro-easy"] = {
-    diagram: serveRcv({ passers: 1, serverNote: "serves from inside the court", serveLabel: "easy serve", serveCurve: 0.05, caption: "Slow, loopy serves from a short distance: the passer reads it, gets behind it, and passes to the target near the net. Move the server back as it gets easy." })
+    diagram: serveRcv({ passers: 1, serverY: 1.4, serverNote: "serves from inside the court", serveLabel: "easy serve", serveCurve: 0.05, caption: "Slow, loopy serves from a short distance: the passer reads it, gets behind it, and passes to the target near the net. Move the server back as it gets easy." })
   };
   E["two-person-serve-receive"] = {
     diagram: serveRcv({ passers: 2, serveLabel: "serve / seam", caption: "Two passers split the court. The server can aim the SEAM between them — both call early, the closer one takes it, the other backs up." })
@@ -179,10 +183,14 @@ RR.extras = RR.extras || {};
   E["libero-serve-receive-range"] = {
     diagram: {
       caption: "The libero starts middle-back and covers a wide area. The server aims the edges and seams; the libero calls, moves to get the body behind it, and passes to target. Grow the area over time.",
-      w: 9, h: 12, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
+      w: 9, h: 12, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0.8, w: 9, h: 10.4 }],
       zones: [{ x: 1.6, y: 7.4, w: 5.8, h: 3.4, tone: "good", label: "libero range" }],
-      players: [{ x: 4.5, y: 1.4, label: "S", team: "b", note: "server" }, { x: 4.5, y: 9, label: "L", team: "a", note: "libero" }, { x: 6.6, y: 6.4, label: "St", team: "a", note: "target" }],
-      paths: [{ from: [4.5, 1.8], to: [2.2, 8.4], kind: "serve", label: "to the edge", curve: 0.2 }, { from: [4.5, 9], to: [6.4, 6.6], kind: "ball", label: "pass", curve: 0.2 }],
+      players: [{ x: 4.5, y: 0.35, label: "S", team: "b", note: "server behind end line" }, { x: 4.5, y: 9, label: "L", team: "a", note: "libero" }, { x: 6.6, y: 6.4, label: "St", team: "a", note: "target" }],
+      paths: [
+        { from: [4.5, 0.7], to: [2.2, 8.4], kind: "serve", label: "serve to the edge", curve: 0.2 },
+        { from: [4.5, 9], to: [2.2, 8.4], kind: "move", label: "libero gets behind it", curve: 0.15, playerIndex: 1 },
+        { from: [2.2, 8.4], to: [6.4, 6.6], kind: "ball", label: "pass to target", curve: 0.2 }
+      ],
       legend: [{ tone: "good", text: "Area to cover" }, { tone: "a", text: "Libero + target" }]
     }
   };
@@ -215,14 +223,15 @@ RR.extras = RR.extras || {};
       { title: "Follow your pass — to the BACK of the OTHER line",
         caption: "After passing, player 1 jogs to the BACK of the OTHER line (Line B). Now the front of Line B passes to the same target and follows ACROSS to Line A. The two lines keep feeding each other back and forth — constant motion, and the target never moves.",
         w: 9, h: 8,
+        zones: [{ x: 6.6, y: 5.45, w: 1.2, h: 1.05, tone: "neutral", label: "BACK" }],
         players: [
-          { x: 1.8, y: 3.5, label: "2", team: "a" }, { x: 1.8, y: 4.5, label: "3", team: "a" },
+          { x: 1.8, y: 3, label: "1", team: "a", note: "follows the pass" },
+          { x: 1.8, y: 4, label: "2", team: "a" }, { x: 1.8, y: 5, label: "3", team: "a" },
           { x: 7.2, y: 3, label: "", team: "b" }, { x: 7.2, y: 4, label: "", team: "b" }, { x: 7.2, y: 5, label: "", team: "b" },
-          { x: 7.2, y: 6, label: "1", team: "a", note: "now at back of Line B" },
           { x: 4.5, y: 4, label: "T", team: "n", note: "cone / hoop / coach" }
         ],
         paths: [
-          { from: [2.1, 3], to: [7.0, 6.0], kind: "move", curve: -0.5 },
+          { from: [2.1, 3], to: [7.0, 6.0], kind: "move", label: "follow to back", curve: -0.5, playerIndex: 0 },
           { from: [6.9, 3], to: [5.0, 3.9], kind: "ball", label: "next pass", curve: -0.12 }
         ],
         legend: [{ tone: "a", text: "Line A" }, { tone: "b", text: "Line B" }, { tone: "n", text: "Target" }] }
@@ -230,13 +239,34 @@ RR.extras = RR.extras || {};
   };
   E["butterfly-passing"] = {
     diagrams: dk.seq(
-      { title: "Serve & pass", caption: "A player serves over the net; a passer on the far side passes to the setter/target by the net.", w: 9, h: 12, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
-        players: [{ x: 2.4, y: 10.4, label: "Sv", team: "a", note: "server" }, { x: 4.5, y: 4.2, label: "P", team: "b", note: "passer" }, { x: 7, y: 1.8, label: "T", team: "b", note: "target" }],
-        paths: [{ from: [2.4, 10], to: [4.3, 4.6], kind: "serve", label: "serve", curve: 0.12 }, { from: [4.5, 4.2], to: [6.7, 2.1], kind: "ball", label: "pass", curve: 0.2 }],
+      { title: "Serve & pass", caption: "A player serves over the net; a passer on the far side passes to the setter/target by the net.", w: 9, h: 14, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
+        players: [
+          { x: 2.4, y: 12.45, label: "Sv", team: "a", note: "serves now behind end line" },
+          { x: 2.4, y: 13.2, label: "Q", team: "n", note: "next server behind end line" },
+          { x: 4.5, y: 4.2, label: "P", team: "b", note: "passes now" },
+          { x: 3.55, y: 3.55, label: "Q", team: "n", note: "passing line" },
+          { x: 7, y: 1.8, label: "T", team: "b", note: "target" },
+          { x: 7.75, y: 3, label: "Sh", team: "n", note: "shags" }
+        ],
+        paths: [{ from: [2.4, 12.1], to: [4.3, 4.6], kind: "serve", label: "serve", curve: 0.12 }, { from: [4.5, 4.2], to: [6.7, 2.1], kind: "ball", label: "pass", curve: 0.2 }],
         legend: [{ tone: "a", text: "Server side" }, { tone: "b", text: "Passer / target" }] },
-      { title: "Follow your ball", caption: "Everyone rotates the way the ball went: the server jogs to the passing line, the passer goes to the target spot, the target shags back to serving. Continuous.", w: 9, h: 12, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
-        players: [{ x: 2.4, y: 10.4, label: "Sv", team: "a" }, { x: 4.5, y: 4.2, label: "P", team: "b" }, { x: 7, y: 1.8, label: "T", team: "b" }],
-        paths: [{ from: [2.7, 10.2], to: [4.3, 4.8], kind: "move", label: "serve → pass", curve: 0.2 }, { from: [4.7, 4], to: [6.8, 2.1], kind: "move", label: "pass → target", curve: 0.2 }] }
+      { title: "Follow your ball", caption: "Everyone rotates the way the ball went: the server jogs to the passing line, the passer goes to the target spot, the target shags back to serving. Continuous.", w: 9, h: 14, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
+        players: [
+          { x: 2.4, y: 12.45, label: "Sv", team: "a", note: "serves now behind end line" },
+          { x: 2.4, y: 13.2, label: "Q", team: "n", note: "next server behind end line" },
+          { x: 4.5, y: 4.2, label: "P", team: "b", note: "passes now" },
+          { x: 3.55, y: 3.55, label: "Q", team: "n", note: "passing line" },
+          { x: 7, y: 1.8, label: "T", team: "b", note: "target / shag" },
+          { x: 7.75, y: 3, label: "Sh", team: "n", note: "shags" }
+        ],
+        paths: [
+          { from: [2.4, 12.45], to: [3.55, 4.35], kind: "move", label: "server → passing line", curve: 0.2, playerIndex: 0 },
+          { from: [4.5, 4.2], to: [7, 2.1], kind: "move", label: "passer → target", curve: 0.2, playerIndex: 2 },
+          { from: [7, 1.8], to: [7.75, 3], kind: "move", label: "target → shag", curve: 0.12, playerIndex: 4 },
+          { from: [7.75, 3], to: [3.1, 13.2], via: [[8.2, 6], [8.2, 10.5]], kind: "move", label: "shagger → serving line", curve: 0, playerIndex: 5 },
+          { from: [2.4, 13.2], to: [2.4, 12.45], kind: "move", label: "queue → serve", curve: 0, playerIndex: 1 },
+          { from: [3.55, 3.55], to: [4.5, 4.2], kind: "move", label: "queue → pass", curve: 0.1, playerIndex: 3 }
+        ] }
     )
   };
   E["out-of-system-passing"] = {
@@ -246,16 +276,30 @@ RR.extras = RR.extras || {};
         paths: [{ from: [4.5, 1.4], to: [2.6, 7.6], kind: "serve", label: "tough ball", curve: 0.1 }, { from: [2.4, 7.6], to: [4.5, 6], kind: "ball", label: "high to middle", curve: -0.2 }],
         legend: [{ tone: "coach", text: "Coach" }, { tone: "a", text: "Passer" }] },
       { title: "Setter chases, hitter finishes", caption: "The setter runs it down and sets a high, hittable ball even from the bad pass; a hitter takes a safe, smart swing. Then rotate.", w: 9, h: 11, net: 2, lines: [{ y: 5.2 }], court: [{ x: 0, y: 0, w: 9, h: 11 }],
-        players: [{ x: 4.5, y: 6, label: "", team: "a", note: "high ball" }, { x: 6.4, y: 4.4, label: "St", team: "a", note: "chases" }, { x: 2.2, y: 4.4, label: "H", team: "a", note: "hitter" }],
+        balls: [{ x: 4.5, y: 6 }],
+        players: [
+          { x: 4.5, y: 0.9, label: "C", team: "coach", note: "starts the rep" },
+          { x: 2.4, y: 8, label: "P", team: "a", note: "made the high pass" },
+          { x: 6.4, y: 4.4, label: "St", team: "a", note: "chases" },
+          { x: 2.2, y: 4.4, label: "H", team: "a", note: "hitter" }
+        ],
         paths: [{ from: [4.7, 6], to: [6.2, 4.6], kind: "ball", label: "setter runs it down", curve: 0.2 }, { from: [6.4, 4.4], to: [2.6, 4.2], kind: "ball", label: "high set", curve: 0.25 }, { from: [2.2, 4], to: [4.4, 1.4], kind: "serve", label: "safe swing", curve: 0.1 }] }
     )
   };
   E["serve-and-pass-crossover"] = {
     diagrams: dk.seq(
-      serveRcv({ passers: 3, title: "Serve & receive", serverNote: "line of servers", serveLabel: "real serve", zones: [{ x: 5.8, y: 5.6, w: 1.6, h: 1.4, tone: "target", label: "cone" }], caption: "Servers serve real serves at three passers; a cone marks the setter target so passers know exactly where the ball must go." }),
-      { title: "Crossover rotation", caption: "After the group earns three good passes, players cross jobs: a passer jogs back to serve, a server steps in to pass — so everyone trains both connected skills.", w: 9, h: 12, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
-        players: [{ x: 4.5, y: 1.4, label: "Sv", team: "b", note: "server line" }, { x: 4.5, y: 9, label: "P", team: "a", note: "passer" }],
-        paths: [{ from: [4.5, 8.6], to: [4.5, 2], kind: "move", label: "pass → serve", curve: 0.4 }, { from: [4, 1.8], to: [4, 8.6], kind: "move", label: "serve → pass", curve: 0.4 }] }
+      serveRcv({ passers: 3, serverQueue: 2, title: "Serve & receive", serverNote: "serves now", serveLabel: "real serve", zones: [{ x: 5.8, y: 5.6, w: 1.6, h: 1.4, tone: "target", label: "cone" }], caption: "The front server serves at three passers while two servers wait behind the end line; the pass goes to the setter target." }),
+      { title: "Crossover rotation", caption: "After the group earns three good passes, players cross jobs: a passer jogs back to serve, a server steps in to pass — so everyone trains both connected skills.", w: 9, h: 12, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0.8, w: 9, h: 10.4 }],
+        players: [
+          { x: 3.7, y: 0.35, label: "Sv", team: "b", note: "server line behind end line" },
+          { x: 4.5, y: 0.35, label: "Q", team: "n", note: "next server behind end line" },
+          { x: 5.3, y: 0.35, label: "Q", team: "n", note: "server queue behind end line" },
+          { x: 2, y: 8.8, label: "P", team: "a", note: "passer" },
+          { x: 4.5, y: 9.2, label: "P", team: "a", note: "passer" },
+          { x: 7, y: 8.8, label: "P", team: "a", note: "passer" },
+          { x: 6.4, y: 6.4, label: "St", team: "a", note: "setter target" }
+        ],
+        paths: [{ from: [4.5, 8.6], to: [4.5, 0.55], kind: "move", label: "pass → serve", curve: 0.4, playerIndex: 4 }, { from: [3.7, 0.55], to: [4, 8.6], kind: "move", label: "serve → pass", curve: 0.4, playerIndex: 0 }] }
     )
   };
 

@@ -1,6 +1,7 @@
 # Runs every self-test on each push and pull request, so a regression in the
-# planning engine, the feed data, the service-worker precache list, or the
-# i18n dictionaries is caught before it reaches a coach's phone.
+# planning engine, the feed data, drill demonstrations, the service-worker
+# precache list, or the i18n dictionaries is caught before it reaches a coach's
+# phone.
 # The same checks run locally with:  node scripts/verify.js  (etc.)
 name: verify
 
@@ -20,6 +21,10 @@ jobs:
         run: node scripts/verify.js
       - name: Ideas feed data integrity
         run: node scripts/verify-feed.js
+      - name: Drill animation data integrity
+        run: node scripts/verify-drill-animation.js
+      - name: Human drill motion assets
+        run: node scripts/verify-drill-human-motion.js
       - name: Service worker precache completeness
         run: node scripts/verify-sw.js
       - name: i18n dictionary health + coverage report
