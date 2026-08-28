@@ -111,10 +111,42 @@ RR.extras = RR.extras || {};
   };
   E["reaction-sprint-starts"] = {
     diagrams: dk.seq(
-      { title: "Wait for the signal", caption: "Players set up in an athletic stance facing a coach or partner, ready to explode the instant they see or hear the cue.", w: 9, h: 10,
-        players: [{ x: 4.5, y: 0.9, label: "C", team: "coach", note: "clap / whistle / drop" }].concat(dk.spread(4, 1.6, 7.4).map(function (x) { return { x: x, y: 8, label: "", team: "a" }; })),
-        legend: [{ tone: "coach", text: "Signal" }, { tone: "a", text: "Ready stance" }] },
-      dk.lanes({ title: "Explode 5 yards", caption: "On the clap, whistle, or hand drop, explode into a short 5-yard sprint. Change the start each round — facing forward, sideways, even backward — full effort then full rest." })
+      {
+        title: "Wait for the signal",
+        caption: "Work in a pair. The cue partner faces the reacting athlete, who holds a balanced athletic stance and stays loaded without guessing.",
+        w: 9, h: 10,
+        players: [
+          { id: "reaction-caller", x: 4.5, y: 2.15, label: "Cue", team: "b",
+            role: "signal partner", facing: "south", note: "clap / whistle / hand drop" },
+          { id: "reaction-runner", x: 4.5, y: 8, label: "R", team: "a",
+            role: "reacting sprinter", facing: "north", note: "loaded athletic stance" }
+        ],
+        signals: [{ actor: "reaction-caller", receiver: "reaction-runner",
+          order: 1, choices: ["clap", "whistle", "hand drop"] }],
+        legend: [{ tone: "b", text: "Signal partner" }, { tone: "a", text: "Sprinter ready" }]
+      },
+      {
+        title: "React, drive, then recover fully",
+        caption: "The instant the signal appears, the sprinter drives the first three steps hard and low, accelerates through five yards, then walks back and rests fully. Repeat from forward-, side-, and backward-facing starts before partners switch jobs.",
+        w: 9, h: 10,
+        zones: [
+          { x: 6.45, y: 2.95, w: 2, h: 0.9, tone: "good", label: "5-YARD FINISH" },
+          { x: 0.5, y: 7.15, w: 2.25, h: 1.05, tone: "neutral", label: "START · FULL REST" }
+        ],
+        players: [
+          { id: "reaction-caller", x: 1.35, y: 2.4, label: "Cue", team: "b",
+            role: "signal partner", facing: "south", note: "varies the signal" },
+          { id: "reaction-runner", x: 1.35, y: 6.25, label: "R", team: "a",
+            role: "reacting sprinter", facing: "east", note: "reacts on the cue" }
+        ],
+        paths: [{
+          from: [1.6, 6.1], via: [[3.15, 6.1], [5.2, 6.1]], to: [7.6, 6.1],
+          kind: "move", curve: 0, label: "REACT → 3 LOW DRIVE STEPS → 5 YARDS",
+          playerIndex: 1, actor: "reaction-runner",
+          startVariants: ["forward-facing", "side-facing", "backward-facing"]
+        }],
+        legend: [{ tone: "b", text: "Signal partner" }, { tone: "move", text: "Explosive sprint" }]
+      }
     )
   };
   E["line-touch-conditioning"] = {

@@ -441,11 +441,17 @@
   12%, 38% { opacity: 0.9; transform: scale(1.12); }
 }
 
-.dam-flight,
-.dam-mover {
+.dam-flight {
   offset-distance: 0%;
   offset-rotate: 0deg;
   animation: dam-travel var(--dam-duration, 4.2s) var(--ease) infinite;
+  animation-delay: var(--dam-delay, 0s);
+  transform-box: view-box;
+}
+.dam-mover {
+  offset-distance: 0%;
+  offset-rotate: 0deg;
+  animation: dam-athlete-travel var(--dam-duration, 4.2s) var(--ease) infinite;
   animation-delay: var(--dam-delay, 0s);
   transform-box: view-box;
 }
@@ -454,6 +460,12 @@
   7% { opacity: 1; }
   86% { opacity: 1; }
   100% { offset-distance: 100%; opacity: 0; }
+}
+/* Athletes remain fully visible through the first drive step and the finish.
+   Ball flights still fade between contacts; people never inherit that reset. */
+@keyframes dam-athlete-travel {
+  0%, 5% { offset-distance: 0%; opacity: 1; }
+  88%, 100% { offset-distance: 100%; opacity: 1; }
 }
 .dam-object__ball-face {
   fill: var(--white);

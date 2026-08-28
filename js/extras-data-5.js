@@ -245,59 +245,200 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       { title: "Base D → 'free!'", caption: "Six players start in their base defensive spots. The coach yells 'free!' and tosses an easy ball over the net for the team to read and run.", w: 9, h: 11, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0.6, w: 9, h: 9.6 }],
         players: [
-          { x: 4.5, y: 1.2, label: "C", team: "coach", note: "tosses free ball" },
-          { x: 2.6, y: 7, label: "", team: "a" }, { x: 6.4, y: 7, label: "", team: "a" }, { x: 4.5, y: 7.8, label: "", team: "a" },
-          { x: 1.6, y: 9.6, label: "", team: "a" }, { x: 4.5, y: 10, label: "", team: "a" }, { x: 7.4, y: 9.6, label: "", team: "a" }
+          { id: "free-coach", x: 4.5, y: 1.2, label: "C", team: "coach", role: "free-ball coach", note: "tosses free ball" },
+          { id: "free-hitter", x: 2.6, y: 7, label: "H", team: "a", role: "outside hitter" },
+          { id: "free-setter", x: 6.4, y: 7, label: "St", team: "a", role: "setter" },
+          { id: "free-passer", x: 4.5, y: 7.8, label: "P", team: "a", role: "free-ball passer" },
+          { id: "free-cover-left", x: 1.6, y: 9.6, label: "L", team: "a", role: "left-back cover" },
+          { id: "free-cover-middle", x: 4.5, y: 10, label: "M", team: "a", role: "middle-back cover" },
+          { id: "free-cover-right", x: 7.4, y: 9.6, label: "R", team: "a", role: "right-back cover" }
         ],
-        paths: [{ from: [4.5, 1.6], to: [4.5, 7.4], kind: "ball", label: "free ball", curve: 0.12 }],
+        paths: [{ from: [4.5, 1.6], to: [4.5, 7.4], kind: "ball", label: "free ball", curve: 0.12,
+          fromActor: "free-coach", toActor: "free-passer" }],
+        contacts: [{ order: 1, actor: "free-coach", toActor: "free-passer",
+          action: "free-ball toss", pathIndex: 0 }],
         legend: [{ tone: "coach", text: "Coach" }, { tone: "a", text: "Base defense" }] },
       { title: "Pass-set-hit attack", caption: "The team passes the free ball to the setter, the setter sets a hitter, and the hitter attacks over. Reset and repeat, rotating so everyone trains each job.", w: 9, h: 11, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0.6, w: 9, h: 9.6 }],
         players: [
-          { x: 4.5, y: 8.4, label: "P", team: "a", note: "passer" },
-          { x: 6.4, y: 7, label: "St", team: "a", note: "setter" },
-          { x: 2.6, y: 7, label: "H", team: "a", note: "hitter" },
-          { x: 4.5, y: 7.75, label: "C", team: "a", note: "attack cover" },
-          { x: 1.6, y: 9.6, label: "L", team: "a", note: "left-back cover" },
-          { x: 7.4, y: 9.6, label: "R", team: "a", note: "right-back cover" }
+          { id: "free-passer", x: 4.5, y: 8.4, label: "P", team: "a", role: "free-ball passer", note: "passer" },
+          { id: "free-setter", x: 6.4, y: 7, label: "St", team: "a", role: "setter", note: "setter" },
+          { id: "free-hitter", x: 2.6, y: 7, label: "H", team: "a", role: "outside hitter", note: "hitter" },
+          { id: "free-cover-middle", x: 4.5, y: 7.75, label: "C", team: "a", role: "attack cover", note: "attack cover" },
+          { id: "free-cover-left", x: 1.6, y: 9.6, label: "L", team: "a", role: "left-back cover", note: "left-back cover" },
+          { id: "free-cover-right", x: 7.4, y: 9.6, label: "R", team: "a", role: "right-back cover", note: "right-back cover" }
         ],
         paths: [
-          { from: [4.5, 8.2], to: [6.3, 7.1], kind: "ball", label: "pass", curve: 0.15 },
-          { from: [6.4, 7], to: [2.8, 6.9], kind: "ball", label: "set", curve: 0.2 },
-          { from: [2.6, 6.8], to: [4.4, 1.6], kind: "serve", label: "hit", curve: 0.1 }
+          { from: [4.5, 8.2], to: [6.3, 7.1], kind: "ball", label: "pass", curve: 0.15,
+            fromActor: "free-passer", toActor: "free-setter" },
+          { from: [6.4, 7], to: [2.8, 6.9], kind: "ball", label: "set", curve: 0.2,
+            fromActor: "free-setter", toActor: "free-hitter" },
+          { from: [2.6, 6.8], to: [4.4, 1.6], kind: "serve", label: "hit", curve: 0.1,
+            fromActor: "free-hitter", toEndpoint: { type: "target", label: "Open court" } }
+        ],
+        motionChains: [[0, 1, 2]],
+        contacts: [
+          { order: 1, actor: "free-passer", toActor: "free-setter", action: "forearm pass", pathIndex: 0 },
+          { order: 2, actor: "free-setter", toActor: "free-hitter", action: "set", pathIndex: 1 },
+          { order: 3, actor: "free-hitter", action: "attack", pathIndex: 2 }
         ],
         legend: [{ tone: "a", text: "Pass → set → hit" }] }
     )
   };
+  // Six legal rotational states for a generic 5-1 lineup. Athlete identities
+  // remain stable while they move clockwise through P1 → P6 → P5 → P4 → P3
+  // → P2. The tactical pass/set/attack is deliberately authored per state so
+  // the animation never substitutes a generic formation for a saved rotation.
+  var rotationSpots = [
+    { code: "P1", x: 7, y: 9.4, row: "back", lane: "right" },
+    { code: "P6", x: 4.5, y: 9.4, row: "back", lane: "middle" },
+    { code: "P5", x: 2, y: 9.4, row: "back", lane: "left" },
+    { code: "P4", x: 2, y: 7, row: "front", lane: "left" },
+    { code: "P3", x: 4.5, y: 7, row: "front", lane: "middle" },
+    { code: "P2", x: 7, y: 7, row: "front", lane: "right" }
+  ];
+  var rotationAthletes = [
+    { id: "rotation-setter", label: "S", role: "setter" },
+    { id: "rotation-outside-1", label: "OH1", role: "outside hitter 1" },
+    { id: "rotation-middle-1", label: "M1", role: "middle blocker 1" },
+    { id: "rotation-opposite", label: "OP", role: "opposite" },
+    { id: "rotation-outside-2", label: "OH2", role: "outside hitter 2" },
+    { id: "rotation-middle-2", label: "M2", role: "middle blocker 2" }
+  ];
+
+  function rotationOffenseScene(rotationNumber) {
+    var shift = rotationNumber - 1;
+    var players = [{ id: "rotation-coach", x: 4.5, y: 1.2, label: "C", team: "coach",
+      role: "coach feeder", facing: "south", note: "starts one controlled ball" }];
+    var placed = [];
+    rotationAthletes.forEach(function (athlete, athleteIndex) {
+      var spot = rotationSpots[(athleteIndex + shift) % rotationSpots.length];
+      var player = {
+        id: athlete.id, x: spot.x, y: spot.y, label: athlete.label, team: "a",
+        role: athlete.role, facing: "north", courtPosition: spot.code,
+        rotation: rotationNumber, row: spot.row, lane: spot.lane,
+        note: athlete.role + " · starts " + spot.code
+      };
+      placed.push(player);
+      players.push(player);
+    });
+
+    var setter = placed.filter(function (player) { return player.id === "rotation-setter"; })[0];
+    var backRow = placed.filter(function (player) { return player.row === "back" && player.id !== setter.id; });
+    var passer = backRow.filter(function (player) { return /outside/.test(player.role); })[0] || backRow[0];
+    var frontRow = placed.filter(function (player) { return player.row === "front" && player.id !== setter.id; });
+    var attacker = frontRow.filter(function (player) { return /outside/.test(player.role); })[0] ||
+      frontRow.filter(function (player) { return player.role === "opposite"; })[0] || frontRow[0];
+    var setterTarget = [6.25, 6.75];
+    function offensiveBase(player) {
+      if (player.id === setter.id) return setterTarget.slice();
+      if (player.row === "front") {
+        if (/outside/.test(player.role)) return [1.65, 6.75];
+        if (player.role === "opposite") return [7.2, 6.75];
+        return [4.5, 6.7];
+      }
+      // Back-row athletes preserve their legal lane and settle into a true
+      // serve-receive/coverage depth while the setter and front-row attackers
+      // release to their offensive bases.
+      return [player.x, 9.25];
+    }
+    var offenseBases = {};
+    placed.forEach(function (player) { offenseBases[player.id] = offensiveBase(player); });
+    var passerBase = offenseBases[passer.id];
+    var attackContact = offenseBases[attacker.id];
+    var paths = [
+      { from: [4.5, 1.6], to: [passerBase[0], passerBase[1] - 0.25], kind: "ball",
+        label: "1 · coach toss to " + passer.label + " (" + passer.courtPosition + ")", curve: 0.12,
+        fromActor: "rotation-coach", toActor: passer.id,
+        simultaneousGroup: "ball-in-and-offense-release", sequenceOrder: 0 },
+      { from: [passerBase[0], passerBase[1] - 0.25], to: setterTarget, kind: "ball",
+        label: "2 · " + passer.label + " passes to setter target", curve: 0.18,
+        fromActor: passer.id, toActor: setter.id, sequenceOrder: 1 },
+      { from: setterTarget, to: attackContact, kind: "ball",
+        label: "3 · setter delivers planned ball to " + attacker.label, curve: 0.2,
+        fromActor: setter.id, toActor: attacker.id, sequenceOrder: 2 },
+      { from: attackContact, to: [attacker.x < 4.5 ? 6.5 : 2.5, 3.2], kind: "serve",
+        label: "4 · " + attacker.label + " attacks from " +
+          (/outside/.test(attacker.role) ? "left pin" :
+            attacker.role === "opposite" ? "right pin" : "middle base") +
+          " after starting " + attacker.courtPosition, curve: 0.1,
+        fromActor: attacker.id, sequenceOrder: 3 }
+    ];
+    // The legal six-person start is only the overlap state. On the incoming
+    // coach ball every athlete releases concurrently into their real offensive
+    // job before the pass-set-attack chain continues.
+    placed.forEach(function (player, athleteIndex) {
+      var destination = offenseBases[player.id];
+      paths.push({
+        from: [player.x, player.y], to: destination.slice(), kind: "move",
+        label: player.id === setter.id
+          ? "setter releases from " + player.courtPosition + " to target"
+          : player.label + " releases from " + player.courtPosition + " to offensive base",
+        curve: (athleteIndex - 2.5) * 0.025,
+        playerIndex: athleteIndex + 1, actor: player.id,
+        motionId: player.id === setter.id ? "sprint" : "shuffle",
+        simultaneousGroup: "ball-in-and-offense-release",
+        stepIndices: [1, 2, 3],
+        sequenceOrder: 0.01 + athleteIndex / 100
+      });
+    });
+    var nextRotation = placed.map(function (player, athleteIndex) {
+      var nextSpot = rotationSpots[(athleteIndex + shift + 1) % rotationSpots.length];
+      return {
+        actor: player.id, from: [player.x, player.y], to: [nextSpot.x, nextSpot.y],
+        kind: "move", label: player.label + " · " + player.courtPosition + " → " + nextSpot.code
+      };
+    });
+    nextRotation.forEach(function (route, athleteIndex) {
+      paths.push({
+        from: offenseBases[route.actor].slice(), to: route.to.slice(), kind: "move",
+        label: route.label + " after the rep", curve: (athleteIndex - 2.5) * 0.035,
+        playerIndex: athleteIndex + 1, actor: route.actor, motionId: "sprint",
+        simultaneousGroup: "clockwise-next-rotation",
+        stepIndices: [2, 3],
+        sequenceOrder: 4 + athleteIndex / 100
+      });
+    });
+    var mechanicsCaption = rotationNumber === 1
+      ? "Set the team in Rotation 1 serve-receive. A coach tosses a ball in; the team passes, sets, and runs its planned attack."
+      : rotationNumber === 2
+        ? "Run two or three balls per rotation, then move to the next one. Rotation 2 keeps the same six athlete identities in legal clockwise order, with " + passer.label + " on first contact, the setter releasing from " + setter.courtPosition + ", and " + attacker.label + " finishing from the front row."
+        : "Legal Rotation " + rotationNumber + " keeps the same six athlete identities in clockwise order. Roles for this rep: " + passer.label + " owns first contact, the setter releases from " + setter.courtPosition + ", and " + attacker.label + " owns the eligible front-row finish. Repeat the controlled rep, then advance clockwise.";
+    return {
+      title: "Rotation " + rotationNumber + " · setter starts " + setter.courtPosition,
+      caption: mechanicsCaption,
+      w: 9, h: 11, net: 6, lines: [{ y: 3 }, { y: 9 }],
+      court: [{ x: 0, y: 0.6, w: 9, h: 9.6 }],
+      zones: [
+        { x: 0.7, y: 6.45, w: 7.6, h: 1.05, tone: "neutral", label: "FRONT ROW · P4   P3   P2" },
+        { x: 0.7, y: 8.85, w: 7.6, h: 1.05, tone: "good", label: "BACK ROW · P5   P6   P1" }
+      ],
+      players: players,
+      paths: paths,
+      motionChains: [[0, 1, 2, 3]],
+      contacts: [
+        { order: 1, actor: "rotation-coach", action: "controlled toss", pathIndex: 0 },
+        { order: 2, actor: passer.id, action: "forearm pass", pathIndex: 1 },
+        { order: 3, actor: setter.id, action: "planned set", pathIndex: 2 },
+        { order: 4, actor: attacker.id, action: "front-row attack", pathIndex: 3 }
+      ],
+      nextRotation: nextRotation,
+      offenseBases: offenseBases,
+      legalOrder: rotationSpots.map(function (spot) {
+        var occupant = placed.filter(function (player) { return player.courtPosition === spot.code; })[0];
+        return { position: spot.code, actor: occupant.id, role: occupant.role };
+      }),
+      legend: [
+        { tone: "coach", text: "Coach starts one ball" },
+        { tone: "a", text: "Six stable lineup athletes" },
+        { tone: "move", text: "Setter release · then rotate clockwise" }
+      ]
+    };
+  }
+
   E["run-the-rotation-offense"] = {
     diagrams: dk.seq(
-      { title: "Rotation serve-receive", caption: "The team sets up in a rotation's serve-receive formation. A coach tosses a ball in; the team passes, sets, and runs its planned attack for that rotation. Two or three balls, then advance.", w: 9, h: 11, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0.6, w: 9, h: 9.6 }],
-        players: [
-          { x: 4.5, y: 1.2, label: "C", team: "coach", note: "tosses in" },
-          { x: 2, y: 8.6, label: "", team: "a" }, { x: 4.5, y: 9.2, label: "", team: "a" }, { x: 7, y: 8.6, label: "", team: "a" },
-          { x: 3, y: 7, label: "H", team: "a", note: "left-side hitter" }, { x: 6, y: 7, label: "H", team: "a", note: "right-side hitter" },
-          { x: 6.6, y: 7, label: "St", team: "a", note: "setter" }
-        ],
-        paths: [
-          { from: [4.5, 1.6], to: [4.5, 8.8], kind: "ball", label: "toss", curve: 0.12 },
-          { from: [4.5, 8.8], to: [6.5, 7.2], kind: "ball", label: "pass to setter", curve: 0.2 },
-          { from: [6.5, 7.2], to: [3.2, 6.8], kind: "ball", label: "planned set", curve: 0.2 },
-          { from: [3, 6.8], to: [4.5, 1.8], kind: "serve", label: "planned attack", curve: 0.1 }
-        ],
-        legend: [{ tone: "coach", text: "Coach" }, { tone: "a", text: "Serve-receive" }] },
-      { title: "Rotate through all six", caption: "After running each rotation, everyone rotates one spot clockwise to the next rotation's formation and repeats — working through all six, fixing overlaps and who-does-what along the way.", w: 9, h: 11, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0.6, w: 9, h: 9.6 }],
-        players: [
-          { x: 2.6, y: 7, label: "4", team: "a" }, { x: 4.5, y: 7, label: "3", team: "a" }, { x: 6.4, y: 7, label: "2", team: "a" },
-          { x: 2.6, y: 9.4, label: "5", team: "a" }, { x: 4.5, y: 9.4, label: "6", team: "a" }, { x: 6.4, y: 9.4, label: "1", team: "a" }
-        ],
-        paths: [
-          { from: [2.6, 7], to: [4.5, 7], kind: "move", curve: 0.2, label: "rotate clockwise", playerIndex: 0 },
-          { from: [4.5, 7], to: [6.4, 7], kind: "move", curve: 0.2, playerIndex: 1 },
-          { from: [6.4, 7.2], to: [6.4, 9.2], kind: "move", curve: 0.2, playerIndex: 2 },
-          { from: [6.4, 9.4], to: [4.5, 9.4], kind: "move", curve: 0.2, playerIndex: 5 },
-          { from: [4.5, 9.4], to: [2.6, 9.4], kind: "move", curve: 0.2, playerIndex: 4 },
-          { from: [2.6, 9.2], to: [2.6, 7.2], kind: "move", curve: 0.2, playerIndex: 3 }
-        ],
-        legend: [{ tone: "move", text: "Rotate to next rotation" }] }
+      rotationOffenseScene(1), rotationOffenseScene(2), rotationOffenseScene(3),
+      rotationOffenseScene(4), rotationOffenseScene(5), rotationOffenseScene(6)
     )
   };
 

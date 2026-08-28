@@ -36,27 +36,97 @@ RR.extras = RR.extras || {};
   // target near the right-front. Pass(es) flow to the target.
   function serveRcv(o) {
     o = o || {};
+    var prefix = o.actorPrefix || "";
+    function actorId(suffix) { return prefix ? prefix + "-" + suffix : undefined; }
     var n = o.passers || 3, px;
     if (n === 1) px = [[4.5, 8.8]];
     else if (n === 2) px = [[2.8, 8.8], [6.4, 8.8]];
     else if (n === 3) px = [[2, 8.8], [4.5, 9.2], [7, 8.8]];
     else px = [[1.7, 9.2], [4.5, 9.6], [7.3, 9.2], [3, 7.2], [6, 7.2]]; // five-player W
     var serverY = o.serverY != null ? o.serverY : 0.35;
-    var players = [{ x: 4.5, y: serverY, label: o.serverLabel || "S", team: "b", note: o.serverNote || "server behind end line" }];
+    var players = [{ id: actorId("server"), x: 4.5, y: serverY,
+      label: o.serverLabel || "S", team: "b", role: prefix ? "server" : undefined,
+      note: o.serverNote || "server behind end line" }];
     for (var qi = 0; qi < (o.serverQueue || 0); qi++) {
-      players.push({ x: 2.9 + qi * 3.2, y: 0.35, label: "Q", team: "n", note: "server queue behind end line" });
+      players.push({ id: actorId("server-queue-" + (qi + 1)), x: 2.9 + qi * 3.2, y: 0.35,
+        label: "Q", team: "n", role: prefix ? "waiting server" : undefined,
+        note: "server queue behind end line" });
     }
-    px.forEach(function (p) { players.push({ x: p[0], y: p[1], label: "", team: "a" }); });
-    players.push({ x: 6.4, y: 6.4, label: "St", team: "a", note: "setter target" });
-    var t = px[Math.floor(px.length / 2)];
-    var paths = [{ from: [4.5, serverY + 0.35], to: [t[0], t[1] - 0.4], kind: "serve", label: o.serveLabel || "serve", curve: o.serveCurve != null ? o.serveCurve : 0.15 }];
-    if (o.pass !== false) paths.push({ from: [t[0], t[1] - 0.4], to: [6.2, 6.6], kind: "ball", label: "pass", curve: 0.2 });
+    var passerStartIndex = players.length;
+    px.forEach(function (p, passerIndex) { players.push({
+      id: actorId("passer-" + (passerIndex + 1)), x: p[0], y: p[1],
+      label: prefix ? "P" + (passerIndex + 1) : "", team: "a",
+      role: prefix ? "serve-receive passer " + (passerIndex + 1) : undefined
+    }); });
+    var setterId = actorId("setter");
+    players.push({ id: setterId, x: 6.4, y: 6.4, label: "St", team: "a",
+      role: prefix ? "setter target" : undefined, note: "setter target" });
+    var primaryIndex = o.primaryPasserIndex != null
+      ? Math.max(0, Math.min(px.length - 1, Math.floor(o.primaryPasserIndex)))
+      : Math.floor(px.length / 2);
+    var t = px[primaryIndex];
+    var primaryId = actorId("passer-" + (primaryIndex + 1));
+    var paths = [{ from: [4.5, serverY + 0.35], to: [t[0], t[1] - 0.4],
+      kind: "serve", label: o.serveLabel || "serve",
+      curve: o.serveCurve != null ? o.serveCurve : 0.15,
+      fromActor: actorId("server"), toActor: primaryId, sequenceOrder: 0 }];
+    var contacts = prefix ? [{ order: 1, actor: actorId("server"), toActor: primaryId,
+      action: "serve", pathIndex: 0 }] : [];
+    var ballChain = [0];
+    if (o.pass !== false) {
+      paths.push({ from: [t[0], t[1] - 0.4], to: [6.2, 6.6], kind: "ball",
+        label: "pass", curve: 0.2, fromActor: primaryId, toActor: setterId,
+        sequenceOrder: 1,
+        simultaneousGroup: o.backupMoves ? prefix + "-receive-response" : undefined });
+      ballChain.push(paths.length - 1);
+      if (prefix) contacts.push({ order: contacts.length + 1, actor: primaryId,
+        toActor: setterId, action: "forearm pass", pathIndex: paths.length - 1 });
+    }
+    if (o.backupMoves) px.forEach(function (p, passerIndex) {
+      if (passerIndex === primaryIndex) return;
+      var towardX = p[0] + (t[0] - p[0]) * 0.18;
+      paths.push({ from: p.slice(), to: [towardX, p[1] - 0.22], kind: "move",
+        label: "open and back up", curve: 0, playerIndex: passerStartIndex + passerIndex,
+        actor: actorId("passer-" + (passerIndex + 1)), sequenceOrder: 1,
+        simultaneousGroup: prefix + "-receive-response" });
+    });
+    if (o.quickAttack) {
+      var hitterIndex = o.hitterIndex != null ? o.hitterIndex : Math.min(3, px.length - 1);
+      var hitterId = actorId("passer-" + (hitterIndex + 1));
+      var hitterPoint = px[hitterIndex];
+      paths.push({ from: [6.4, 6.4], to: [hitterPoint[0], Math.max(6.5, hitterPoint[1] - 0.35)],
+        kind: "ball", label: "quick set", curve: 0.18, fromActor: setterId,
+        toActor: hitterId, sequenceOrder: 2 });
+      ballChain.push(paths.length - 1);
+      if (prefix) contacts.push({ order: contacts.length + 1, actor: setterId,
+        toActor: hitterId, action: "quick set", pathIndex: paths.length - 1 });
+      paths.push({ from: [hitterPoint[0], Math.max(6.3, hitterPoint[1] - 0.55)],
+        to: [7.1, 2.1], kind: "serve", label: "quick attack", curve: 0.1,
+        fromActor: hitterId, toEndpoint: { type: "target", label: "Open court" },
+        sequenceOrder: 3 });
+      ballChain.push(paths.length - 1);
+      if (prefix) contacts.push({ order: contacts.length + 1, actor: hitterId,
+        action: "quick attack", pathIndex: paths.length - 1 });
+    }
+    if (o.rotateFormation) px.forEach(function (p, passerIndex) {
+      var next = px[(passerIndex + 1) % px.length];
+      paths.push({ from: p.slice(), to: next.slice(), kind: "move",
+        label: passerIndex === 0 ? "rotate receive jobs" : "", curve: 0.08,
+        playerIndex: passerStartIndex + passerIndex,
+        actor: actorId("passer-" + (passerIndex + 1)), sequenceOrder: 4,
+        simultaneousGroup: prefix + "-receive-rotation" });
+    });
     var spec = {
       title: o.title, caption: o.caption, w: 9, h: 12, net: 6,
       lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0.8, w: 9, h: 10.4 }],
       players: players, paths: paths,
       legend: [{ tone: "b", text: "Server" }, { tone: "a", text: "Passers + setter" }]
     };
+    if (prefix) {
+      spec.contacts = contacts;
+      if (ballChain.length > 1) spec.motionChains = [ballChain];
+    }
+    if (o.backupMoves || o.rotateFormation) spec.operation = "parallel";
     if (o.zones) spec.zones = o.zones;
     return spec;
   }
@@ -163,22 +233,34 @@ RR.extras = RR.extras || {};
     diagram: serveRcv({ passers: 1, serverY: 1.4, serverNote: "serves from inside the court", serveLabel: "easy serve", serveCurve: 0.05, caption: "Slow, loopy serves from a short distance: the passer reads it, gets behind it, and passes to the target near the net. Move the server back as it gets easy." })
   };
   E["two-person-serve-receive"] = {
-    diagram: serveRcv({ passers: 2, serveLabel: "serve / seam", caption: "Two passers split the court. The server can aim the SEAM between them — both call early, the closer one takes it, the other backs up." })
+    diagram: serveRcv({ passers: 2, actorPrefix: "two-receive", primaryPasserIndex: 0,
+      backupMoves: true, serveLabel: "serve / seam",
+      caption: "Two passers split the court. The server can aim the SEAM between them — both call early, the closer one takes it, the other backs up." })
   };
   E["three-person-serve-receive"] = {
     diagrams: dk.seq(
-      serveRcv({ passers: 3, title: "Formation & serve", pass: false, caption: "Three passers in a W across the back court, setter target at the net. The server serves into the formation." }),
-      serveRcv({ passers: 3, title: "Call & pass", serveLabel: "", caption: "Whoever the ball is closest to calls early and passes to the setter; the other two open toward the ball in case it's shanked their way." })
+      serveRcv({ passers: 3, actorPrefix: "three-receive", title: "Formation & serve",
+        pass: false, caption: "Three passers in a W across the back court, setter target at the net. The server serves into the formation." }),
+      serveRcv({ passers: 3, actorPrefix: "three-receive", title: "Call & pass",
+        backupMoves: true, serveLabel: "",
+        caption: "Whoever the ball is closest to calls early and passes to the setter; the other two open toward the ball in case it's shanked their way." })
     )
   };
   E["w-formation-serve-receive"] = {
     diagrams: dk.seq(
-      serveRcv({ passers: 5, title: "The W & the serve", pass: false, caption: "Five passers in a W with the setter releasing to right-front. Server serves anywhere into the formation." }),
-      serveRcv({ passers: 5, title: "Pass & attack", serveLabel: "", caption: "Whoever it's heading toward takes it, neighbors back up, ball goes to the setter target — then run a quick attack and rotate." })
+      serveRcv({ passers: 5, actorPrefix: "w-receive", primaryPasserIndex: 1,
+        title: "The W & the serve", pass: false,
+        caption: "Five passers in a W with the setter releasing to right-front. Server serves anywhere into the formation." }),
+      serveRcv({ passers: 5, actorPrefix: "w-receive", primaryPasserIndex: 1,
+        hitterIndex: 3, backupMoves: true, quickAttack: true, rotateFormation: true,
+        title: "Pass & attack", serveLabel: "",
+        caption: "Whoever it's heading toward takes it, neighbors back up, ball goes to the setter target — then run a quick attack and rotate." })
     )
   };
   E["backcourt-communication-passing"] = {
-    diagram: serveRcv({ passers: 3, serveLabel: "serve to a seam", caption: "Three back-court passers: the server hits zones and seams. Demand a LOUD early call on every serve before the pass; the others open up and back up the play." })
+    diagram: serveRcv({ passers: 3, actorPrefix: "backcourt-call", backupMoves: true,
+      serveLabel: "serve to a seam",
+      caption: "Three back-court passers: the server hits zones and seams. Demand a LOUD early call on every serve before the pass; the others open up and back up the play." })
   };
   E["libero-serve-receive-range"] = {
     diagram: {
@@ -239,34 +321,62 @@ RR.extras = RR.extras || {};
   };
   E["butterfly-passing"] = {
     diagrams: dk.seq(
-      { title: "Serve & pass", caption: "A player serves over the net; a passer on the far side passes to the setter/target by the net.", w: 9, h: 14, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
+      { title: "Serve → pass → target → return", caption: "Six athletes fill the six continuous jobs. The server serves to the passer; the passer passes to the setter target; the target catches or sets it; then the shagger retrieves that same ball and returns it down the sideline to the serving queue.", w: 9, h: 14, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
         players: [
-          { x: 2.4, y: 12.45, label: "Sv", team: "a", note: "serves now behind end line" },
-          { x: 2.4, y: 13.2, label: "Q", team: "n", note: "next server behind end line" },
-          { x: 4.5, y: 4.2, label: "P", team: "b", note: "passes now" },
-          { x: 3.55, y: 3.55, label: "Q", team: "n", note: "passing line" },
-          { x: 7, y: 1.8, label: "T", team: "b", note: "target" },
-          { x: 7.75, y: 3, label: "Sh", team: "n", note: "shags" }
-        ],
-        paths: [{ from: [2.4, 12.1], to: [4.3, 4.6], kind: "serve", label: "serve", curve: 0.12 }, { from: [4.5, 4.2], to: [6.7, 2.1], kind: "ball", label: "pass", curve: 0.2 }],
-        legend: [{ tone: "a", text: "Server side" }, { tone: "b", text: "Passer / target" }] },
-      { title: "Follow your ball", caption: "Everyone rotates the way the ball went: the server jogs to the passing line, the passer goes to the target spot, the target shags back to serving. Continuous.", w: 9, h: 14, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
-        players: [
-          { x: 2.4, y: 12.45, label: "Sv", team: "a", note: "serves now behind end line" },
-          { x: 2.4, y: 13.2, label: "Q", team: "n", note: "next server behind end line" },
-          { x: 4.5, y: 4.2, label: "P", team: "b", note: "passes now" },
-          { x: 3.55, y: 3.55, label: "Q", team: "n", note: "passing line" },
-          { x: 7, y: 1.8, label: "T", team: "b", note: "target / shag" },
-          { x: 7.75, y: 3, label: "Sh", team: "n", note: "shags" }
+          { id: "butterfly-server", x: 2.4, y: 12.45, label: "Sv", team: "a",
+            role: "current server", facing: "north", note: "serves now behind end line" },
+          { id: "butterfly-next-server", x: 2.4, y: 13.2, label: "Q", team: "n",
+            role: "next server", facing: "north", note: "serving queue behind end line" },
+          { id: "butterfly-passer", x: 4.5, y: 4.2, label: "P", team: "b",
+            role: "current passer", facing: "south", note: "passes now" },
+          { id: "butterfly-next-passer", x: 3.55, y: 3.55, label: "Q", team: "n",
+            role: "next passer", facing: "south", note: "passing line" },
+          { id: "butterfly-target", x: 7, y: 1.8, label: "T", team: "b",
+            role: "setter target", facing: "southwest", note: "catches or sets the pass" },
+          { id: "butterfly-shagger", x: 7.75, y: 3, label: "Sh", team: "n",
+            role: "shagger", facing: "north", note: "retrieves and returns the ball" }
         ],
         paths: [
-          { from: [2.4, 12.45], to: [3.55, 4.35], kind: "move", label: "server → passing line", curve: 0.2, playerIndex: 0 },
-          { from: [4.5, 4.2], to: [7, 2.1], kind: "move", label: "passer → target", curve: 0.2, playerIndex: 2 },
-          { from: [7, 1.8], to: [7.75, 3], kind: "move", label: "target → shag", curve: 0.12, playerIndex: 4 },
-          { from: [7.75, 3], to: [3.1, 13.2], via: [[8.2, 6], [8.2, 10.5]], kind: "move", label: "shagger → serving line", curve: 0, playerIndex: 5 },
-          { from: [2.4, 13.2], to: [2.4, 12.45], kind: "move", label: "queue → serve", curve: 0, playerIndex: 1 },
-          { from: [3.55, 3.55], to: [4.5, 4.2], kind: "move", label: "queue → pass", curve: 0.1, playerIndex: 3 }
-        ] }
+          { from: [2.4, 12.1], to: [4.3, 4.6], kind: "serve",
+            label: "1 · server to passer", curve: 0.12,
+            fromActor: "butterfly-server", toActor: "butterfly-passer" },
+          { from: [4.5, 4.2], via: [[6.7, 2.1], [7, 1.8], [7.75, 3], [8.2, 6], [8.2, 10.5]],
+            to: [3.1, 13.2], kind: "ball", curve: 0,
+            label: "2 · pass to target · target controls · shagger returns to serving queue",
+            fromActor: "butterfly-passer", toActor: "butterfly-next-server" }
+        ],
+        contacts: [
+          { order: 1, actor: "butterfly-server", action: "serve", pathIndex: 0 },
+          { order: 2, actor: "butterfly-passer", action: "forearm pass", pathIndex: 1 },
+          { order: 3, actor: "butterfly-target", action: "catch or set", pathIndex: 1 },
+          { order: 4, actor: "butterfly-shagger", action: "retrieve and return", pathIndex: 1 }
+        ],
+        legend: [{ tone: "a", text: "Serving jobs" }, { tone: "b", text: "Passer / target" }, { tone: "n", text: "Queues / shag" }] },
+      { title: "All six follow to the next job", caption: "After the shared ball is controlled, every athlete advances exactly one job: server to passing queue, next passer into pass, passer to target, target to shag, shagger to serving queue, and next server onto the end line.", w: 9, h: 14, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0, w: 9, h: 12 }],
+        players: [
+          { id: "butterfly-server", x: 2.4, y: 12.45, label: "Sv", team: "a",
+            role: "current server", facing: "north", note: "moves to passing queue" },
+          { id: "butterfly-next-server", x: 2.4, y: 13.2, label: "Q", team: "n",
+            role: "next server", facing: "north", note: "steps onto end line" },
+          { id: "butterfly-passer", x: 4.5, y: 4.2, label: "P", team: "b",
+            role: "current passer", facing: "south", note: "moves to target" },
+          { id: "butterfly-next-passer", x: 3.55, y: 3.55, label: "Q", team: "n",
+            role: "next passer", facing: "south", note: "steps into pass" },
+          { id: "butterfly-target", x: 7, y: 1.8, label: "T", team: "b",
+            role: "setter target", facing: "southwest", note: "moves to shag" },
+          { id: "butterfly-shagger", x: 7.75, y: 3, label: "Sh", team: "n",
+            role: "shagger", facing: "north", note: "returns to serving queue" }
+        ],
+        paths: [
+          { from: [2.4, 12.45], to: [3.55, 4.35], kind: "move", label: "server → passing line", curve: 0.2, playerIndex: 0, actor: "butterfly-server", simultaneousGroup: "all-six-advance" },
+          { from: [4.5, 4.2], to: [7, 2.1], kind: "move", label: "passer → target", curve: 0.2, playerIndex: 2, actor: "butterfly-passer", simultaneousGroup: "all-six-advance" },
+          { from: [7, 1.8], to: [7.75, 3], kind: "move", label: "target → shag", curve: 0.12, playerIndex: 4, actor: "butterfly-target", simultaneousGroup: "all-six-advance" },
+          { from: [7.75, 3], to: [3.1, 13.2], via: [[8.2, 6], [8.2, 10.5]], kind: "move", label: "shagger → serving line", curve: 0, playerIndex: 5, actor: "butterfly-shagger", simultaneousGroup: "all-six-advance" },
+          { from: [2.4, 13.2], to: [2.4, 12.45], kind: "move", label: "queue → serve", curve: 0, playerIndex: 1, actor: "butterfly-next-server", simultaneousGroup: "all-six-advance" },
+          { from: [3.55, 3.55], to: [4.5, 4.2], kind: "move", label: "queue → pass", curve: 0.1, playerIndex: 3, actor: "butterfly-next-passer", simultaneousGroup: "all-six-advance" }
+        ],
+        legend: [{ tone: "move", text: "Every athlete advances one job" }]
+      }
     )
   };
   E["out-of-system-passing"] = {
@@ -288,18 +398,28 @@ RR.extras = RR.extras || {};
   };
   E["serve-and-pass-crossover"] = {
     diagrams: dk.seq(
-      serveRcv({ passers: 3, serverQueue: 2, title: "Serve & receive", serverNote: "serves now", serveLabel: "real serve", zones: [{ x: 5.8, y: 5.6, w: 1.6, h: 1.4, tone: "target", label: "cone" }], caption: "The front server serves at three passers while two servers wait behind the end line; the pass goes to the setter target." }),
-      { title: "Crossover rotation", caption: "After the group earns three good passes, players cross jobs: a passer jogs back to serve, a server steps in to pass — so everyone trains both connected skills.", w: 9, h: 12, net: 6, lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0.8, w: 9, h: 10.4 }],
+      serveRcv({ passers: 3, serverQueue: 2, actorPrefix: "crossover",
+        title: "Serve & receive", serverNote: "serves now", serveLabel: "real serve",
+        zones: [{ x: 5.8, y: 5.6, w: 1.6, h: 1.4, tone: "target", label: "cone" }],
+        caption: "The front server serves at three passers while two servers wait behind the end line; the pass goes to the setter target." }),
+      { title: "Crossover rotation", caption: "After the group earns three good passes, players cross jobs: a passer jogs back to serve, a server steps in to pass — so everyone trains both connected skills.", w: 9, h: 12, net: 6, operation: "parallel", lines: [{ y: 3 }, { y: 9 }], court: [{ x: 0, y: 0.8, w: 9, h: 10.4 }],
         players: [
-          { x: 3.7, y: 0.35, label: "Sv", team: "b", note: "server line behind end line" },
-          { x: 4.5, y: 0.35, label: "Q", team: "n", note: "next server behind end line" },
-          { x: 5.3, y: 0.35, label: "Q", team: "n", note: "server queue behind end line" },
-          { x: 2, y: 8.8, label: "P", team: "a", note: "passer" },
-          { x: 4.5, y: 9.2, label: "P", team: "a", note: "passer" },
-          { x: 7, y: 8.8, label: "P", team: "a", note: "passer" },
-          { x: 6.4, y: 6.4, label: "St", team: "a", note: "setter target" }
+          { id: "crossover-server", x: 3.7, y: 0.35, label: "Sv", team: "b", role: "active server", note: "server line behind end line" },
+          { id: "crossover-server-queue-1", x: 4.5, y: 0.35, label: "Q", team: "n", role: "waiting server", note: "next server behind end line" },
+          { id: "crossover-server-queue-2", x: 5.3, y: 0.35, label: "Q", team: "n", role: "waiting server", note: "server queue behind end line" },
+          { id: "crossover-passer-1", x: 2, y: 8.8, label: "P1", team: "a", role: "passer" },
+          { id: "crossover-passer-2", x: 4.5, y: 9.2, label: "P2", team: "a", role: "passer" },
+          { id: "crossover-passer-3", x: 7, y: 8.8, label: "P3", team: "a", role: "passer" },
+          { id: "crossover-setter", x: 6.4, y: 6.4, label: "St", team: "a", role: "setter target", note: "setter target" }
         ],
-        paths: [{ from: [4.5, 8.6], to: [4.5, 0.55], kind: "move", label: "pass → serve", curve: 0.4, playerIndex: 4 }, { from: [3.7, 0.55], to: [4, 8.6], kind: "move", label: "serve → pass", curve: 0.4, playerIndex: 0 }] }
+        paths: [
+          { from: [4.5, 8.6], to: [4.5, 0.55], kind: "move", label: "pass → serve",
+            curve: 0.4, playerIndex: 4, actor: "crossover-passer-2",
+            simultaneousGroup: "crossover-job-change" },
+          { from: [3.7, 0.55], to: [4, 8.6], kind: "move", label: "serve → pass",
+            curve: 0.4, playerIndex: 0, actor: "crossover-server",
+            simultaneousGroup: "crossover-job-change" }
+        ] }
     )
   };
 

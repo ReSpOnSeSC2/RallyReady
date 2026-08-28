@@ -102,22 +102,30 @@ RR.extras = RR.extras || {};
     },
     diagram: {
       caption: "Two three-player relay teams: each front server serves, follows the sideline to shag, returns the ball, tags the next teammate, and joins the back of the same line.",
-      w: 9, h: 14, net: 6, lines: [{ y: 3 }, { y: 9 }],
+      w: 9, h: 14, net: 6, operation: "parallel", lines: [{ y: 3 }, { y: 9 }],
       court: [{ x: 0, y: 0, w: 9, h: 12 }],
       zones: [{ x: 0.6, y: 0.7, w: 3.4, h: 2.4, tone: "target", label: "TEAM A" }, { x: 5, y: 0.7, w: 3.4, h: 2.4, tone: "target", label: "TEAM B" }],
       players: [
-        { x: 2.5, y: 12.45, label: "A1", team: "a", note: "serves now" },
-        { x: 2.5, y: 13.15, label: "A2", team: "a", note: "next" },
-        { x: 1.65, y: 13.15, label: "A3", team: "a", note: "waits" },
-        { x: 6.5, y: 12.45, label: "B1", team: "b", note: "serves now" },
-        { x: 6.5, y: 13.15, label: "B2", team: "b", note: "next" },
-        { x: 7.35, y: 13.15, label: "B3", team: "b", note: "waits" }
+        { id: "relay-a-server", x: 2.5, y: 12.45, label: "A1", team: "a", role: "team A active server", note: "serves now" },
+        { id: "relay-a-next", x: 2.5, y: 13.15, label: "A2", team: "a", role: "team A next server", note: "next" },
+        { id: "relay-a-queue", x: 1.65, y: 13.15, label: "A3", team: "a", role: "team A waiting server", note: "waits" },
+        { id: "relay-b-server", x: 6.5, y: 12.45, label: "B1", team: "b", role: "team B active server", note: "serves now" },
+        { id: "relay-b-next", x: 6.5, y: 13.15, label: "B2", team: "b", role: "team B next server", note: "next" },
+        { id: "relay-b-queue", x: 7.35, y: 13.15, label: "B3", team: "b", role: "team B waiting server", note: "waits" }
       ],
       paths: [
-        { from: [2.5, 12.1], to: [2.5, 2], kind: "serve", label: "serve A", curve: 0.12 },
-        { from: [2.5, 12.45], to: [2, 13.05], via: [[0.55, 8], [0.55, 2], [1.3, 12]], kind: "move", label: "shag · tag · back", curve: 0, playerIndex: 0 },
-        { from: [6.5, 12.1], to: [6.5, 2], kind: "serve", label: "serve B", curve: -0.12 },
-        { from: [6.5, 12.45], to: [7, 13.05], via: [[8.45, 8], [8.45, 2], [7.7, 12]], kind: "move", label: "shag · tag · back", curve: 0, playerIndex: 3 }
+        { from: [2.5, 12.1], to: [2.5, 2], kind: "serve", label: "serve A", curve: 0.12,
+          fromActor: "relay-a-server", toEndpoint: { type: "target", label: "Team A target" },
+          sequenceOrder: 0, simultaneousGroup: "relay-serve" },
+        { from: [6.5, 12.1], to: [6.5, 2], kind: "serve", label: "serve B", curve: -0.12,
+          fromActor: "relay-b-server", toEndpoint: { type: "target", label: "Team B target" },
+          sequenceOrder: 0, simultaneousGroup: "relay-serve" },
+        { from: [2.5, 12.45], to: [2, 13.05], via: [[0.55, 8], [0.55, 2], [1.3, 12]],
+          kind: "move", label: "shag · tag · back", curve: 0, playerIndex: 0,
+          actor: "relay-a-server", sequenceOrder: 1, simultaneousGroup: "relay-return" },
+        { from: [6.5, 12.45], to: [7, 13.05], via: [[8.45, 8], [8.45, 2], [7.7, 12]],
+          kind: "move", label: "shag · tag · back", curve: 0, playerIndex: 3,
+          actor: "relay-b-server", sequenceOrder: 1, simultaneousGroup: "relay-return" }
       ],
       legend: [{ tone: "a", text: "Team A relay" }, { tone: "b", text: "Team B relay" }, { tone: "move", text: "Serve → shag → tag → back" }]
     }

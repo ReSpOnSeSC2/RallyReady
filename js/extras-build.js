@@ -134,21 +134,50 @@ RR.dk = (function () {
     var cx0 = opt.courtX0 != null ? opt.courtX0 : 0;
     var cw = opt.courtW || 9;
     var x0 = cx0 + cw * 0.18, x1 = cx0 + cw * 0.82;
+    var teamNames = opt.teamNames || null;
+    var actorPrefix = opt.actorPrefix || "court";
     var players = [];
+    function rowRole(row, index, count) {
+      if (count === 1) return row + "-middle";
+      if (index === 0) return row + "-left";
+      if (index === count - 1) return row + "-right";
+      return row + "-middle";
+    }
+    function courtPlayer(team, row, index, count, x, y) {
+      var player = { x: x, y: y, label: "", team: team };
+      if (teamNames) {
+        var spot = rowRole(row, index, count);
+        var teamName = teamNames[team] || (team === "a" ? "near" : "far");
+        player.id = actorPrefix + "-" + teamName + "-" + spot;
+        player.role = teamName + " " + spot.replace(/-/g, " ");
+        player.facing = team === "a" ? "north" : "south";
+      }
+      return player;
+    }
     // Top = other side, bottom = your side. For 6, use two staggered rows.
     function place(team, yFront, yBack) {
       var front = Math.ceil(size / 2), back = size - front;
-      spread(front, x0, x1).forEach(function (x) { players.push({ x: x, y: yFront, label: "", team: team }); });
-      if (back > 0) spread(back, x0 + 0.8, x1 - 0.8).forEach(function (x) { players.push({ x: x, y: yBack, label: "", team: team }); });
+      spread(front, x0, x1).forEach(function (x, index) {
+        players.push(courtPlayer(team, "front", index, front, x, yFront));
+      });
+      if (back > 0) spread(back, x0 + 0.8, x1 - 0.8).forEach(function (x, index) {
+        players.push(courtPlayer(team, "back", index, back, x, yBack));
+      });
     }
     place("b", 4.3, 2.4);
     place("a", 7.7, 9.6);
+    var activeServerIndex = -1;
     if (opt.sequence === "serve-three" || opt.sequence === "wash-two") {
-      var serverIndex = size > 1 ? Math.ceil(size / 2) : 0;
+      // `place` appends the far-side back row after the front row. Its final
+      // athlete is the right-back/P1 server, not the first back-row athlete.
+      var serverIndex = size > 1 ? size - 1 : 0;
+      activeServerIndex = serverIndex;
       players[serverIndex].x = cx0 + cw * 0.5;
       players[serverIndex].y = 0.35;
       players[serverIndex].label = "S";
       players[serverIndex].note = "serves behind end line";
+      players[serverIndex].activeRole = "server";
+      if (players[serverIndex].facing) players[serverIndex].facing = "south";
     }
     var spec = {
       caption: opt.caption,
@@ -163,22 +192,119 @@ RR.dk = (function () {
       var waitY = opt.waitSide === "far" ? 0.35 : 11.55;
       for (var i = 0; i < opt.wait; i++) players.push({
         x: cx0 + 0.55 + i * 0.7, y: waitY, label: "Q", team: "n",
-        note: "waits behind end line"
+        note: "waits behind end line",
+        id: teamNames ? actorPrefix + "-waiting-" + (i + 1) : undefined,
+        role: teamNames ? "waiting player " + (i + 1) : undefined,
+        facing: teamNames ? (opt.waitSide === "far" ? "south" : "north") : undefined
       });
       spec.legend.push({ tone: "n", text: "Waiting" });
     }
     if (opt.sequence) {
       var motion = acrossNetMotion(opt.sequence, cx0, cw);
+      motion.contactOrder = opt.contactOrder || motion.label.split(/\s*·\s*/);
+      if (teamNames && size === 6 && opt.sequence === "serve-three") {
+        function teamActor(team, role) {
+          var match = players.filter(function (player) {
+            return player.team === team && player.id &&
+              player.id.slice(-(role.length + 1)) === "-" + role;
+          })[0];
+          return match && match.id;
+        }
+        var queenPasser = teamActor("a", "back-left");
+        var queenSetter = teamActor("a", "front-right");
+        var queenHitter = teamActor("a", "front-left");
+        // The serving P1 is still behind the end line in this snapshot. End
+        // the shown attack at the on-court right-front defender/blocker rather
+        // than falsely making the server receive its own rally-ending ball.
+        var challengerDefender = teamActor("b", "front-right");
+        motion.contacts = [
+          { order: 1, actor: players[activeServerIndex].id, toActor: queenPasser,
+            action: "serve release", pathIndex: 0 },
+          { order: 2, actor: queenPasser, toActor: queenSetter,
+            action: "forearm pass", pathIndex: 0 },
+          { order: 3, actor: queenSetter, toActor: queenHitter,
+            action: "set", pathIndex: 0 },
+          { order: 4, actor: queenHitter, toActor: challengerDefender,
+            action: "attack", pathIndex: 0 }
+        ];
+        motion.fromActor = motion.contacts[0].actor;
+        motion.toActor = challengerDefender;
+      }
       spec.paths = [motion];
+      if (motion.contacts) spec.contacts = motion.contacts.slice();
       spec.legend.push({ tone: motion.kind, text: motion.label });
     }
     return spec;
+  }
+
+  // ---- Two-ball 6v6 wash sequence -----------------------------------------
+  // A wash is not one zig-zag arrow: it is two complete, independently
+  // tracked rallies. The first starts with a serve; the second starts from a
+  // coach-entered free/down ball and forces the receiving side to transition.
+  function washGame(opt) {
+    opt = opt || {};
+    var prefix = opt.actorPrefix || "wash";
+    function id(value) { return prefix + "-" + value; }
+    var players = [
+      { id: id("far-server"), x: 4.5, y: 0.35, label: "Sv", team: "b", role: "far-side server", facing: "south", note: "starts rally one" },
+      { id: id("far-outside"), x: 1.65, y: 4.15, label: "OH", team: "b", role: "far-side outside hitter", facing: "south" },
+      { id: id("far-middle"), x: 4.35, y: 4.15, label: "M", team: "b", role: "far-side middle", facing: "south" },
+      { id: id("far-setter"), x: 7.15, y: 4.15, label: "St", team: "b", role: "far-side setter", facing: "south" },
+      { id: id("far-left-back"), x: 2.35, y: 2.35, label: "D1", team: "b", role: "far-side left-back defender", facing: "south" },
+      { id: id("far-right-back"), x: 6.65, y: 2.35, label: "D2", team: "b", role: "far-side right-back defender", facing: "south" },
+      { id: id("near-outside"), x: 1.65, y: 7.15, label: "OH", team: "a", role: "near-side outside hitter", facing: "north" },
+      { id: id("near-middle"), x: 4.35, y: 7.15, label: "M", team: "a", role: "near-side middle", facing: "north" },
+      { id: id("near-setter"), x: 7.15, y: 7.15, label: "St", team: "a", role: "near-side setter", facing: "north" },
+      { id: id("near-left-back"), x: 2.35, y: 9.55, label: "P1", team: "a", role: "near-side left-back passer", facing: "north" },
+      { id: id("near-middle-back"), x: 4.5, y: 9.8, label: "P2", team: "a", role: "near-side middle-back passer", facing: "north" },
+      { id: id("near-right-back"), x: 6.65, y: 9.55, label: "P3", team: "a", role: "near-side right-back passer", facing: "north" },
+      { id: id("coach"), x: 8.55, y: 5.45, label: "C", team: "coach", role: "wash-ball coach", facing: "southwest", note: "enters rally two immediately" }
+    ];
+    var paths = [
+      { from: [4.5, 0.7], to: [2.35, 9.2], kind: "serve", label: "Rally 1 · serve to left-back passer", fromActor: id("far-server"), toActor: id("near-left-back"), stepIndices: [0] },
+      { from: [2.35, 9.2], to: [6.95, 7.35], kind: "ball", label: "Rally 1 · controlled pass to setter", fromActor: id("near-left-back"), toActor: id("near-setter"), stepIndices: [0] },
+      { from: [7.15, 7.15], to: [1.95, 6.9], kind: "ball", label: "Rally 1 · high outside set", fromActor: id("near-setter"), toActor: id("near-outside"), stepIndices: [0] },
+      { from: [1.65, 6.85], to: [6.45, 2.6], kind: "serve", label: "Rally 1 · near-side attack", fromActor: id("near-outside"), toActor: id("far-right-back"), stepIndices: [0] },
+      { from: [6.65, 2.55], to: [6.95, 4], kind: "ball", label: "Rally 1 · far-side dig", fromActor: id("far-right-back"), toActor: id("far-setter"), stepIndices: [0] },
+      { from: [7.15, 4.15], to: [1.95, 4.35], kind: "ball", label: "Rally 1 · far-side outside set", fromActor: id("far-setter"), toActor: id("far-outside"), stepIndices: [0] },
+      { from: [1.65, 4.4], to: [6.45, 9.25], kind: "serve", label: "Rally 1 · far-side counterattack", fromActor: id("far-outside"), toActor: id("near-right-back"), stepIndices: [0] },
+      { from: [8.3, 5.6], to: [6.65, 9.25], kind: "ball", label: opt.hardSecondBall ? "Rally 2 · coach drives transition ball" : "Rally 2 · coach enters free ball", fromActor: id("coach"), toActor: id("near-right-back"), stepIndices: opt.hardSecondBall ? [1, 3] : [1] },
+      { from: [6.65, 9.25], to: [6.95, 7.35], kind: "ball", label: opt.hardSecondBall ? "Rally 2 · transition dig to target" : "Rally 2 · free-ball pass to target", fromActor: id("near-right-back"), toActor: id("near-setter"), stepIndices: opt.hardSecondBall ? [1, 3] : [1] },
+      { from: [7.15, 7.15], to: [4.45, 6.9], kind: "ball", label: "Rally 2 · transition set to middle", fromActor: id("near-setter"), toActor: id("near-middle"), stepIndices: opt.hardSecondBall ? [1, 3] : [1] },
+      { from: [4.35, 6.85], to: [2.45, 2.65], kind: "serve", label: "Rally 2 · middle counterattack", fromActor: id("near-middle"), toActor: id("far-left-back"), stepIndices: opt.hardSecondBall ? [1, 3] : [1] }
+    ];
+    return {
+      title: opt.title || "Two-rally wash",
+      caption: opt.caption,
+      w: 9, h: 12, net: 6, lines: [{ y: 3 }, { y: 9 }],
+      court: [{ x: 0, y: 0.8, w: 9, h: 10.4 }],
+      zones: [
+        { x: 0.35, y: 0.85, w: 3.35, h: 0.75, tone: "neutral", label: "RALLY 1 · SERVE" },
+        { x: 5.3, y: 10.4, w: 3.35, h: 0.75, tone: "good", label: "RALLY 2 · TRANSITION" }
+      ],
+      players: players,
+      paths: paths,
+      motionChains: [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9, 10]],
+      contacts: paths.map(function (path, index) {
+        var actions = ["serve", "forearm pass", "outside set", "attack", "dig", "outside set", "attack",
+          "coach feed", opt.hardSecondBall ? "dig" : "forearm pass", "transition set", "attack"];
+        return { order: index + 1, actor: path.fromActor, action: actions[index], pathIndex: index };
+      }),
+      operation: "rotation",
+      legend: [
+        { tone: "b", text: "Far-side six" }, { tone: "a", text: "Near-side six" },
+        { tone: "coach", text: "Coach starts second rally" },
+        { tone: "ball", text: "Win both separate rallies to score" }
+      ]
+    };
   }
 
   // ---- King / Queen of the Court (rotate-in) -------------------------------
   function rotateIn(opt) {
     opt = opt || {};
     var size = opt.teamSize || 2;
+    var teamNames = opt.teamNames || null;
+    var actorPrefix = opt.actorPrefix || "rotate";
     var queenPositions, challengerPositions;
     if (size === 6) {
       // A full team needs a real three-front / three-back volleyball shape.
@@ -192,18 +318,29 @@ RR.dk = (function () {
       queenPositions = qx.map(function (x) { return [x, 8.6]; });
       challengerPositions = qx.map(function (x) { return [x, 3.4]; });
     }
-    var players = queenPositions.map(function (point) {
-      return { x: point[0], y: point[1], label: "", team: "a" };
-    }).concat(challengerPositions.map(function (point) {
-      return { x: point[0], y: point[1], label: "", team: "b" };
+    var positionNames = size === 6 ? ["front-left", "front-middle", "front-right", "back-left", "back-middle", "back-right"] : [];
+    var players = queenPositions.map(function (point, index) {
+      var role = positionNames[index] || "player-" + (index + 1);
+      return { x: point[0], y: point[1], label: "", team: "a",
+        id: teamNames ? actorPrefix + "-" + (teamNames.a || "queen") + "-" + role : undefined,
+        role: teamNames ? (teamNames.a || "queen") + " " + role.replace(/-/g, " ") : undefined,
+        facing: teamNames ? "north" : undefined };
+    }).concat(challengerPositions.map(function (point, index) {
+      var role = positionNames[index] || "player-" + (index + 1);
+      return { x: point[0], y: point[1], label: "", team: "b",
+        id: teamNames ? actorPrefix + "-" + (teamNames.b || "challenger") + "-" + role : undefined,
+        role: teamNames ? (teamNames.b || "challenger") + " " + role.replace(/-/g, " ") : undefined,
+        facing: teamNames ? "south" : undefined };
     }));
     // Waiting teams queued behind the challenger side.
     var waitN = opt.wait != null ? Math.max(0, Math.floor(opt.wait)) : 3;
-    for (var i = 0; i < waitN; i++) players.push({ x: 1 + i * 0.8, y: 0.5, label: "", team: "n" });
+    for (var i = 0; i < waitN; i++) players.push({ x: 1 + i * 0.8, y: 0.5, label: "", team: "n",
+      id: teamNames ? actorPrefix + "-waiting-" + (i + 1) : undefined,
+      role: teamNames ? "waiting player " + (i + 1) : undefined,
+      facing: teamNames ? "south" : undefined });
     var paths = [];
     var exitStart = waitN ? Math.min(7.2, 1.8 + waitN * 0.8) : 1;
     var exitXs = spread(size, exitStart, 8);
-    var positionNames = size === 6 ? ["front-left", "front-middle", "front-right", "back-left", "back-middle", "back-right"] : [];
     queenPositions.forEach(function (point, index) {
       var sidelineX = point[0] <= 4.5 ? 0.35 : 8.65;
       var exitTarget = waitN ? [exitXs[index], 0.55] : challengerPositions[index].slice();
@@ -211,16 +348,20 @@ RR.dk = (function () {
       paths.push({
         from: point.slice(), via: [[sidelineX, point[1]], [sidelineX, exitTarget[1]]],
         to: exitTarget, kind: "move", curve: 0, hideLabel: true,
-        label: "Queen " + role + (waitN ? " exits" : " rotates around"), playerIndex: index
+        simultaneousGroup: "post-rally-team-change",
+        label: "Queen " + role + (waitN ? " exits" : " rotates around"), playerIndex: index,
+        actor: players[index].id
       });
     });
     challengerPositions.forEach(function (point, index) {
       var role = positionNames[index] || "player " + (index + 1);
       paths.push({
         from: point.slice(), to: queenPositions[index].slice(), kind: "move", hideLabel: true,
+        simultaneousGroup: "post-rally-team-change",
         curve: (index - (size - 1) / 2) * 0.04,
         label: "Challenger " + role + " crosses",
-        playerIndex: size + index
+        playerIndex: size + index,
+        actor: players[size + index].id
       });
     });
     if (waitN >= size) {
@@ -230,8 +371,10 @@ RR.dk = (function () {
         paths.push({
           from: [waitingPlayer.x, waitingPlayer.y], to: challengerPositions[waitingIndex].slice(),
           kind: "move", curve: (waitingIndex - (size - 1) / 2) * -0.08, hideLabel: true,
+          simultaneousGroup: "post-rally-team-change",
           label: "Waiting player " + (waitingIndex + 1) + " enters challenger side",
-          playerIndex: waitingPlayerIndex
+          playerIndex: waitingPlayerIndex,
+          actor: players[waitingPlayerIndex].id
         });
       }
     }
@@ -444,19 +587,31 @@ RR.dk = (function () {
     opt = opt || {};
     var startX = opt.side === "middle" ? 4.5 : (opt.side === "right" ? 7 : 2);
     var takeX = opt.side === "middle" ? 4.5 : (opt.side === "right" ? 6.6 : 2.4);
-    var players = [{ x: startX, y: 8.4, label: "H", team: "a", note: "start" }];
+    var hitterId = opt.hitterId || "approach-hitter";
+    var setterId = opt.setterId || "approach-setter";
+    var players = [{ id: hitterId, x: startX, y: 8.4, label: "H", team: "a",
+      role: "hitter", note: "start" }];
     for (var qi = 0; qi < (opt.queue || 0); qi++) {
       players.push({ x: startX - 0.55 + qi * 0.55, y: 9.05,
         label: "Q", team: "n", note: "hitter line" });
     }
-    if (opt.setter !== false) players.push({ x: 5.4, y: 3, label: "St", team: "a", note: "setter" });
+    if (opt.setter !== false) players.push({ id: setterId, x: 5.4, y: 3,
+      label: "St", team: "a", role: "setter", note: "setter" });
     // Three step segments (slow-slow-quick-quick) up to the takeoff.
     var paths = [{
       from: [startX, 8], via: [[takeX - 0.4, 6]], to: [takeX, 4.2],
-      kind: "move", curve: 0, label: "approach", playerIndex: 0
+      kind: "move", curve: 0, label: "approach", playerIndex: 0,
+      actor: hitterId
     }];
-    if (opt.setter !== false) paths.push({ from: [5.4, 3], to: [takeX, 3.6], kind: "ball", label: "set", curve: 0.2 });
-    if (opt.swing) paths.push({ from: [takeX, 3.4], to: [opt.side === "right" ? 2.2 : 6.6, 1.4], kind: "serve", label: "swing", curve: 0.1 });
+    if (opt.setter !== false) paths.push({
+      from: [5.4, 3], to: [takeX, 3.6], kind: "ball", label: "set", curve: 0.2,
+      fromActor: setterId, toActor: hitterId
+    });
+    if (opt.swing) paths.push({
+      from: [takeX, 3.4], to: [opt.side === "right" ? 2.2 : 6.6, 1.4],
+      kind: "serve", label: "swing", curve: 0.1, fromActor: hitterId,
+      toEndpoint: { type: "target", label: "Attack target" }
+    });
     return titleable(opt, {
       caption: opt.caption,
       w: 9, h: 9.4, net: 2,
@@ -469,18 +624,26 @@ RR.dk = (function () {
   function basePositions(opt) {
     opt = opt || {};
     var L = opt.labels || ["", "", "", "", "", ""];
+    var playerIds = opt.playerIds || [];
+    var playerRoles = opt.playerRoles || [];
     var spots = [
       [2.6, 3.4], [6.4, 3.4],            // front (net) pair
       [4.5, 5.8],                         // middle
       [1.5, 8.4], [4.5, 9.2], [7.5, 8.4]  // back three
     ];
-    var players = spots.map(function (p, i) { return { x: p[0], y: p[1], label: L[i] || "", team: "a" }; });
+    var players = spots.map(function (p, i) { return {
+      id: playerIds[i], x: p[0], y: p[1], label: L[i] || "", team: "a",
+      role: playerRoles[i], facing: playerIds[i] ? "north" : undefined
+    }; });
     var legend = [{ tone: "a", text: "Base spots" }];
     if (opt.feeder !== false) {
-      players.unshift({ x: opt.feederX != null ? opt.feederX : 4.5, y: 0.9,
-        label: opt.feederLabel || "C", team: "coach", note: opt.feederNote || "coach attacks" });
-      legend.unshift({ tone: "coach", text: "Attack" });
+      players.unshift({ id: opt.feederId, x: opt.feederX != null ? opt.feederX : 4.5, y: 0.9,
+        label: opt.feederLabel || "C", team: opt.feederTeam || "coach",
+        role: opt.feederRole, facing: opt.feederId ? "south" : undefined,
+        note: opt.feederNote || "coach attacks" });
+      legend.unshift({ tone: opt.feederTeam || "coach", text: "Attack" });
     }
+    (opt.extraPlayers || []).forEach(function (player) { players.push(player); });
     var spec = titleable(opt, {
       caption: opt.caption,
       w: 9, h: 10, net: 2, lines: [{ y: 5.2 }],
@@ -488,6 +651,9 @@ RR.dk = (function () {
       players: players, legend: legend
     });
     if (opt.paths) spec.paths = opt.paths;
+    if (opt.contacts) spec.contacts = opt.contacts;
+    if (opt.motionChains) spec.motionChains = opt.motionChains;
+    if (opt.operation) spec.operation = opt.operation;
     return spec;
   }
 
@@ -513,6 +679,7 @@ RR.dk = (function () {
     spread: spread,
     serveTargets: tag("serveTargets", serveTargets),
     acrossNet: tag("acrossNet", acrossNet),
+    washGame: tag("washGame", washGame),
     rotateIn: tag("rotateIn", rotateIn),
     circlePass: tag("circlePass", circlePass),
     pairsRows: tag("pairsRows", pairsRows),

@@ -40,9 +40,12 @@ RR.extras = RR.extras || {};
   function swingStep(o) {
     o = o || {};
     var takeX = o.takeX != null ? o.takeX : 4.5;
-    var players = [{ x: takeX, y: 4, label: "H", team: "a", note: "at the top" }];
-    (o.blockers || []).forEach(function (bx) {
-      players.push({ x: bx, y: 1.5, label: "B", team: "b", note: "blocker" });
+    var hitterId = o.hitterId || "swing-hitter";
+    var players = [{ id: hitterId, x: takeX, y: 4, label: "H", team: "a",
+      role: "hitter", note: "at the top" }];
+    (o.blockers || []).forEach(function (bx, blockerIndex) {
+      players.push({ id: (o.blockerPrefix || "swing-blocker") + "-" + (blockerIndex + 1),
+        x: bx, y: 1.5, label: "B", team: "b", role: "blocker", note: "blocker" });
     });
     (o.extraPlayers || []).forEach(function (player) { players.push(player); });
     var spec = {
@@ -51,8 +54,14 @@ RR.extras = RR.extras || {};
       court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
       zones: o.zones || [tgt("cross", "target")],
       players: players,
-      paths: [{ from: [takeX, 3.6], to: o.to || [6.8, 1], kind: "serve", label: o.label || "swing", curve: o.curve != null ? o.curve : 0.1 }]
+      paths: [{ from: [takeX, 3.6], to: o.to || [6.8, 1], kind: "serve",
+        label: o.label || "swing", curve: o.curve != null ? o.curve : 0.1,
+        fromActor: hitterId,
+        toEndpoint: { type: "target", label: "Attack target" } }]
         .concat(o.extraPaths || []),
+      motionChains: o.motionChains || undefined,
+      contacts: o.contacts || undefined,
+      operation: o.operation || undefined,
       legend: [{ tone: "target", text: "Aim here" }]
     };
     if (o.blockers) spec.legend.push({ tone: "b", text: "Block" });
@@ -213,30 +222,85 @@ RR.extras = RR.extras || {};
 
   E["pass-set-hit-triangle"] = {
     diagrams: dk.seq(
-      { title: "Free ball → pass → set", caption: "A setter at the net target, hitters lined at the left-side approach, a coach across the net. The coach tosses a free ball to a back-court passer, who passes to the setter.", w: 9, h: 11, net: 2,
+      { title: "Coach starts the free ball", caption: "All four athletes are already in their jobs when the coach tosses a free ball over the net to the back-court receiver: the net target holds, the left-side line waits, and the far-court shagger tracks the rep.", w: 9, h: 11, net: 2,
         court: [{ x: 0, y: 0, w: 9, h: 11 }],
-        players: [{ x: 4.5, y: 0.9, label: "C", team: "coach", note: "free ball" }, { x: 5.4, y: 3.2, label: "St", team: "a", note: "setter" }, { x: 3, y: 8.4, label: "P", team: "a", note: "passer" }, { x: 1.6, y: 9.4, label: "H", team: "a", note: "hitter line" }],
+        players: [
+          { id: "psh-coach", x: 4.5, y: 0.9, label: "C", team: "coach",
+            role: "free-ball coach", facing: "south", note: "starts each rep" },
+          { id: "psh-setter", x: 5.4, y: 3.2, label: "St", team: "a",
+            role: "setter", facing: "northwest", note: "setter target" },
+          { id: "psh-passer", x: 3, y: 8.4, label: "P", team: "a",
+            role: "back-court passer", facing: "north", note: "first contact" },
+          { id: "psh-hitter", x: 1.6, y: 9.4, label: "H", team: "a",
+            role: "outside hitter", facing: "north", note: "waits wide for approach" },
+          { id: "psh-shagger", x: 7.5, y: 1.4, label: "Sh", team: "b",
+            role: "shagger and next passer", facing: "south", note: "tracks the attack" }
+        ],
         paths: [
-          { from: [4.5, 1.4], to: [3.2, 8], kind: "serve", label: "free ball", curve: 0.1 },
-          { from: [3, 8], to: [5.2, 3.5], kind: "ball", label: "pass", curve: 0.2 },
-          { from: [5.4, 3.2], to: [2.6, 3.8], kind: "ball", label: "set outside", curve: 0.25 }
+          { from: [4.5, 1.4], to: [3.2, 8], kind: "serve",
+            label: "1 · coach free ball to passer", curve: 0.1,
+            fromActor: "psh-coach", toActor: "psh-passer" },
+          { from: [3, 8], to: [5.2, 3.5], kind: "ball",
+            label: "2 · passer to setter target", curve: 0.2,
+            fromActor: "psh-passer", toActor: "psh-setter" },
+          { from: [5.4, 3.2], to: [2.6, 3.8], kind: "ball",
+            label: "3 · setter delivers high outside", curve: 0.25,
+            fromActor: "psh-setter", toActor: "psh-hitter" }
         ],
-        legend: [{ tone: "coach", text: "Free ball" }, { tone: "a", text: "Your side" }] },
-      swingStep({
-        title: "Approach, attack & rotate", takeX: 2.4, to: [6.8, 1], label: "outside attack",
-        extraPlayers: [
-          { x: 5.4, y: 3.2, label: "St", team: "a", note: "setter" },
-          { x: 3, y: 8.4, label: "P", team: "a", note: "passer rotates to hit" },
-          { x: 7.5, y: 1.4, label: "Sh", team: "a", note: "shagger rotates to pass" },
-          { x: 4.5, y: 0.9, label: "C", team: "coach", note: "enters next free ball" }
+        contacts: [
+          { order: 1, actor: "psh-coach", action: "free-ball toss", pathIndex: 0 },
+          { order: 2, actor: "psh-passer", action: "forearm pass", pathIndex: 1 },
+          { order: 3, actor: "psh-setter", action: "outside set", pathIndex: 2 }
         ],
-        extraPaths: [
-          { from: [2.4, 4], to: [7.5, 1.6], kind: "move", label: "hitter → shag", curve: 0.25, playerIndex: 0 },
-          { from: [3, 8.4], to: [1.6, 9.4], kind: "move", label: "passer → hitter line", curve: 0.15, playerIndex: 2 },
-          { from: [7.5, 1.4], to: [3, 8.4], kind: "move", label: "shagger → pass", curve: -0.25, playerIndex: 3 }
+        legend: [{ tone: "coach", text: "Coach starts one ball" }, { tone: "a", text: "Passer · setter · hitter" }, { tone: "b", text: "Shagger" }]
+      },
+      {
+        title: "Complete rep, then rotate every job",
+        caption: "The passer passes to the setter, the setter sets the outside, and the hitter approaches and attacks. Run a set number of clean pass-set-hit reps, then switch sides. After contact, the hitter shags, the passer joins the hitter line, and the shagger becomes the next passer while the setter holds the target.",
+        w: 9, h: 11, net: 2,
+        court: [{ x: 0, y: 0, w: 9, h: 11 }],
+        zones: [{ x: 5.7, y: 0.35, w: 2.6, h: 1.25, tone: "target", label: "ATTACK TARGET" }],
+        players: [
+          { id: "psh-coach", x: 4.5, y: 0.9, label: "C", team: "coach",
+            role: "free-ball coach", facing: "south", note: "starts next rep" },
+          { id: "psh-setter", x: 5.4, y: 3.2, label: "St", team: "a",
+            role: "setter", facing: "northwest", note: "holds setter target" },
+          { id: "psh-passer", x: 3, y: 8.4, label: "P", team: "a",
+            role: "back-court passer", facing: "north", note: "passes, then joins hitters" },
+          { id: "psh-hitter", x: 2.4, y: 4, label: "H", team: "a",
+            role: "outside hitter", facing: "north", note: "approaches and attacks" },
+          { id: "psh-shagger", x: 7.5, y: 1.4, label: "Sh", team: "b",
+            role: "shagger and next passer", facing: "south", note: "shags, then enters passing" }
         ],
-        caption: "The hitter attacks the outside set, then everyone rotates one job: passer to hitter line, hitter to shag, shagger to pass. Run a set number of clean pass-set-hit reps."
-      })
+        paths: [
+          { from: [4.5, 1.4], to: [3.2, 8], kind: "serve",
+            label: "1 · free ball", curve: 0.1,
+            fromActor: "psh-coach", toActor: "psh-passer" },
+          { from: [3, 8], to: [5.2, 3.5], kind: "ball",
+            label: "2 · controlled pass", curve: 0.2,
+            fromActor: "psh-passer", toActor: "psh-setter" },
+          { from: [5.4, 3.2], to: [2.6, 3.8], kind: "ball",
+            label: "3 · high outside set", curve: 0.25,
+            fromActor: "psh-setter", toActor: "psh-hitter" },
+          { from: [2.4, 3.6], to: [6.8, 1], kind: "serve",
+            label: "4 · outside attack", curve: 0.1,
+            fromActor: "psh-hitter", toActor: "psh-shagger" },
+          { from: [2.4, 4], to: [7.5, 1.6], kind: "move",
+            label: "hitter → shag", curve: 0.25, playerIndex: 3, actor: "psh-hitter", simultaneousGroup: "post-rep-job-change" },
+          { from: [3, 8.4], to: [1.6, 9.4], kind: "move",
+            label: "passer → hitter line", curve: 0.15, playerIndex: 2, actor: "psh-passer", simultaneousGroup: "post-rep-job-change" },
+          { from: [7.5, 1.4], to: [3, 8.4], kind: "move",
+            label: "shagger → pass", curve: -0.25, playerIndex: 4, actor: "psh-shagger", simultaneousGroup: "post-rep-job-change" }
+        ],
+        motionChains: [[0, 1, 2, 3]],
+        contacts: [
+          { order: 1, actor: "psh-coach", action: "free-ball toss", pathIndex: 0 },
+          { order: 2, actor: "psh-passer", action: "forearm pass", pathIndex: 1 },
+          { order: 3, actor: "psh-setter", action: "outside set", pathIndex: 2 },
+          { order: 4, actor: "psh-hitter", action: "attack", pathIndex: 3 }
+        ],
+        legend: [{ tone: "coach", text: "Free-ball source" }, { tone: "a", text: "Pass → set → hit" }, { tone: "move", text: "Rotate after contact" }]
+      }
     )
   };
 
@@ -253,22 +317,48 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       { title: "Fast approach, in the air early", caption: "Middle blockers time the quick set. Starting at the net, the middle takes a short, fast approach and is already rising as the setter releases the low, fast ball right in front of them.", w: 9, h: 9.4, net: 2,
         court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
-        players: [{ x: 5.2, y: 3, label: "St", team: "a", note: "setter" }, { x: 4, y: 5.4, label: "M", team: "a", note: "middle" }],
+        players: [
+          { id: "middle-quick-setter", x: 5.2, y: 3, label: "St", team: "a",
+            role: "setter", note: "setter" },
+          { id: "middle-quick-hitter", x: 4, y: 5.4, label: "M", team: "a",
+            role: "middle hitter", note: "middle" }
+        ],
         paths: [
-          { from: [4, 5], to: [4.3, 4], kind: "move", label: "short fast approach", curve: 0 },
-          { from: [5.2, 3.2], to: [4.4, 3.6], kind: "ball", label: "low quick set", curve: 0.12 }
+          { from: [4, 5], to: [4.3, 4], kind: "move", label: "short fast approach",
+            curve: 0, playerIndex: 1, actor: "middle-quick-hitter",
+            simultaneousGroup: "middle-rises-on-release", sequenceOrder: 0 },
+          { from: [5.2, 3.2], to: [4.4, 3.6], kind: "ball", label: "low quick set",
+            curve: 0.12, fromActor: "middle-quick-setter", toActor: "middle-quick-hitter",
+            simultaneousGroup: "middle-rises-on-release", sequenceOrder: 0.01 }
+        ],
+        contacts: [
+          { order: 1, actor: "middle-quick-setter", toActor: "middle-quick-hitter",
+            action: "quick set", pathIndex: 1 }
         ],
         legend: [{ tone: "a", text: "Setter + middle" }] },
       swingStep({
         title: "Pass, quick set & hit", takeX: 4.4, to: [4.6, 1], label: "fast swing down",
+        hitterId: "middle-quick-hitter",
         zones: [tgt("middle", "seam")],
         extraPlayers: [
-          { x: 5.2, y: 3, label: "St", team: "a", note: "setter" },
-          { x: 7, y: 7.4, label: "P", team: "a", note: "steady passer" }
+          { id: "middle-quick-setter", x: 5.2, y: 3, label: "St", team: "a",
+            role: "setter", note: "setter" },
+          { id: "middle-quick-passer", x: 7, y: 7.4, label: "P", team: "a",
+            role: "passer", note: "steady passer" }
         ],
         extraPaths: [
-          { from: [7, 7.4], to: [5.2, 3.2], kind: "ball", label: "steady pass", curve: 0.2 },
-          { from: [5.2, 3.2], to: [4.4, 3.6], kind: "ball", label: "quick set", curve: 0.12 }
+          { from: [7, 7.4], to: [5.2, 3.2], kind: "ball", label: "steady pass",
+            curve: 0.2, fromActor: "middle-quick-passer", toActor: "middle-quick-setter" },
+          { from: [5.2, 3.2], to: [4.4, 3.6], kind: "ball", label: "quick set",
+            curve: 0.12, fromActor: "middle-quick-setter", toActor: "middle-quick-hitter" }
+        ],
+        motionChains: [[1, 2, 0]],
+        contacts: [
+          { order: 1, actor: "middle-quick-passer", toActor: "middle-quick-setter",
+            action: "forearm pass", pathIndex: 1 },
+          { order: 2, actor: "middle-quick-setter", toActor: "middle-quick-hitter",
+            action: "quick set", pathIndex: 2 },
+          { order: 3, actor: "middle-quick-hitter", action: "quick attack", pathIndex: 0 }
         ],
         caption: "A steady passer feeds the setter, the setter delivers the low quick, and the middle hits at full reach with a fast swing down. Then vary the pass so the middle adjusts."
       })
@@ -279,10 +369,14 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       { title: "Run the slide behind the setter", caption: "The middle (or right-side) starts near the setter and runs a CURVED path along the net behind them, taking off from one foot like a basketball layup while moving down the net.", w: 9, h: 9.4, net: 2,
         court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
-        players: [{ x: 5.2, y: 3, label: "St", team: "a", note: "setter" }, { x: 4, y: 5.6, label: "M", team: "a", note: "start" }],
+        players: [
+          { id: "slide-setter", x: 5.2, y: 3, label: "St", team: "a", role: "setter", note: "setter" },
+          { id: "slide-hitter", x: 4, y: 5.6, label: "M", team: "a", role: "slide hitter", note: "start" }
+        ],
         paths: [
-          { from: [4, 5.4], via: [[6, 4.4]], to: [6.8, 3.8], kind: "move", label: "curve behind St → one-foot takeoff", curve: -0.3, playerIndex: 1 },
-          { from: [5.2, 3.2], to: [6.8, 3.6], kind: "ball", label: "back set", curve: -0.2 }
+          { from: [4, 5.4], via: [[6, 4.4]], to: [6.8, 3.8], kind: "move", label: "curve behind St → one-foot takeoff", curve: -0.3, playerIndex: 1, actor: "slide-hitter" },
+          { from: [5.2, 3.2], to: [6.8, 3.6], kind: "ball", label: "back set", curve: -0.2,
+            fromActor: "slide-setter", toActor: "slide-hitter" }
         ],
         legend: [{ tone: "a", text: "Setter + slide hitter" }] },
       swingStep({ title: "Hit at the top of the slide", takeX: 6.8, to: [3, 1], label: "swing across body", zones: [tgt("cross", "angle")], curve: -0.1, caption: "Hit the back-set ball at the top of the slide, swinging across the body. Run it off a steady back set first, then change up the takeoff spot." })
@@ -300,17 +394,47 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       { title: "Start behind the 3m line", caption: "Back-row hitters attack the pipe (middle back). The hitter starts BEHIND the attack line; on the set to the pipe they approach and jump from behind the line.", w: 9, h: 10.4, net: 2, lines: [{ y: 5.6 }],
         court: [{ x: 0, y: 0, w: 9, h: 10.4 }],
-        players: [{ x: 5.2, y: 3, label: "St", team: "a", note: "setter" }, { x: 4.5, y: 8.6, label: "H", team: "a", note: "back row" }],
+        players: [
+          { id: "pipe-setter", x: 5.2, y: 3, label: "St", team: "a", role: "setter", note: "setter" },
+          { id: "pipe-hitter", x: 4.5, y: 8.6, label: "H", team: "a", role: "back-row hitter", note: "back row" }
+        ],
         paths: [
-          { from: [4.5, 8.2], via: [[4.5, 6.2]], to: [4.5, 5.8], kind: "move", label: "approach → jump behind line", curve: 0, playerIndex: 1 },
-          { from: [5.2, 3.2], to: [4.6, 5.4], kind: "ball", label: "pipe set", curve: 0.15 }
+          { from: [4.5, 8.2], via: [[4.5, 6.2]], to: [4.5, 5.8], kind: "move", label: "approach → jump behind line", curve: 0, playerIndex: 1, actor: "pipe-hitter",
+            simultaneousGroup: "pipe-set-and-approach", sequenceOrder: 0 },
+          { from: [5.2, 3.2], to: [4.6, 5.4], kind: "ball", label: "pipe set", curve: 0.15,
+            fromActor: "pipe-setter", toActor: "pipe-hitter",
+            simultaneousGroup: "pipe-set-and-approach", sequenceOrder: 0.01 }
+        ],
+        contacts: [
+          { order: 1, actor: "pipe-setter", toActor: "pipe-hitter",
+            action: "pipe set", pathIndex: 1 }
         ],
         legend: [{ tone: "a", text: "Setter + pipe hitter" }, { tone: "move", text: "Takeoff behind 3m line" }] },
       { title: "Hit at full reach", caption: "Hit the high back-row set at full reach, landing PAST the line legally. Keep working the takeoff point so they never step over the line on the jump.", w: 9, h: 10.4, net: 2, lines: [{ y: 5.6 }],
         court: [{ x: 0, y: 0, w: 9, h: 10.4 }],
         zones: [tgt("middle", "deep")],
-        players: [{ x: 4.5, y: 5.8, label: "H", team: "a", note: "at the top" }],
-        paths: [{ from: [4.5, 5.4], to: [4.7, 1.2], kind: "serve", label: "swing deep", curve: 0.1 }],
+        players: [
+          { id: "pipe-setter", x: 5.2, y: 3, label: "St", team: "a",
+            role: "setter", note: "high pipe set" },
+          { id: "pipe-hitter", x: 4.5, y: 8.6, label: "H", team: "a",
+            role: "back-row hitter", note: "starts behind line" }
+        ],
+        paths: [
+          { from: [4.5, 8.2], via: [[4.5, 6.4]], to: [4.5, 5.8], kind: "move",
+            label: "approach and jump behind attack line", curve: 0,
+            playerIndex: 1, actor: "pipe-hitter", motionId: "approach-jump",
+            simultaneousGroup: "pipe-set-and-approach", sequenceOrder: 0 },
+          { from: [5.2, 3.2], to: [4.6, 5.4], kind: "ball", label: "high pipe set", curve: 0.15,
+            fromActor: "pipe-setter", toActor: "pipe-hitter",
+            simultaneousGroup: "pipe-set-and-approach", sequenceOrder: 0.01 },
+          { from: [4.5, 5.4], to: [4.7, 1.2], kind: "serve", label: "swing deep", curve: 0.1,
+            fromActor: "pipe-hitter", toEndpoint: { type: "target", label: "Deep pipe target" } }
+        ],
+        motionChains: [[1, 2]],
+        contacts: [
+          { order: 1, actor: "pipe-setter", toActor: "pipe-hitter", action: "high pipe set", pathIndex: 1 },
+          { order: 2, actor: "pipe-hitter", action: "attack", pathIndex: 2 }
+        ],
         legend: [{ tone: "target", text: "Aim deep" }] }
     )
   };
@@ -375,13 +499,41 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       { title: "Start on the setter's release", caption: "The key timing lesson: start the approach off the PASS and the setter's release, not off the set. A passer passes to the setter; the hitter waits in the wings and begins moving as the ball reaches the setter's hands.", w: 9, h: 9.4, net: 2,
         court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
-        players: [{ x: 5.2, y: 3, label: "St", team: "a", note: "setter" }, { x: 3, y: 7, label: "P", team: "a", note: "passer" }, { x: 1.8, y: 7.4, label: "H", team: "a", note: "waits" }],
+        players: [
+          { id: "timing-setter", x: 5.2, y: 3, label: "St", team: "a", role: "setter", note: "setter" },
+          { id: "timing-passer", x: 3, y: 7, label: "P", team: "a", role: "passer", note: "passer" },
+          { id: "timing-hitter", x: 1.8, y: 7.4, label: "H", team: "a", role: "outside hitter", note: "waits" }
+        ],
         paths: [
-          { from: [3, 6.8], to: [5, 3.3], kind: "ball", label: "pass", curve: 0.2 },
-          { from: [1.8, 7], to: [2.2, 5.4], kind: "move", label: "start on release", curve: 0.1 }
+          { from: [3, 6.8], to: [5, 3.3], kind: "ball", label: "pass", curve: 0.2,
+            fromActor: "timing-passer", toActor: "timing-setter" },
+          { from: [1.8, 7], to: [2.2, 5.4], kind: "move", label: "start on release", curve: 0.1,
+            playerIndex: 2, actor: "timing-hitter", motionId: "approach-jump", stepIndices: [1] }
         ],
         legend: [{ tone: "a", text: "Your side" }, { tone: "move", text: "Approach start" }] },
-      dk.approachPath({ side: "outside", setter: true, swing: true, title: "Rise as the set arrives", caption: "Time the last steps so the hitter is rising just as the set arrives at the contact point. Repeat with steady passes, then add small changes so hitters adjust their timing." })
+      (function () {
+        var scene = dk.approachPath({ side: "outside", setter: true, swing: true,
+          title: "Rise as the set arrives",
+          caption: "A steady passer sends the ball to target as the hitter reads the setter's release. The hitter times the last steps so they are rising just as the set arrives; then the setter varies the pass and set slightly so the hitter adjusts." });
+        scene.players.push({ id: "timing-live-passer", x: 3.8, y: 7.4, label: "P", team: "a",
+          role: "live passer", note: "starts the timing rep" });
+        scene.paths = [
+          { from: [3.8, 7.1], to: [5.25, 3.35], kind: "ball", label: "steady pass to target", curve: 0.18,
+            fromActor: "timing-live-passer", toActor: "approach-setter", sequenceOrder: 0,
+            simultaneousGroup: "pass-and-approach-read" },
+          Object.assign({}, scene.paths[0], { sequenceOrder: 0.01,
+            simultaneousGroup: "pass-and-approach-read" }),
+          Object.assign({}, scene.paths[1], { sequenceOrder: 1 }),
+          Object.assign({}, scene.paths[2], { sequenceOrder: 2 })
+        ];
+        scene.motionChains = [[0, 2, 3]];
+        scene.contacts = [
+          { order: 1, actor: "timing-live-passer", toActor: "approach-setter", action: "forearm pass", pathIndex: 0 },
+          { order: 2, actor: "approach-setter", toActor: "approach-hitter", action: "outside set", pathIndex: 2 },
+          { order: 3, actor: "approach-hitter", action: "attack", pathIndex: 3 }
+        ];
+        return scene;
+      })()
     )
   };
 
@@ -391,7 +543,30 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       dk.approachPath({ side: "outside", setter: true, swing: true, title: "1. Outside", caption: "Take swings from every spot in a row. First the setter sets the OUTSIDE: approach from outside-left, hit, and reset." }),
       dk.approachPath({ side: "middle", setter: true, swing: true, title: "2. Middle quick", caption: "Next a quick set to the MIDDLE: short, fast approach from the center, in the air early, hit down." }),
-      dk.approachPath({ side: "right", setter: true, swing: true, title: "3. Right side", caption: "Then a back set to the RIGHT side: approach to the right pin and swing across the body. Finish with a back-row set from behind the line, then rotate everyone through the whole sequence." })
+      dk.approachPath({ side: "right", setter: true, swing: true, title: "3. Right side", caption: "Then a back set to the RIGHT side: approach to the right pin and swing across the body." }),
+      { title: "4. Back-row pipe", caption: "Finish with a high back-row pipe set. The hitter starts behind the attack line, approaches and jumps legally from behind it, attacks at full reach, then the group rotates through the complete outside-middle-right-pipe sequence.", w: 9, h: 10.4, net: 2, lines: [{ y: 5.6 }],
+        court: [{ x: 0, y: 0, w: 9, h: 10.4 }],
+        zones: [tgt("middle", "pipe target")],
+        players: [
+          { id: "all-positions-pipe-setter", x: 5.2, y: 3, label: "St", team: "a", role: "setter", note: "pipe set" },
+          { id: "all-positions-pipe-hitter", x: 4.5, y: 8.6, label: "H", team: "a", role: "back-row hitter", note: "behind attack line" }
+        ],
+        paths: [
+          { from: [4.5, 8.2], via: [[4.5, 6.4]], to: [4.5, 5.8], kind: "move", label: "pipe approach · jump behind line", curve: 0,
+            playerIndex: 1, actor: "all-positions-pipe-hitter", motionId: "approach-jump",
+            simultaneousGroup: "pipe-set-and-approach", sequenceOrder: 0 },
+          { from: [5.2, 3.2], to: [4.6, 5.4], kind: "ball", label: "high back-row set", curve: 0.15,
+            fromActor: "all-positions-pipe-setter", toActor: "all-positions-pipe-hitter",
+            simultaneousGroup: "pipe-set-and-approach", sequenceOrder: 0.01 },
+          { from: [4.5, 5.4], to: [4.7, 1.2], kind: "serve", label: "pipe attack", curve: 0.1,
+            fromActor: "all-positions-pipe-hitter", toEndpoint: { type: "target", label: "Deep pipe target" } }
+        ],
+        motionChains: [[1, 2]],
+        contacts: [
+          { order: 1, actor: "all-positions-pipe-setter", toActor: "all-positions-pipe-hitter", action: "back-row set", pathIndex: 1 },
+          { order: 2, actor: "all-positions-pipe-hitter", action: "pipe attack", pathIndex: 2 }
+        ],
+        legend: [{ tone: "move", text: "Legal back-row takeoff" }, { tone: "target", text: "Deep pipe target" }] }
     )
   };
 
@@ -401,11 +576,22 @@ RR.extras = RR.extras || {};
       w: 9, h: 9.4, net: 2,
       court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
       zones: [{ x: 2, y: 3.4, w: 1.2, h: 1, tone: "neutral", label: "BOX" }, tgt("line", "line"), tgt("cross", "angle")],
-      players: [{ x: 4.4, y: 4, label: "F", team: "a", note: "feeder" }, { x: 2.6, y: 3.9, label: "H", team: "a", note: "on box" }],
+      players: [
+        { id: "box-feeder", x: 4.4, y: 4, label: "F", team: "a", role: "feeder", note: "controlled toss" },
+        { id: "box-hitter", x: 2.6, y: 3.9, label: "H", team: "a", role: "hitter", note: "on box" }
+      ],
       cones: [{ x: 1.9, y: 1 }, { x: 7.6, y: 0.9 }],
       paths: [
-        { from: [4.2, 4], to: [3, 3.9], kind: "ball", label: "toss", curve: 0.2 },
-        { from: [2.6, 3.6], to: [6.8, 1], kind: "serve", label: "full swing down", curve: 0.1 }
+        { from: [4.2, 4], to: [3, 3.9], kind: "ball", label: "toss", curve: 0.2,
+          fromActor: "box-feeder", toActor: "box-hitter" },
+        { from: [2.6, 3.6], to: [6.8, 1], kind: "serve", label: "full swing down", curve: 0.1,
+          fromActor: "box-hitter",
+          toEndpoint: { type: "target", label: "Line / angle target" } }
+      ],
+      motionChains: [[0, 1]],
+      contacts: [
+        { order: 1, actor: "box-feeder", action: "controlled toss", pathIndex: 0 },
+        { order: 2, actor: "box-hitter", action: "elevated box hit", pathIndex: 1 }
       ],
       legend: [{ tone: "neutral", text: "Box" }, { tone: "target", text: "Target cones" }, { tone: "a", text: "Hitter + feeder" }]
     }
@@ -417,27 +603,48 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       { title: "Dig the entered ball", caption: "Hitters link defense to offense. The hitter starts in a defensive spot in the back court and digs a ball the coach enters over the net.", w: 9, h: 10.4, net: 2, lines: [{ y: 5.6 }],
         court: [{ x: 0, y: 0, w: 9, h: 10.4 }],
-        players: [{ x: 4.5, y: 0.9, label: "C", team: "coach", note: "enters ball" }, { x: 3, y: 8.4, label: "H", team: "a", note: "defender" }, { x: 6, y: 6.2, label: "St", team: "a", note: "setter" }, { x: 7.5, y: 1.4, label: "Sh", team: "a", note: "shagger" }, { x: 1.6, y: 9.4, label: "Q", team: "a", note: "next hitter" }],
+        players: [
+          { id: "transition-coach", x: 4.5, y: 0.9, label: "C", team: "coach", role: "attacking coach", note: "enters ball" },
+          { id: "transition-hitter", x: 3, y: 8.4, label: "H", team: "a", role: "hitter-defender", note: "defender" },
+          { id: "transition-setter", x: 6, y: 6.2, label: "St", team: "a", role: "setter", note: "setter" },
+          { id: "transition-shagger", x: 7.5, y: 1.4, label: "Sh", team: "a", role: "shagger", note: "shagger" },
+          { id: "transition-queue", x: 1.6, y: 9.4, label: "Q", team: "a", role: "next hitter", note: "next hitter" }
+        ],
         paths: [
-          { from: [4.5, 1.4], to: [3.2, 8], kind: "serve", label: "attack", curve: 0.1 },
-          { from: [3, 8], to: [5.8, 6.4], kind: "ball", label: "dig", curve: 0.2 }
+          { from: [4.5, 1.4], to: [3.2, 8], kind: "serve", label: "attack", curve: 0.1,
+            fromActor: "transition-coach", toActor: "transition-hitter" },
+          { from: [3, 8], to: [5.8, 6.4], kind: "ball", label: "dig", curve: 0.2,
+            fromActor: "transition-hitter", toActor: "transition-setter" }
+        ],
+        motionChains: [[0, 1]],
+        contacts: [
+          { order: 1, actor: "transition-coach", toActor: "transition-hitter", action: "attack", pathIndex: 0 },
+          { order: 2, actor: "transition-hitter", toActor: "transition-setter", action: "dig", pathIndex: 1 }
         ],
         legend: [{ tone: "coach", text: "Coach" }, { tone: "a", text: "Your side" }] },
       { title: "Pull off the net", caption: "On the dig, the hitter pulls OFF the net out to the attack line to become a hitter, while the setter delivers a transition set.", w: 9, h: 10.4, net: 2, lines: [{ y: 5.6 }],
         court: [{ x: 0, y: 0, w: 9, h: 10.4 }],
-        players: [{ x: 6, y: 5, label: "St", team: "a", note: "transition set" }, { x: 3, y: 8, label: "H", team: "a", note: "pulls off" }, { x: 7.5, y: 1.4, label: "Sh", team: "a", note: "shagger" }, { x: 1.6, y: 9.4, label: "Q", team: "a", note: "next hitter" }],
+        players: [
+          { id: "transition-setter", x: 6, y: 5, label: "St", team: "a", role: "setter", note: "transition set" },
+          { id: "transition-hitter", x: 3, y: 8, label: "H", team: "a", role: "hitter", note: "pulls off" },
+          { id: "transition-shagger", x: 7.5, y: 1.4, label: "Sh", team: "a", role: "shagger", note: "shagger" },
+          { id: "transition-queue", x: 1.6, y: 9.4, label: "Q", team: "a", role: "next hitter", note: "next hitter" }
+        ],
         paths: [
-          { from: [3, 7.8], to: [2.6, 6], kind: "move", label: "pull off to the line", curve: 0.1 },
-          { from: [6, 5.2], to: [2.6, 5.4], kind: "ball", label: "transition set", curve: 0.25 }
+          { from: [3, 7.8], to: [2.6, 6], kind: "move", label: "pull off to the line", curve: 0.1,
+            playerIndex: 1, actor: "transition-hitter" },
+          { from: [6, 5.2], to: [2.6, 5.4], kind: "ball", label: "transition set", curve: 0.25,
+            fromActor: "transition-setter", toActor: "transition-hitter" }
         ],
         legend: [{ tone: "move", text: "Off the net" }, { tone: "a", text: "Your side" }] },
       swingStep({
         title: "Approach & attack", takeX: 2.4, to: [6.8, 1], label: "transition swing",
+        hitterId: "transition-hitter",
         zones: [tgt("cross", "target")],
         extraPlayers: [
-          { x: 6, y: 5, label: "St", team: "a", note: "transition setter" },
-          { x: 7.5, y: 1.4, label: "Sh", team: "a", note: "shagger" },
-          { x: 1.6, y: 9.4, label: "Q", team: "a", note: "next hitter" }
+          { id: "transition-setter", x: 6, y: 5, label: "St", team: "a", role: "setter", note: "transition setter" },
+          { id: "transition-shagger", x: 7.5, y: 1.4, label: "Sh", team: "a", role: "shagger", note: "shagger" },
+          { id: "transition-queue", x: 1.6, y: 9.4, label: "Q", team: "a", role: "next hitter", note: "next hitter" }
         ],
         caption: "The setter delivers the transition set, the hitter approaches and attacks, the shagger retrieves, and the next hitter is ready so the defense-to-offense cycle keeps moving."
       })
@@ -449,15 +656,55 @@ RR.extras = RR.extras || {};
       dk.approachPath({ side: "outside", setter: true, swing: true, title: "Attack the set", caption: "After hitting, you must get right back to defense. The hitter approaches and attacks a set at the net." }),
       { title: "Pull back to your spot", caption: "Don't admire the swing — quickly pull back from the net to a balanced defensive spot in the court.", w: 9, h: 9.4, net: 2,
         court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
-        players: [{ x: 2.4, y: 4, label: "H", team: "a", note: "just hit" }],
-        paths: [{ from: [2.4, 4.2], to: [3, 7.4], kind: "move", label: "transition back", curve: -0.2 }],
-        legend: [{ tone: "move", text: "Back to defense" }] },
+        zones: [tgt("cross", "attack target")],
+        players: [
+          { id: "attack-transition-setter", x: 5.4, y: 3, label: "St", team: "a", role: "setter", note: "sets the attack" },
+          { id: "attack-transition-hitter", x: 2.4, y: 4, label: "H", team: "a", role: "hitter-defender", note: "attacks, then releases" }
+        ],
+        paths: [
+          { from: [5.4, 3.2], to: [2.6, 3.7], kind: "ball", label: "outside set", curve: 0.2,
+            fromActor: "attack-transition-setter", toActor: "attack-transition-hitter" },
+          { from: [2.4, 3.6], to: [6.8, 1], kind: "serve", label: "attack", curve: 0.1,
+            fromActor: "attack-transition-hitter", toEndpoint: { type: "target", label: "Attack target" } },
+          { from: [2.4, 4.2], to: [3, 7.4], kind: "move", label: "backpedal from net to defensive base", curve: -0.2,
+            playerIndex: 1, actor: "attack-transition-hitter", motionId: "backpedal", stepIndices: [0] }
+        ],
+        motionChains: [[0, 1]],
+        contacts: [
+          { order: 1, actor: "attack-transition-setter", toActor: "attack-transition-hitter", action: "outside set", pathIndex: 0 },
+          { order: 2, actor: "attack-transition-hitter", action: "attack", pathIndex: 1 }
+        ],
+        legend: [{ tone: "target", text: "Finish the attack" }, { tone: "move", text: "Back to defense immediately" }] },
       { title: "Dig the next ball", caption: "A coach sends a ball at the player, now a defender, who digs it up. Do the attack-then-defend cycle several times — focus on a fast, balanced move from the net back to your spot.", w: 9, h: 9.4, net: 2,
         court: [{ x: 0, y: 0, w: 9, h: 9.4 }],
-        players: [{ x: 4.5, y: 0.9, label: "C", team: "coach", note: "attacks" }, { x: 3, y: 7.4, label: "H", team: "a", note: "now defends" }],
+        zones: [tgt("cross", "attack target"), { x: 3.55, y: 4.75, w: 1.8, h: 1.25, tone: "good", label: "DIG TARGET" }],
+        players: [
+          { id: "attack-transition-coach", x: 4.5, y: 0.9, label: "C", team: "coach",
+            role: "attacking coach", note: "attacks" },
+          { id: "attack-transition-setter", x: 5.4, y: 3, label: "St", team: "a",
+            role: "setter", note: "starts each cycle" },
+          { id: "attack-transition-hitter", x: 3, y: 7.4, label: "H", team: "a",
+            role: "hitter-defender", note: "now defends" }
+        ],
         paths: [
-          { from: [4.5, 1.4], to: [3.2, 7], kind: "serve", label: "attack", curve: 0.1 },
-          { from: [3, 7], to: [4.4, 5.4], kind: "ball", label: "dig", curve: 0.2 }
+          { from: [5.4, 3.2], to: [2.6, 3.7], kind: "ball", label: "cycle · outside set", curve: 0.2,
+            fromActor: "attack-transition-setter", toActor: "attack-transition-hitter", stepIndices: [2], sequenceOrder: 0 },
+          { from: [2.6, 3.6], to: [6.8, 1], kind: "serve", label: "cycle · hitter attack", curve: 0.1,
+            fromActor: "attack-transition-hitter", toEndpoint: { type: "target", label: "Attack target" }, stepIndices: [2], sequenceOrder: 1 },
+          { from: [2.6, 4], to: [3, 7.4], kind: "move", label: "cycle · backpedal to defensive base", curve: -0.18,
+            playerIndex: 2, actor: "attack-transition-hitter", motionId: "backpedal", stepIndices: [2, 3], sequenceOrder: 2 },
+          { from: [4.5, 1.4], to: [3.2, 7], kind: "serve", label: "cycle · coach attack", curve: 0.1,
+            fromActor: "attack-transition-coach", toActor: "attack-transition-hitter", stepIndices: [1, 2], sequenceOrder: 3 },
+          { from: [3, 7], to: [4.4, 5.4], kind: "ball", label: "cycle · controlled dig", curve: 0.2,
+            fromActor: "attack-transition-hitter",
+            toEndpoint: { type: "target", label: "Playable dig target" }, stepIndices: [1, 2], sequenceOrder: 4 }
+        ],
+        motionChains: [[0, 1], [3, 4]],
+        contacts: [
+          { order: 1, actor: "attack-transition-setter", toActor: "attack-transition-hitter", action: "outside set", pathIndex: 0 },
+          { order: 2, actor: "attack-transition-hitter", action: "attack", pathIndex: 1 },
+          { order: 3, actor: "attack-transition-coach", toActor: "attack-transition-hitter", action: "attack", pathIndex: 3 },
+          { order: 4, actor: "attack-transition-hitter", action: "dig", pathIndex: 4 }
         ],
         legend: [{ tone: "coach", text: "Coach" }, { tone: "a", text: "Defender" }] }
     )

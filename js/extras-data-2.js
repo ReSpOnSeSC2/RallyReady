@@ -71,11 +71,16 @@ RR.extras = RR.extras || {};
       dk.acrossNet({
         teamSize: 6,
         sequence: "serve-three",
+        actorPrefix: "six-queen",
+        teamNames: { a: "queen", b: "challenger" },
+        contactOrder: ["1 · challenger serve", "2 · queen pass", "3 · queen set", "4 · queen attack"],
         zones: [{ x: 0.2, y: 6.2, w: 8.6, h: 4.8, tone: "good", label: "Queen side scores" }],
         legend: [{ tone: "a", text: "Kings/Queens" }, { tone: "b", text: "Challengers" }],
         caption: "The challenger serves from behind the end line. Both six-player teams run the rally through serve → pass → set → attack; only the queen side can score."
       }),
-      dk.rotateIn({ teamSize: 6, wait: 0, caption: "After a queen-side loss, all six challengers cross into the matching 3-front/3-back queen positions while all six former queens rotate around the sideline to the vacated challenger positions." })
+      dk.rotateIn({ teamSize: 6, wait: 0,
+        actorPrefix: "six-queen", teamNames: { a: "queen", b: "challenger" },
+        caption: "After a queen-side loss, all six challengers cross into the matching 3-front/3-back queen positions while all six former queens rotate around the sideline to the vacated challenger positions." })
     )
   };
 
@@ -88,7 +93,11 @@ RR.extras = RR.extras || {};
       tracking: "Coach runs the wash scoring and calls the big points out loud; teams rotate on each sideout.",
       aim: "First team to 5–7 big points; 15–20 min."
     },
-    diagram: dk.acrossNet({ teamSize: 6, sequence: "wash-two", caption: "Full 6v6 in rotation; win two rallies in a row to 'wash' and bank a big point." })
+    diagram: dk.washGame({
+      actorPrefix: "wash-scoring",
+      title: "Serve rally, then immediate free-ball rally",
+      caption: "All 12 players stay in their six-on-six positions. Play the served rally through both offenses; the coach immediately enters a separate free ball for the receiving team to pass, set, and counterattack. The two ball tracks stay distinct: win both rallies to bank one wash point."
+    })
   };
 
   E["serve-receive-wash-game"] = {
@@ -108,7 +117,12 @@ RR.extras = RR.extras || {};
       tracking: "Coach feeds the transition ball and tallies washes; teams play their normal positions.",
       aim: "First to the wash target; 15–20 min."
     },
-    diagram: dk.acrossNet({ teamSize: 6, sequence: "wash-two", caption: "Serve/receive, then the coach feeds a transition ball — win both to bank the point." })
+    diagram: dk.washGame({
+      actorPrefix: "transition-wash",
+      hardSecondBall: true,
+      title: "Serve rally, then defense-to-offense transition",
+      caption: "All 12 players complete the served rally first. Without resetting positions, the sideline coach drives a second ball to the winning side; that defender digs to target, the setter delivers the transition set, and the middle counterattacks. Win both distinct rallies to score."
+    })
   };
 
   E["sideout-scoring-game"] = {

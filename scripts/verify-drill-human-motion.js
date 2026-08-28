@@ -10,7 +10,9 @@ const ROOT = path.join(__dirname, "..");
 const ASSET_DIR = path.join(ROOT, "images", "drill-motion");
 const EXPECTED_DRILLS = 241;
 const EXPECTED_STEPS = 979;
-const EXPECTED_ACTIONS = 15;
+const EXPECTED_REGISTERED_ACTIONS = 16;
+const EXPECTED_SELECTABLE_ACTIONS = 15;
+const EXPECTED_ASSETS = 15;
 const MAX_ASSET_BYTES = 220 * 1024;
 const MAX_PACK_BYTES = Math.floor(2.2 * 1024 * 1024);
 
@@ -114,12 +116,16 @@ ok(!!motion && motion.actions && typeof motion.actions === "object" &&
 ok(!!motion && typeof motion.programFor === "function", "programFor(drill, specs) is exposed");
 ok(!!motion && typeof motion.actionsFor === "function", "actionsFor(drill, text) is exposed");
 ok(!!motion && typeof motion.actionFor === "function", "actionFor(drill, text) is exposed");
+ok(!!motion && typeof motion.classificationFor === "function",
+  "classificationFor(drill, text) is exposed");
 ok(!!motion && typeof motion.assetFor === "function", "assetFor(action) is exposed");
 ok(!!motion && typeof motion.frameFor === "function", "frameFor(action, text) is exposed");
+ok(!!motion && typeof motion.options === "function", "options() is exposed");
 
 if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
     typeof motion.actionsFor !== "function" || typeof motion.actionFor !== "function" ||
-    typeof motion.assetFor !== "function" || typeof motion.frameFor !== "function") {
+    typeof motion.classificationFor !== "function" || typeof motion.assetFor !== "function" ||
+    typeof motion.frameFor !== "function" || typeof motion.options !== "function") {
   failures.push("human-motion API is incomplete; remaining checks cannot run");
 } else {
   const actionIds = Object.keys(motion.actions);
@@ -127,8 +133,33 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
   const checkedAssetFiles = new Set();
   let totalPackBytes = 0;
 
-  ok(actionIds.length === EXPECTED_ACTIONS,
-    `expected ${EXPECTED_ACTIONS} registered actions, found ${actionIds.length}`);
+  ok(actionIds.length === EXPECTED_REGISTERED_ACTIONS,
+    `expected ${EXPECTED_REGISTERED_ACTIONS} registered actions, found ${actionIds.length}`);
+
+  const internalActionIds = actionIds.filter((id) => motion.actions[id].internal);
+  const editorOptions = Array.from(motion.options());
+  const editorOptionIds = editorOptions.map((option) => option.value);
+  const selectableActionIds = actionIds.filter((id) => !motion.actions[id].internal);
+  ok(JSON.stringify(internalActionIds) === JSON.stringify(["organize"]),
+    "organize is the only internal action used for non-technique instructions");
+  ok(motion.actions.organize && motion.actions.organize.kind === "administrative" &&
+    motion.actions.organize.mode === "catalog",
+  "organize is explicitly classified as a catalog-style administrative posture");
+  ok(motion.actions.organize && motion.actions.footwork &&
+    motion.actions.organize.asset === motion.actions.footwork.asset,
+  "organize deliberately reuses the reviewed athletic-footwork posture atlas");
+  ok(editorOptions.length === EXPECTED_SELECTABLE_ACTIONS,
+    `custom editor exposes exactly ${EXPECTED_SELECTABLE_ACTIONS} motion options`);
+  ok(new Set(editorOptionIds).size === EXPECTED_SELECTABLE_ACTIONS,
+    "custom editor motion options have unique action ids");
+  ok(!editorOptionIds.includes("organize"),
+    "custom editor does not expose the internal organize posture");
+  ok(editorOptions.every((option) => option && typeof option.label === "string" &&
+    !!option.label.trim() && Object.prototype.hasOwnProperty.call(motion.actions, option.value)),
+  "every custom editor option has a label and a registered action");
+  ok(JSON.stringify(editorOptionIds.slice().sort()) ===
+    JSON.stringify(selectableActionIds.slice().sort()),
+  "custom editor options exactly match all selectable registered actions");
 
   actionIds.forEach((id) => {
     const action = motion.actions[id];
@@ -183,19 +214,22 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
     }
   });
 
+  // Scene-composition grids share this directory but are verified by the
+  // renderer suite. This registry owns only the action atlases, whose stable
+  // `-atlas.webp` suffix lets us keep an exact on-disk parity check here.
   const diskAssets = fs.existsSync(ASSET_DIR)
     ? fs.readdirSync(ASSET_DIR)
-      .filter((file) => /\.webp$/i.test(file))
+      .filter((file) => /-atlas\.webp$/i.test(file))
       .map((file) => "images/drill-motion/" + file)
       .sort()
     : [];
   const registeredList = Array.from(registeredAssets).sort();
-  ok(registeredAssets.size === EXPECTED_ACTIONS,
-    `expected ${EXPECTED_ACTIONS} unique registered atlases, found ${registeredAssets.size}`);
-  ok(diskAssets.length === EXPECTED_ACTIONS,
-    `expected ${EXPECTED_ACTIONS} WebP atlases on disk, found ${diskAssets.length}`);
+  ok(registeredAssets.size === EXPECTED_ASSETS,
+    `expected ${EXPECTED_ASSETS} unique registered atlases, found ${registeredAssets.size}`);
+  ok(diskAssets.length === EXPECTED_ASSETS,
+    `expected ${EXPECTED_ASSETS} action atlases on disk, found ${diskAssets.length}`);
   ok(JSON.stringify(registeredList) === JSON.stringify(diskAssets),
-    "registered atlas set exactly matches images/drill-motion/*.webp");
+    "registered atlas set exactly matches images/drill-motion/*-atlas.webp");
   ok(totalPackBytes < MAX_PACK_BYTES,
     `atlas pack is under 2.2 MB (${Math.ceil(totalPackBytes / 1024)} KB)`);
 
@@ -208,6 +242,7 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
     `expected ${EXPECTED_STEPS} saved steps, found ${savedStepCount}`);
 
   let programInstructionCount = 0;
+  let supplementalSceneCount = 0;
   drills.forEach((drill) => {
     const specs = RR.format && typeof RR.format.diagrams === "function"
       ? RR.format.diagrams(drill) : [];
@@ -217,45 +252,62 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
     ok(Array.isArray(program) && program.length > 0,
       `${drill.id}: bundled drill has a real-step program`);
     if (!Array.isArray(program)) return;
-    ok(program.length === steps.length,
-      `${drill.id}: program has exactly one entry per saved step`);
-    programInstructionCount += program.length;
+    const savedEntries = program.filter((entry) => entry && entry.sourceStep >= 0);
+    ok(savedEntries.length === steps.length && savedEntries.every((entry, index) =>
+      entry.sourceStep === index),
+      `${drill.id}: program preserves exactly one ordered entry per saved step`);
+    programInstructionCount += savedEntries.length;
 
     program.forEach((entry, index) => {
-      const expected = steps[index];
+      const isSavedStep = !!entry && entry.sourceStep >= 0;
+      const expected = isSavedStep ? steps[entry.sourceStep] : entry && entry.instruction;
       ok(!!entry && entry.index === index,
-        `${drill.id}: program entry ${index + 1} preserves its step index`);
-      ok(!!entry && entry.instruction === expected,
-        `${drill.id}: saved step ${index + 1} appears exactly in order`);
+        `${drill.id}: program entry ${index + 1} preserves its walkthrough index`);
+      if (isSavedStep) {
+        ok(entry.instruction === expected,
+          `${drill.id}: saved step ${entry.sourceStep + 1} appears exactly in order`);
+      } else {
+        supplementalSceneCount++;
+        ok(entry.supplementalScene === true && entry.scene &&
+          (entry.instruction === entry.scene.caption || entry.instruction === drill.setup),
+          `${drill.id}: supplemental scene ${entry.sceneIndex + 1} uses only authored caption/setup copy`);
+      }
 
       const primary = motion.actionFor(drill, expected);
       ok(typeof primary === "string" && Object.prototype.hasOwnProperty.call(motion.actions, primary),
-        `${drill.id}: step ${index + 1} resolves to a registered primary action`);
+        `${drill.id}: walkthrough ${index + 1} resolves to a registered primary action`);
       ok(!!entry && entry.action === primary,
-        `${drill.id}: step ${index + 1} stores its resolved primary action`);
+        `${drill.id}: walkthrough ${index + 1} stores its resolved primary action`);
       ok(!!entry && Array.isArray(entry.actions) && entry.actions.length > 0 &&
         entry.actions[0] === entry.action,
-      `${drill.id}: step ${index + 1} has an ordered action list led by its primary action`);
+      `${drill.id}: walkthrough ${index + 1} has an ordered action list led by its primary action`);
       (entry && Array.isArray(entry.actions) ? entry.actions : []).forEach((actionId) => {
         ok(Object.prototype.hasOwnProperty.call(motion.actions, actionId),
-          `${drill.id}: step ${index + 1} references registered action ${actionId}`);
+          `${drill.id}: walkthrough ${index + 1} references registered action ${actionId}`);
         ok(!!motion.assetFor(actionId),
-          `${drill.id}: step ${index + 1} action ${actionId} resolves to an atlas`);
+          `${drill.id}: walkthrough ${index + 1} action ${actionId} resolves to an atlas`);
       });
       if (specs.length) {
         ok(Number.isInteger(entry.sceneIndex) && entry.sceneIndex >= 0 &&
           entry.sceneIndex < specs.length,
-        `${drill.id}: step ${index + 1} has an auditable scene index`);
+        `${drill.id}: walkthrough ${index + 1} has an auditable scene index`);
         ok(entry.scene === specs[entry.sceneIndex],
-          `${drill.id}: step ${index + 1} scene matches its recorded index`);
+          `${drill.id}: walkthrough ${index + 1} scene matches its recorded index`);
       } else {
         ok(entry.sceneIndex === -1 && entry.scene == null,
-          `${drill.id}: step ${index + 1} records that no court scene exists`);
+          `${drill.id}: walkthrough ${index + 1} records that no court scene exists`);
       }
     });
+    if (specs.length) {
+      ok(specs.every((spec, sceneIndex) => program.some((entry) =>
+        entry.sceneIndex === sceneIndex && entry.scene === spec)),
+        `${drill.id}: every authored court scene is reachable in the walkthrough`);
+    }
   });
   ok(programInstructionCount === EXPECTED_STEPS,
     `all ${EXPECTED_STEPS} saved steps appear exactly once as program instructions`);
+  ok(supplementalSceneCount === 8,
+    `expected 8 authored scene-coverage phases, found ${supplementalSceneCount}`);
 
   function assertStepActions(drillId, stepIndex, expected) {
     const drill = drills.find((item) => item.id === drillId);
@@ -274,10 +326,19 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
     const specs = RR.format && typeof RR.format.diagrams === "function"
       ? RR.format.diagrams(drill) : [];
     const program = motion.programFor(drill, specs);
-    ok(!!program[stepIndex] &&
-      JSON.stringify(Array.from(program[stepIndex].actions)) === JSON.stringify(expected) &&
-      program[stepIndex].action === expected[0],
+    const savedEntry = program.find((entry) => entry.sourceStep === stepIndex);
+    ok(!!savedEntry &&
+      JSON.stringify(Array.from(savedEntry.actions)) === JSON.stringify(expected) &&
+      savedEntry.action === expected[0],
     `${drillId}: stored step ${stepIndex + 1} keeps the ordered resolver result`);
+  }
+
+  function assertSyntheticActions(label, drill, instruction, expected) {
+    const resolved = Array.from(motion.actionsFor(drill, instruction));
+    ok(JSON.stringify(resolved) === JSON.stringify(expected),
+      `${label}: resolves ${JSON.stringify(expected)} (found ${JSON.stringify(resolved)})`);
+    ok(motion.actionFor(drill, instruction) === expected[0],
+      `${label}: primary is ${expected[0]}`);
   }
 
   // Pepper is the compact regression case for step-local verbs, action order,
@@ -313,19 +374,19 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
 
   // Ambiguous administrative and feed phrases must not masquerade as body
   // mechanics. Exact equipment/ID choices still lead every resolved list.
-  assertStepActions("serving-to-zones", 2, ["serve"]);
-  assertStepActions("close-range-reaction-digging", 3, ["defense"]);
-  assertStepActions("pass-to-the-hoop-target", 0, ["pass"]);
-  assertStepActions("perimeter-defense-system", 0, ["defense"]);
+  assertStepActions("serving-to-zones", 2, ["organize"]);
+  assertStepActions("close-range-reaction-digging", 3, ["organize"]);
+  assertStepActions("pass-to-the-hoop-target", 0, ["organize"]);
+  assertStepActions("perimeter-defense-system", 0, ["organize"]);
   assertStepActions("deep-corner-roll-shots", 1, ["attack"]);
   assertStepActions("rolls-and-sprawls", 1, ["defense"]);
-  assertStepActions("overhead-emergency-pass", 0, ["pass"]);
+  assertStepActions("overhead-emergency-pass", 0, ["organize"]);
   assertStepActions("mini-band-defensive-shuffle", 1, ["band", "footwork"]);
   assertStepActions("band-arm-speed", 1, ["band"]);
   assertStepActions("med-ball-chest-pass-wall", 1, ["medicine"]);
   assertStepActions("foam-roller-upper-back", 1, ["recovery"]);
   assertStepActions("box-step-ups-approach", 1, ["footwork"]);
-  assertStepActions("box-block-reach", 0, ["block", "set"]);
+  assertStepActions("box-block-reach", 0, ["block"]);
   assertStepActions("box-hitting-reps", 0, ["attack"]);
   assertStepActions("reaction-sprint-starts", 1, ["run"]);
   assertStepActions("cooldown-jog-and-breathing", 0, ["run"]);
@@ -338,8 +399,52 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
   assertStepActions("underhand-serve-progression", 2, ["underhand"]);
   assertStepActions("serve-and-sprint", 1, ["run"]);
 
+  // Regression matrix for overloaded words and actor identity. A ball coming
+  // down is not an athlete jump, placing equipment is not an overhead set, and
+  // the type of set being attacked is the hitter's object rather than a second
+  // athlete action.
+  assertSyntheticActions("ball landing", { skill: "Serving" },
+    "The ball lands deep in zone 5.", ["organize"]);
+  assertSyntheticActions("athlete landing", { skill: "Serving" },
+    "The server lands inside the court, balanced and ready.", ["jump"]);
+  assertSyntheticActions("equipment setup", {
+    skill: "Setting", equipment: ["Cones", "Hoop"]
+  }, "Set the cones and hoop at the target.", ["organize"]);
+  assertSyntheticActions("volleyball set", { skill: "Setting" },
+    "Set a high outside ball to the left antenna.", ["set"]);
+  assertSyntheticActions("back-set attack", { skill: "Hitting" },
+    "The hitter hits a back-set ball into the corner.", ["attack"]);
+  assertSyntheticActions("performed set followed by back-set attack", { skill: "Hitting" },
+    "The setter sets a back ball, then the hitter hits a back-set ball.",
+    ["set", "attack"]);
+
+  // A support person's feed is court operation, not a learner technique. If a
+  // learner response is written in the same step, only that response animates.
+  assertSyntheticActions("coach-only feed", { skill: "Passing" },
+    "The coach hits a ball into the court.", ["organize"]);
+  assertSyntheticActions("coach feed with learner response", { skill: "Defense" },
+    "The coach hits a ball, then the player digs it to target.", ["defense"]);
+
+  const administrative = motion.classificationFor({ skill: "Team Play" },
+    "Track the score, then rotate the teams.");
+  ok(administrative && administrative.kind === "administrative" &&
+    administrative.reason === "Scoring or outcome" &&
+    administrative.action === "organize" &&
+    JSON.stringify(Array.from(administrative.actions || [])) === JSON.stringify(["organize"]),
+  "scoring and rotation prose is explicitly classified as administrative organize");
+  const technique = motion.classificationFor({ skill: "Serving" },
+    "Serve the ball deep to zone 5.");
+  ok(technique && technique.kind === "technique" && technique.action === "serve" &&
+    technique.reason === "Explicit athlete mechanic",
+  "an explicit learner mechanic remains classified as technique");
+
   function sceneIndices(program) {
     return Array.from(program, (entry) => entry.sceneIndex);
+  }
+
+  function savedSceneIndices(program) {
+    return Array.from(program).filter((entry) => entry.sourceStep >= 0)
+      .map((entry) => entry.sceneIndex);
   }
 
   // Equal step/scene counts are an authored one-to-one contract, even when
@@ -369,7 +474,8 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
     { title: "Reset", caption: "Collect equipment before the next repetition." },
     { title: "High outside", caption: "Set a high outside ball to the left antenna." }
   ]);
-  ok(JSON.stringify(sceneIndices(semanticBinding)) === JSON.stringify([3, 1, 0]),
+  ok(JSON.stringify(savedSceneIndices(semanticBinding)) === JSON.stringify([3, 1, 0]) &&
+    [0, 1, 2, 3].every((sceneIndex) => sceneIndices(semanticBinding).includes(sceneIndex)),
     "action and meaningful-word overlap bind unequal scenes by their real content");
 
   // When neither title nor caption supplies a factual match, normalized
@@ -387,7 +493,7 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
     const drill = drills.find((item) => item.id === drillId);
     const specs = RR.format.diagrams(drill);
     const program = motion.programFor(drill, specs);
-    ok(JSON.stringify(sceneIndices(program)) === JSON.stringify(expected),
+    ok(JSON.stringify(savedSceneIndices(program)) === JSON.stringify(expected),
       `${drillId}: saved steps bind to reviewed court scenes ${JSON.stringify(expected)}`);
   }
   assertSceneBinding("pepper", [0, 0, 1, 1, 1]);
@@ -411,7 +517,7 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
   ok(motion.actionFor(customBase, customSteps[0]) == null,
     "actionFor does not infer a custom drill action from free text");
 
-  const validMotionType = actionIds[0];
+  const validMotionType = editorOptionIds[0];
   const typedCustom = Object.assign({}, customBase, { motionType: validMotionType });
   const typedProgram = motion.programFor(typedCustom, []);
   ok(Array.isArray(typedProgram) && typedProgram.length === customSteps.length,
@@ -425,6 +531,11 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
   });
   ok(motion.actionFor(typedCustom, customSteps[0]) === validMotionType,
     "actionFor honors a valid explicit custom motionType");
+
+  const internalCustom = Object.assign({}, customBase, { motionType: "organize" });
+  ok(motion.programFor(internalCustom, []).length === 0 &&
+    motion.actionFor(internalCustom, customSteps[0]) == null,
+  "custom drills cannot select the internal organize posture as a motion type");
 }
 
 console.log("──────────────────────────────────────────");
@@ -436,4 +547,5 @@ if (failures.length) {
 
 console.log(`DRILL HUMAN MOTION: ALL ${pass} CHECKS PASSED ` +
   `(${EXPECTED_DRILLS} drills; ${EXPECTED_STEPS} saved steps; ` +
-  `${EXPECTED_ACTIONS} human-motion atlases)`);
+  `${EXPECTED_REGISTERED_ACTIONS} actions; ${EXPECTED_ASSETS} human-motion atlases; ` +
+  `${EXPECTED_SELECTABLE_ACTIONS} editor options)`);

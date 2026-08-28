@@ -8,8 +8,8 @@
 //     reject and the WHOLE install fail — the app would never work offline);
 //   • every <script src> and <link rel="stylesheet"> in index.html is precached;
 //   • the manifest, its icons, and the preloaded fonts are precached;
-//   • all 15 human-motion atlases exist, are non-empty WebP files, and are
-//     precached so every drill demonstration remains available offline;
+//   • all 15 close-up atlases and 11 full-scene human grids exist, are non-empty
+//     WebP files, and are precached for offline drill demonstrations;
 //   • every js/*.js and css/*.css on disk is precached (a new module that loads
 //     fine online but was never added to APP_SHELL breaks ONLY offline — the
 //     worst kind of bug to spot in a gym with no signal).
@@ -115,6 +115,38 @@ ok(JSON.stringify(motionAtlases) === JSON.stringify(expectedMotionAtlases),
   "human-motion atlas filenames match the reviewed offline pack");
 
 expectedMotionAtlases.forEach((f) => {
+  const rel = "images/drill-motion/" + f;
+  const abs = path.join(motionDir, f);
+  const exists = fs.existsSync(abs);
+  ok(exists, rel + " exists on disk");
+  if (exists) {
+    const bytes = fs.readFileSync(abs);
+    ok(bytes.length > 12, rel + " is non-empty");
+    ok(bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP",
+      rel + " has a valid WebP container header");
+  }
+  ok(!!inShell[rel], rel + " is precached in APP_SHELL");
+});
+
+const expectedSceneGrids = [
+  "scene-box-mat-grid.webp",
+  "scene-defense-grid.webp",
+  "scene-equipment-grid.webp",
+  "scene-jump-band-grid.webp",
+  "scene-locomotion-grid.webp",
+  "scene-power-grid.webp",
+  "scene-recovery-grid.webp",
+  "scene-roster-grid.webp",
+  "scene-serving-attack-grid.webp",
+  "scene-specialized-grid.webp",
+  "scene-volleyball-grid.webp"
+];
+const sceneGrids = fs.existsSync(motionDir)
+  ? fs.readdirSync(motionDir).filter((f) => /^scene-.*-grid\.webp$/.test(f)).sort()
+  : [];
+ok(JSON.stringify(sceneGrids) === JSON.stringify(expectedSceneGrids),
+  "full-scene human grid filenames match the reviewed production pack");
+expectedSceneGrids.forEach((f) => {
   const rel = "images/drill-motion/" + f;
   const abs = path.join(motionDir, f);
   const exists = fs.existsSync(abs);

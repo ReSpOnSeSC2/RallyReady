@@ -1,0 +1,302 @@
+/* Synchronized full-scene people and technique lens. Loaded after the
+ * established renderer so every participant remains visible with the active
+ * movement and exact written instruction at desktop and phone widths. */
+
+@keyframes dam-scene-grid-x {
+  0%, 24.99% { background-position-x: 0%; }
+  25%, 49.99% { background-position-x: 33.333%; }
+  50%, 74.99% { background-position-x: 66.667%; }
+  75%, 99.99% { background-position-x: 100%; }
+  100% { background-position-x: 0%; }
+}
+
+.dam-motion-announcer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.drill-motion.has-court-details .drill-motion__viewport {
+  aspect-ratio: auto;
+  min-height: 650px;
+}
+.drill-motion__court-view {
+  grid-template-rows: minmax(260px, 0.95fr) minmax(310px, 1.05fr);
+}
+.drill-motion__court-diagram { position: relative; }
+.drill-motion__court-inspector {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  grid-template-rows: auto minmax(150px, 1fr);
+  gap: var(--sp-2);
+}
+.dam-live-artwork {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  place-items: center;
+}
+.dam-live-artwork .dam-svg { width: 100%; height: 100%; }
+
+.dam-scene-person {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  filter: drop-shadow(0 4px 4px rgba(22, 24, 29, 0.34));
+}
+.dam-scene-person--studio {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--coral) 52%, white);
+  border-radius: 16px 16px 12px 12px;
+  background: var(--surface-2);
+  box-shadow:
+    0 5px 14px rgba(22, 24, 29, 0.2),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.34);
+  isolation: isolate;
+}
+.dam-scene-person--studio::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 12px rgba(22, 24, 29, 0.1);
+  content: "";
+  pointer-events: none;
+}
+.dam-scene-sprite {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: 400% 400%;
+  background-position-x: var(--dam-scene-column, 0%);
+  background-position-y: var(--dam-scene-row, 0%);
+}
+.dam-scene-person--studio .dam-scene-sprite {
+  border-radius: inherit;
+}
+.dam-scene-sprite.is-performing {
+  animation: dam-scene-grid-x var(--dam-scene-duration, 1s) steps(1, end) infinite;
+}
+.dam-scene-person__role {
+  position: absolute;
+  z-index: 2;
+  right: 4px;
+  bottom: 1px;
+  left: 4px;
+  overflow: hidden;
+  padding: 3px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: var(--radius-pill);
+  background: rgba(22, 24, 29, 0.88);
+  box-shadow: 0 2px 6px rgba(22, 24, 29, 0.24);
+  color: #fff;
+  font: 850 10px/1.15 var(--font-body);
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dam-scene-actor--active {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--coral) 84%, transparent));
+}
+.dam-scene-actor--active .dam-scene-person__role {
+  border-color: color-mix(in srgb, var(--coral) 76%, white);
+  background: color-mix(in srgb, var(--coral) 84%, var(--navy));
+}
+.dam-scene-actor--partner {
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--teal) 74%, transparent));
+}
+.dam-scene-actor--partner .dam-scene-person__role {
+  border-color: color-mix(in srgb, var(--teal) 75%, white);
+}
+.dam-scene-actor--crowded .dam-scene-person__role {
+  right: 5px;
+  left: 5px;
+  padding: 2px 3px;
+  font-size: 10px;
+}
+.dam-scene-lane {
+  fill: color-mix(in srgb, var(--slate) 9%, var(--surface));
+  stroke: var(--field-border);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.dam-scene-lane-label {
+  fill: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+}
+
+/* The lens is a sibling of the court, never an overlay. */
+.dam-technique-lens {
+  display: grid;
+  min-width: 0;
+  min-height: max-content;
+  grid-template-columns: 94px minmax(0, 1fr);
+  gap: 10px;
+  overflow: visible;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--field-border) 82%, var(--border));
+  border-radius: calc(var(--radius-card) - 5px);
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--coral) 8%, var(--surface)), var(--surface));
+  box-shadow: 0 8px 24px rgba(22, 24, 29, 0.1);
+  color: var(--text);
+}
+.dam-technique-lens[hidden] { display: none; }
+.dam-technique-lens__visual {
+  position: relative;
+  align-self: start;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background-color: var(--surface-2);
+  background-repeat: no-repeat;
+  background-size: 400% 400%;
+  background-position-x: 0%;
+  background-position-y: var(--dam-lens-row, 0%);
+  animation: dam-scene-grid-x var(--dam-lens-duration, 1s) steps(1, end) infinite;
+}
+.dam-technique-lens__copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dam-technique-lens__kicker {
+  display: block;
+  color: var(--coral);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+}
+.dam-technique-lens__motion {
+  display: block;
+  margin-top: 2px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 900;
+  line-height: 1.16;
+}
+.dam-technique-lens__role,
+.dam-technique-lens__chain,
+.dam-technique-lens__instruction,
+.dam-technique-lens__equipment {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.28;
+}
+.dam-technique-lens__role { color: var(--teal); font-weight: 850; }
+.dam-technique-lens__instruction { color: var(--text); font-weight: 700; }
+.dam-technique-lens__equipment { font-size: 9px; }
+
+.drill-motion.is-paused .dam-scene-sprite,
+.drill-motion.is-auto-paused .dam-scene-sprite,
+.drill-motion.is-paused .dam-technique-lens__visual,
+.drill-motion.is-auto-paused .dam-technique-lens__visual {
+  animation-play-state: paused !important;
+}
+.drill-motion.is-resetting .dam-scene-sprite,
+.drill-motion.is-resetting .dam-technique-lens__visual { animation: none !important; }
+
+@media (min-width: 760px) {
+  .drill-motion.has-court-details .drill-motion__viewport { min-height: 520px; }
+  .drill-motion__court-view {
+    grid-template-columns: minmax(0, 1.25fr) minmax(250px, 0.75fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
+@media (max-width: 759px) {
+  .drill-motion.has-court-details .drill-motion__viewport {
+    min-height: 700px;
+  }
+  .drill-motion__court-view {
+    grid-template-rows: minmax(250px, 0.9fr) minmax(360px, 1.1fr);
+  }
+  .drill-motion__court-inspector {
+    grid-template-rows: max-content minmax(112px, 1fr);
+    overflow: visible;
+  }
+  .dam-technique-lens {
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px;
+  }
+  .dam-scene-person__role { font-size: 11px; }
+  .dam-scene-actor--crowded .dam-scene-person__role { font-size: 10px; }
+  .drill-motion__court-summary {
+    overflow-x: hidden;
+  }
+  .drill-motion__court-tokens {
+    flex-wrap: wrap;
+    overflow-x: hidden;
+  }
+  .drill-motion__court-token {
+    min-width: 0;
+    max-width: 100%;
+    flex: 0 1 auto;
+  }
+  .drill-motion__court-mechanics,
+  .drill-motion__court-route,
+  .drill-motion__court-route-list {
+    max-width: 100%;
+  }
+  .drill-motion__court-route {
+    grid-template-columns: minmax(58px, 68px) minmax(0, 1fr);
+  }
+  .drill-motion__court-route-chip {
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+}
+@media (max-width: 480px) {
+  .drill-motion__transport .drill-motion__button { padding-inline: 0; }
+  .drill-motion__transport .drill-motion__button span { display: none; }
+}
+@media (max-width: 380px) {
+  .drill-motion.has-court-details .drill-motion__viewport {
+    min-height: 720px;
+    padding: var(--sp-2);
+  }
+  .drill-motion__court-view {
+    grid-template-rows: minmax(245px, 0.86fr) minmax(380px, 1.14fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dam-scene-sprite,
+  .dam-technique-lens__visual {
+    animation: none !important;
+    background-position-x: 66.667% !important;
+  }
+}
+@media print {
+  .dam-scene-sprite,
+  .dam-technique-lens__visual {
+    animation: none !important;
+    background-position-x: 66.667% !important;
+  }
+}

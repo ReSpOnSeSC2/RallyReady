@@ -4,7 +4,7 @@
 // stale-while-revalidate (see the fetch handler), so a deployed update shows up on
 // the next launch rather than being pinned to the cache.
 // Bump CACHE_VERSION whenever any cached file changes to force clients to update.
-const CACHE_VERSION = "rallyready-v61";
+const CACHE_VERSION = "rallyready-v72";
 
 // Core files that make up the offline app shell. Everything here is fetched and
 // cached up front on install, so the app loads with NO network after first visit.
@@ -33,6 +33,17 @@ const APP_SHELL = [
   "./images/drill-motion/set-atlas.webp",
   "./images/drill-motion/underhand-atlas.webp",
   "./images/drill-motion/warmup-atlas.webp",
+  "./images/drill-motion/scene-box-mat-grid.webp",
+  "./images/drill-motion/scene-defense-grid.webp",
+  "./images/drill-motion/scene-equipment-grid.webp",
+  "./images/drill-motion/scene-jump-band-grid.webp",
+  "./images/drill-motion/scene-locomotion-grid.webp",
+  "./images/drill-motion/scene-power-grid.webp",
+  "./images/drill-motion/scene-recovery-grid.webp",
+  "./images/drill-motion/scene-roster-grid.webp",
+  "./images/drill-motion/scene-serving-attack-grid.webp",
+  "./images/drill-motion/scene-specialized-grid.webp",
+  "./images/drill-motion/scene-volleyball-grid.webp",
   "./css/styles.css",
   "./css/page-guide.css",
   "./css/team.css",
@@ -49,6 +60,7 @@ const APP_SHELL = [
   "./css/diagram.css",
   "./css/drill-animation.css",
   "./css/drill-human-motion.css",
+  "./css/drill-choreography.css",
   "./css/feed.css",
   "./css/print.css",
   "./js/state.js",
@@ -97,6 +109,7 @@ const APP_SHELL = [
   "./js/extras-data-11.js",
   "./js/extras-data-12.js",
   "./js/drill-human-motion.js",
+  "./js/drill-choreography.js",
   "./js/drill-animation.js",
   "./js/ui.js",
   "./js/photos.js",

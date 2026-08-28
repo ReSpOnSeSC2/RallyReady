@@ -28,27 +28,46 @@ RR.extras = RR.extras || {};
     var dx = o.defX != null ? o.defX : 4.5;
     var dy = o.defY != null ? o.defY : 8;
     var src = o.src || [4.5, 1.2];
+    var sourceId = o.sourceId;
+    var defenderId = o.defenderId;
+    var setterId = o.setterId;
     var spec = {
       title: o.title, caption: o.caption,
       w: 9, h: 10, net: 2, lines: [{ y: 5.2 }],
       court: [{ x: 0, y: 2, w: 9, h: 7.6 }],
       players: [
-        { x: src[0], y: src[1], label: o.srcLabel || "C", team: o.srcTeam || "coach", note: o.srcNote || "hits at defender" },
-        { x: dx, y: dy, label: o.defLabel || "D", team: "a", note: o.defNote || "digger" }
+        { id: sourceId, x: src[0], y: src[1], label: o.srcLabel || "C",
+          team: o.srcTeam || "coach", role: sourceId ? "attacking coach" : undefined,
+          note: o.srcNote || "hits at defender" },
+        { id: defenderId, x: dx, y: dy, label: o.defLabel || "D", team: "a",
+          role: defenderId ? "back-row defender" : undefined, note: o.defNote || "digger" }
       ],
       paths: [
-        { from: [src[0], src[1] + 0.4], to: [dx, dy - 0.4], kind: "serve", label: o.hitLabel || "hard ball", curve: o.hitCurve != null ? o.hitCurve : 0.1 }
+        { from: [src[0], src[1] + 0.4], to: [dx, dy - 0.4], kind: "serve",
+          label: o.hitLabel || "hard ball", curve: o.hitCurve != null ? o.hitCurve : 0.1,
+          fromActor: sourceId, toActor: defenderId }
       ],
       legend: [{ tone: o.srcTeam === "b" ? "b" : "coach", text: o.srcLegend || "Coach" }, { tone: "a", text: "Defender" }]
     };
     if (o.target !== false) {
-      spec.players.push({ x: 6.6, y: 4, label: "St", team: "a", note: "setter target" });
+      spec.players.push({ id: setterId, x: 6.6, y: 4, label: "St", team: "a",
+        role: setterId ? "setter" : undefined, note: "setter target" });
       spec.zones = [{ x: 5.8, y: 3.2, w: 1.8, h: 1.6, tone: "target", label: "setter" }];
-      spec.paths.push({ from: [dx, dy - 0.5], to: [6.5, 4.2], kind: "ball", label: o.digLabel || "dig high", curve: o.digCurve != null ? o.digCurve : 0.2 });
+      spec.paths.push({ from: [dx, dy - 0.5], to: [6.5, 4.2], kind: "ball",
+        label: o.digLabel || "dig high", curve: o.digCurve != null ? o.digCurve : 0.2,
+        fromActor: defenderId, toActor: setterId });
       spec.legend.push({ tone: "target", text: "Dig to here" });
     } else {
       // No setter: just dig high to the middle of the court.
       spec.paths.push({ from: [dx, dy - 0.5], to: [4.5, 5.6], kind: "ball", label: o.digLabel || "dig high & middle", curve: -0.15 });
+    }
+    if (sourceId && defenderId) {
+      spec.motionChains = [[0, 1]];
+      spec.contacts = [
+        { order: 1, actor: sourceId, toActor: defenderId, action: "attack", pathIndex: 0 },
+        { order: 2, actor: defenderId, toActor: setterId,
+          action: "dig", pathIndex: 1 }
+      ];
     }
     return spec;
   }
@@ -216,14 +235,24 @@ RR.extras = RR.extras || {};
         title: "Pancake & pop up", caption: "The player reaches out and slides one flat HAND to the floor under the ball so it bounces up off the back of the hand, then pops right back to ready. Practice both hands and toss farther over time.",
         w: 9, h: 8,
         players: [
-          { x: 4.5, y: 5.8, label: "D", team: "a", note: "slides hand under" }
+          { id: "pancake-coach", x: 4.5, y: 1.8, label: "C", team: "coach", note: "varies the short toss" },
+          { id: "pancake-defender", x: 4.5, y: 5.8, label: "D", team: "a", note: "slides hand under" }
         ],
         balls: [{ x: 3.4, y: 4.6 }],
         paths: [
-          { from: [4.5, 5.6], to: [3.8, 4.8], kind: "move", label: "reach & slide", curve: 0.15 },
-          { from: [3.6, 4.7], to: [3.4, 3.6], kind: "ball", label: "pops up", curve: 0 }
+          { from: [4.5, 2.2], to: [3.8, 4.8], kind: "ball", label: "controlled short toss", curve: 0.14,
+            fromActor: "pancake-coach", toActor: "pancake-defender" },
+          { from: [4.5, 5.6], to: [3.8, 4.8], kind: "move", label: "reach & slide", curve: 0.15,
+            actor: "pancake-defender", playerIndex: 1 },
+          { from: [3.6, 4.7], to: [3.4, 3.6], kind: "ball", label: "pancake pops it up", curve: 0,
+            fromActor: "pancake-defender", toEndpoint: { type: "zone", label: "Saved ball apex" } }
         ],
-        legend: [{ tone: "a", text: "Player" }, { tone: "n", text: "Saved ball" }]
+        motionChains: [[0, 2]],
+        contacts: [
+          { pathIndex: 0, actor: "pancake-coach", toActor: "pancake-defender", action: "controlled toss", order: 1 },
+          { pathIndex: 2, actor: "pancake-defender", action: "pancake save", order: 2 }
+        ],
+        legend: [{ tone: "coach", text: "Coach / tosser" }, { tone: "a", text: "Defender" }, { tone: "n", text: "Saved ball" }]
       }
     )
   };
@@ -342,25 +371,53 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       dk.basePositions({
         title: "Start in base", labels: ["B", "B", "MB", "LB", "", "RB"],
-        feederNote: "ball set to hitter",
+        playerIds: ["read-block-line", "read-block-close", "read-short", "read-left-back", "read-center-back", "read-right-back"],
+        playerRoles: ["line blocker", "closing blocker", "short defender", "left-back defender", "center-back defender", "right-back defender"],
+        feederId: "read-opponent-setter", feederLabel: "St", feederTeam: "b",
+        feederRole: "opponent setter", feederNote: "sets the pin hitter",
+        extraPlayers: [{ id: "read-opponent-hitter", x: 2.4, y: 1.25, label: "H",
+          team: "b", role: "opponent pin hitter", facing: "south", note: "approaches the set" }],
+        paths: [{ from: [4.5, 1.25], to: [2.5, 1.55], kind: "ball", label: "outside set",
+          fromActor: "read-opponent-setter", toActor: "read-opponent-hitter" }],
+        contacts: [{ order: 1, actor: "read-opponent-setter", toActor: "read-opponent-hitter",
+          action: "outside set", pathIndex: 0 }],
         caption: "Defenders start in their BASE spots as the ball is set to a hitter — two at the net to block, one middle, three deep."
       }),
       {
-        title: "Read & move to the spot", caption: "As the hitter approaches, defenders read the set and the hitter's arm, move to their read spots, and get STOPPED and low just before contact. Then the coach hits or tips and they dig from a balanced stance.",
-        w: 9, h: 10, net: 2, lines: [{ y: 5.2 }], court: [{ x: 0, y: 2, w: 9, h: 7.6 }],
+        title: "Read & move to the spot", caption: "As the hitter approaches, all six defenders read together: two form the block, short and perimeter defenders move to their lanes, and everyone is stopped before the pin hitter attacks. The left-back defender digs the shown cross-court ball high to a playable target.",
+        w: 9, h: 10, net: 2, operation: "parallel", lines: [{ y: 5.2 }], court: [{ x: 0, y: 2, w: 9, h: 7.6 }],
         players: [
-          { x: 2.4, y: 1, label: "C", team: "coach", note: "hits or tips" },
-          { x: 2.6, y: 3.4, label: "B", team: "a", note: "block" },
-          { x: 3.6, y: 3.4, label: "B", team: "a" },
-          { x: 6.6, y: 7, label: "RB", team: "a", note: "line dig" },
-          { x: 2, y: 8.2, label: "LB", team: "a", note: "angle dig" },
-          { x: 4.5, y: 6.2, label: "MB", team: "a", note: "tips/short" }
+          { id: "read-opponent-hitter", x: 2.4, y: 1, label: "H", team: "b", role: "opponent pin hitter", facing: "south", note: "hits or tips" },
+          { id: "read-block-line", x: 2.6, y: 3.4, label: "B1", team: "a", role: "line blocker", facing: "north", note: "sets the line block" },
+          { id: "read-block-close", x: 3.6, y: 3.4, label: "B2", team: "a", role: "closing blocker", facing: "north", note: "closes the seam" },
+          { id: "read-right-back", x: 6.6, y: 7, label: "RB", team: "a", role: "right-back defender", facing: "north", note: "line dig" },
+          { id: "read-left-back", x: 2, y: 8.2, label: "LB", team: "a", role: "left-back defender", facing: "north", note: "angle dig" },
+          { id: "read-short", x: 4.5, y: 6.2, label: "S", team: "a", role: "short defender", facing: "north", note: "tips/short" },
+          { id: "read-center-back", x: 4.5, y: 8.8, label: "CB", team: "a", role: "center-back defender", facing: "north", note: "deep seam" }
         ],
         paths: [
-          { from: [6.6, 7], to: [6.6, 6.2], kind: "move", curve: 0 },
-          { from: [2, 8.2], to: [2.2, 7.4], kind: "move", curve: 0 },
-          { from: [4.5, 6.2], to: [4.5, 5.6], kind: "move", label: "stop & read", curve: 0 },
-          { from: [2.4, 1.4], to: [3, 4.4], kind: "serve", label: "attack", curve: 0.1 }
+          { from: [2.6, 3.4], to: [2.35, 3.2], kind: "move", label: "set line block", curve: 0,
+            actor: "read-block-line", playerIndex: 1, sequenceOrder: 0, simultaneousGroup: "read-defense-shape" },
+          { from: [3.6, 3.4], to: [3.15, 3.2], kind: "move", label: "close block", curve: 0,
+            actor: "read-block-close", playerIndex: 2, sequenceOrder: 0, simultaneousGroup: "read-defense-shape" },
+          { from: [6.6, 7], to: [6.6, 6.2], kind: "move", label: "hold line", curve: 0,
+            actor: "read-right-back", playerIndex: 3, sequenceOrder: 0, simultaneousGroup: "read-defense-shape" },
+          { from: [2, 8.2], to: [2.2, 7.4], kind: "move", label: "take cross", curve: 0,
+            actor: "read-left-back", playerIndex: 4, sequenceOrder: 0, simultaneousGroup: "read-defense-shape" },
+          { from: [4.5, 6.2], to: [4.5, 5.6], kind: "move", label: "stop & read short", curve: 0,
+            actor: "read-short", playerIndex: 5, sequenceOrder: 0, simultaneousGroup: "read-defense-shape" },
+          { from: [4.5, 8.8], to: [4.7, 8.35], kind: "move", label: "protect deep seam", curve: 0,
+            actor: "read-center-back", playerIndex: 6, sequenceOrder: 0, simultaneousGroup: "read-defense-shape" },
+          { from: [2.4, 1.4], to: [2.2, 7.4], kind: "serve", label: "cross attack", curve: 0.1,
+            fromActor: "read-opponent-hitter", toActor: "read-left-back", sequenceOrder: 1 },
+          { from: [2.2, 7.4], to: [5.8, 4.8], kind: "ball", label: "balanced dig high", curve: 0.2,
+            fromActor: "read-left-back", toEndpoint: { type: "target", label: "Playable dig target" },
+            sequenceOrder: 2 }
+        ],
+        motionChains: [[6, 7]],
+        contacts: [
+          { order: 1, actor: "read-opponent-hitter", toActor: "read-left-back", action: "attack", pathIndex: 6 },
+          { order: 2, actor: "read-left-back", action: "dig", pathIndex: 7 }
         ],
         legend: [{ tone: "coach", text: "Attack" }, { tone: "a", text: "Defenders" }]
       }
@@ -369,18 +426,36 @@ RR.extras = RR.extras || {};
   E["youth-team-defense-positions"] = {
     diagram: dk.basePositions({
       labels: ["B", "B", "M", "L", "", "R"],
+      playerIds: ["youth-block-line", "youth-block-close", "youth-short", "youth-left-back", "youth-center-back", "youth-right-back"],
+      playerRoles: ["line blocker", "closing blocker", "short defender", "left-back defender", "center-back defender", "right-back defender"],
+      feederId: "youth-defense-coach", feederRole: "pin attacking coach",
       feederX: 2.1,
       feederNote: "attacks slowly from a pin",
       caption: "A first, walkable look at team defense: players stand in simple base spots (two block at the net, one middle, three deep) and each spot is named. The coach attacks slowly from a pin and the team moves to their read spots TOGETHER — walking through who covers tips, who covers the deep ball, and who backs up.",
       paths: [
-        { from: [2.1, 1.25], to: [6.8, 8.2], kind: "serve", label: "slow pin attack", curve: 0.14 },
-        { from: [2.6, 3.4], to: [2.3, 3.25], kind: "move", label: "set block", playerIndex: 1 },
-        { from: [6.4, 3.4], to: [3.35, 3.35], kind: "move", label: "close", playerIndex: 2 },
-        { from: [4.5, 5.8], to: [2.8, 5.25], kind: "move", label: "tip cover", playerIndex: 3 },
-        { from: [1.5, 8.4], to: [1.15, 7.65], kind: "move", label: "line", playerIndex: 4 },
-        { from: [4.5, 9.2], to: [4.65, 8.55], kind: "move", label: "deep angle", playerIndex: 5 },
-        { from: [7.5, 8.4], to: [7.8, 8.75], kind: "move", label: "deep cross", playerIndex: 6 }
-      ]
+        { from: [2.1, 1.25], to: [7.8, 8.75], kind: "serve", label: "slow pin attack", curve: 0.14,
+          fromActor: "youth-defense-coach", toActor: "youth-right-back", sequenceOrder: 1 },
+        { from: [2.6, 3.4], to: [2.3, 3.25], kind: "move", label: "set block", playerIndex: 1,
+          actor: "youth-block-line", sequenceOrder: 0, simultaneousGroup: "youth-defense-read" },
+        { from: [6.4, 3.4], to: [3.35, 3.35], kind: "move", label: "close", playerIndex: 2,
+          actor: "youth-block-close", sequenceOrder: 0, simultaneousGroup: "youth-defense-read" },
+        { from: [4.5, 5.8], to: [2.8, 5.25], kind: "move", label: "tip cover", playerIndex: 3,
+          actor: "youth-short", sequenceOrder: 0, simultaneousGroup: "youth-defense-read" },
+        { from: [1.5, 8.4], to: [1.15, 7.65], kind: "move", label: "line", playerIndex: 4,
+          actor: "youth-left-back", sequenceOrder: 0, simultaneousGroup: "youth-defense-read" },
+        { from: [4.5, 9.2], to: [4.65, 8.55], kind: "move", label: "deep angle", playerIndex: 5,
+          actor: "youth-center-back", sequenceOrder: 0, simultaneousGroup: "youth-defense-read" },
+        { from: [7.5, 8.4], to: [7.8, 8.75], kind: "move", label: "deep cross", playerIndex: 6,
+          actor: "youth-right-back", sequenceOrder: 0, simultaneousGroup: "youth-defense-read" },
+        { from: [7.8, 8.75], to: [4.5, 5.4], kind: "ball", label: "dig high to middle", curve: 0.2,
+          fromActor: "youth-right-back", toEndpoint: { type: "target", label: "Playable middle" }, sequenceOrder: 2 }
+      ],
+      contacts: [
+        { order: 1, actor: "youth-defense-coach", toActor: "youth-right-back", action: "controlled attack", pathIndex: 0 },
+        { order: 2, actor: "youth-right-back", action: "dig", pathIndex: 7 }
+      ],
+      motionChains: [[0, 7]],
+      operation: "parallel"
     })
   };
   E["perimeter-defense-system"] = {
@@ -392,7 +467,7 @@ RR.extras = RR.extras || {};
       }),
       {
         title: "Spread to the perimeter", caption: "The coach attacks from a pin. Defenders move to the perimeter: one takes the LINE, one the deep CROSS, and the off-blocker pulls off the net to cover the short angle and tips. Run attacks from both pins so everyone learns each spot.",
-        w: 9, h: 10, net: 2, lines: [{ y: 5.2 }], court: [{ x: 0, y: 2, w: 9, h: 7.6 }],
+        w: 9, h: 10, net: 2, operation: "parallel", lines: [{ y: 5.2 }], court: [{ x: 0, y: 2, w: 9, h: 7.6 }],
         zones: [{ x: 0.2, y: 6.4, w: 8.6, h: 3, tone: "good", label: "perimeter coverage" }],
         players: [
           { x: 6.8, y: 1, label: "C", team: "coach", note: "attacks from pin" },
@@ -404,11 +479,11 @@ RR.extras = RR.extras || {};
           { x: 4.5, y: 9, label: "CB", team: "a", note: "deep middle / seam" }
         ],
         paths: [
+          { from: [6.8, 1.4], to: [2, 8], kind: "serve", label: "cross attack", curve: 0.1 },
           { from: [7.4, 8.2], to: [7.4, 8.6], kind: "move", label: "hold line", curve: 0, playerIndex: 3 },
           { from: [1.4, 8.4], to: [1.4, 8.6], kind: "move", label: "hold deep cross", curve: 0, playerIndex: 4 },
           { from: [2.6, 4.2], to: [2.6, 5.4], kind: "move", label: "pull off net", curve: 0, playerIndex: 5 },
-          { from: [4.5, 9], to: [4.7, 8.65], kind: "move", label: "deep seam", curve: 0, playerIndex: 6 },
-          { from: [6.8, 1.4], to: [2, 8], kind: "serve", label: "cross attack", curve: 0.1 }
+          { from: [4.5, 9], to: [4.7, 8.65], kind: "move", label: "deep seam", curve: 0, playerIndex: 6 }
         ],
         legend: [{ tone: "coach", text: "Attack" }, { tone: "good", text: "Edges to cover" }, { tone: "a", text: "Defenders" }]
       }
@@ -528,23 +603,39 @@ RR.extras = RR.extras || {};
     diagrams: dk.seq(
       digRep({
         title: "Dig to the setter", src: [4.5, 1.2],
+        sourceId: "dig-counter-coach", defenderId: "dig-counter-defender",
+        setterId: "dig-counter-setter",
         srcNote: "attacks at defenders", hitLabel: "attack",
         digLabel: "dig to target",
         caption: "A coach attacks at the back-row defenders, who dig the ball to the SETTER target at right-front. A clean dig to target is what makes the counter-attack possible."
       }),
       {
-        title: "Set & counter-attack", caption: "The setter sets the dug ball and a hitter TRANSITIONS off the net to attack the counter. Only score the rally if the dig led to a controlled counter-attack. Rotate so everyone digs, sets, and attacks.",
+        title: "Set & counter-attack", caption: "The complete counter sequence stays connected: the coach attacks, the defender digs to target, the hitter transitions off, the setter sets, and that same hitter attacks the open court. Only score when every contact remains controlled.",
         w: 9, h: 10, net: 2, lines: [{ y: 5.2 }], court: [{ x: 0, y: 2, w: 9, h: 7.6 }],
         players: [
-          { x: 4.5, y: 1.2, label: "C", team: "coach", note: "entered attack" },
-          { x: 4.5, y: 8.2, label: "D", team: "a", note: "made the dig" },
-          { x: 6.6, y: 4, label: "St", team: "a", note: "setter" },
-          { x: 2.4, y: 5.8, label: "H", team: "a", note: "transitions in" }
+          { id: "dig-counter-coach", x: 4.5, y: 1.2, label: "C", team: "coach", role: "attacking coach", note: "entered attack" },
+          { id: "dig-counter-defender", x: 4.5, y: 8.2, label: "D", team: "a", role: "back-row defender", note: "makes the dig" },
+          { id: "dig-counter-setter", x: 6.6, y: 4, label: "St", team: "a", role: "setter", note: "setter" },
+          { id: "dig-counter-hitter", x: 2.4, y: 5.8, label: "H", team: "a", role: "transition hitter", note: "transitions in" }
         ],
         paths: [
-          { from: [6.6, 4], to: [2.8, 4], kind: "ball", label: "set", curve: 0.25 },
-          { from: [2.4, 5.8], to: [2.6, 4.4], kind: "move", label: "approach", curve: 0 },
-          { from: [2.6, 4], to: [5, 2.4], kind: "serve", label: "counter-attack", curve: 0.1 }
+          { from: [4.5, 1.6], to: [4.5, 7.8], kind: "serve", label: "coach attack", curve: 0.1,
+            fromActor: "dig-counter-coach", toActor: "dig-counter-defender", sequenceOrder: 0 },
+          { from: [4.5, 7.8], to: [6.5, 4.2], kind: "ball", label: "dig to target", curve: 0.2,
+            fromActor: "dig-counter-defender", toActor: "dig-counter-setter", sequenceOrder: 1 },
+          { from: [2.4, 5.8], to: [2.6, 4.4], kind: "move", label: "transition approach", curve: 0,
+            playerIndex: 3, actor: "dig-counter-hitter", sequenceOrder: 2 },
+          { from: [6.6, 4], to: [2.8, 4], kind: "ball", label: "set", curve: 0.25,
+            fromActor: "dig-counter-setter", toActor: "dig-counter-hitter", sequenceOrder: 3 },
+          { from: [2.6, 4], to: [5, 2.4], kind: "serve", label: "counter-attack", curve: 0.1,
+            fromActor: "dig-counter-hitter", toEndpoint: { type: "target", label: "Counter-attack target" }, sequenceOrder: 4 }
+        ],
+        motionChains: [[0, 1, 3, 4]],
+        contacts: [
+          { order: 1, actor: "dig-counter-coach", toActor: "dig-counter-defender", action: "attack", pathIndex: 0 },
+          { order: 2, actor: "dig-counter-defender", toActor: "dig-counter-setter", action: "dig", pathIndex: 1 },
+          { order: 3, actor: "dig-counter-setter", toActor: "dig-counter-hitter", action: "set", pathIndex: 3 },
+          { order: 4, actor: "dig-counter-hitter", action: "counter-attack", pathIndex: 4 }
         ],
         legend: [{ tone: "a", text: "Our team" }]
       }

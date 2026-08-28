@@ -1,10 +1,12 @@
 // drill-human-motion.js — factual drill steps mapped to reviewed human motion.
 //
 // The court specs explain where a drill happens. This module explains how the
-// athlete moves: every bundled written step is preserved verbatim, paired with
-// a reviewed technique family, a four-pose human atlas, and phase-level body
-// cues. Custom drills only receive a human demonstration when the coach saves
-// an explicit motionType; free text is never used to invent custom mechanics.
+// athlete moves: every bundled written step is preserved verbatim and exact
+// athlete mechanics are paired with a reviewed technique family. Instructions
+// that only organize, score, rest, feed, or rotate the group deliberately use a
+// neutral ready posture instead of inventing a volleyball contact. Custom drills
+// only receive a human demonstration when the coach saves an explicit
+// motionType; free text is never used to invent custom mechanics.
 window.RR = window.RR || {};
 
 RR.drillHumanMotion = (function () {
@@ -101,13 +103,16 @@ RR.drillHumanMotion = (function () {
       phase("Take off", "Swing both arms and leave the floor from a balanced base."),
       phase("Reach", "Stay tall through the trunk and reach without drifting sideways."),
       phase("Stick the landing", "Land quietly on two feet with knees tracking over toes.")
-    ])
-  };
-
-  var FALLBACK_BY_SKILL = {
-    Warmup: "warmup", "Ball Control": "pass", Passing: "pass", Setting: "set",
-    Serving: "serve", Hitting: "attack", Blocking: "block", Defense: "defense",
-    "Team Play": "footwork", Cooldown: "cooldown"
+    ]),
+    // Administrative instructions still need a truthful visual state so every
+    // saved step can remain in the program. Reuse the reviewed athletic-base
+    // poster, but keep this internal option out of the custom-drill editor.
+    organize: action("organize", "Setup / reset", 1120, 879, "catalog", [
+      phase("Ready to organize", "Hold a balanced ready posture while the group sets up, resets, scores, or changes roles."),
+      phase("Check positions", "Confirm the saved court positions and equipment before the next live repetition."),
+      phase("Rotate safely", "Change roles under control and stay aware of balls and other players."),
+      phase("Ready again", "Face the play and wait for the next explicit action cue.")
+    ], "footwork", true, "administrative")
   };
 
   // Strong detectors describe an action the learner actually performs in this
@@ -118,15 +123,15 @@ RR.drillHumanMotion = (function () {
   // overloaded in real drill copy.
   var detectors = [
     detector("pass", /\bforearm pass(?:es|ed|ing)?\b|\bserve[- ]receive\b|\bbump(?:s|ed|ing)?\s+(?:it|the|a|that|this|ball|serve|to|back|up|over|across)\b|\bpass(?:es|ing)?\s+(?:it|the|a|that|this|another|ball|serve|rebound|to|back|up|over|across|themselves|himself|herself)\b/i),
-    detector("set", /\b(?:front|back|jump|bump|overhead|quick|shoot|high|outside|one[- ]knee)[- ]set(?:s|ting)?\b|\bsetter\s+(?:sets?|releases?|squares?|chases?)\b|\bsetter\s+delivers?\s+(?:(?:a|the)\s+)?(?:front|back|quick|high|transition|outside|right[- ]side)?\s*set\b|\bsets?\s+(?:it|the|a|that|this|next|another|tossed|passed|dug|ball|rebound|to|back|outside|middle|right|left|over|for|themselves|himself|herself)\b|\bclean hands\b|\bhand window\b/i),
+    detector("set", /\b(?:front|back|jump|bump|overhead|quick|shoot|high|outside|one[- ]knee)[- ]set(?:s|ting)?\b|\bsetter\s+(?:sets?|releases?|squares?|chases?)\b|\bsetter\s+delivers?\s+(?:(?:a|the)\s+)?(?:front|back|quick|high|transition|outside|right[- ]side)?\s*set\b|\bsets?\s+(?:it|that|this|to|back|outside|middle|right|left|over|for|themselves|himself|herself|(?:(?:the|a)\s+)?(?:(?:next|another|tossed|passed|dug)\s+)?(?:(?:high|low|quick|fast|front|back|outside|right[- ]side|middle)\s+){0,2}(?:ball|rebound))\b|\bclean hands\b|\bhand window\b/i),
     detector("serve", /\b(?:standing|underhand|overhand|float|topspin|jump[- ]float|jump[- ]topspin|hybrid)\s+serv(?:e|es|ing)\b|\bserv(?:e|es|ed|ing)\s+(?:it|the|a|that|this|ball|to|at|into|over|from|for|real|tough|easy|high|deep)\b|\b(?:team|player|athlete|they)\s+serves?\b|\bserving\s+(?:toss|arm|contact|routine)\b|\bpre[- ]serve\b/i),
-    detector("attack", /\bspik(?:e|es|ed|ing)\b|\barm swing\b|\broll[- ]shots?\b|\btip(?:s|ped|ping)?\s+(?:it|the|a|ball|over|to)\b|\bdump(?:s|ed|ing)?\s+(?:it|the|a|ball|over|to)\b|\bdown[- ]?balls?\b|\bkill(?:s|ed|ing)?\b|\bswing(?:s|ing)?\s+(?:through|hard|at|over|into)\b|\bapproach(?:es|ing)?\s+(?:and|to)\s+(?:hit|attack|swing|jump)\b|\bhits?\s+(?:it|back|down|over|into|(?:(?:the|a|that|this)\s+)?(?:ball|set))\b|\b(?:player|hitter|team|they|everyone|who)\s+(?:[a-z'-]+[\s,]+){0,6}attacks\b|\battack(?:ed|ing)\b|\battack\s+(?:it|over|into|back|(?:(?:the|a)\s+)?(?:ball|set|counter))\b|\b(?:player|hitter)\s+rolls?\s+(?:the\s+|a\s+)?ball\b/i),
+    detector("attack", /\bspik(?:e|es|ed|ing)\b|\barm swing\b|\broll[- ]shots?\b|\btip(?:s|ped|ping)?\s+(?:it|the|a|ball|over|to)\b|\bdump(?:s|ed|ing)?\s+(?:it|the|a|ball|over|to)\b|\bdown[- ]?balls?\b|\bkill(?:s|ed|ing)?\b|\bswing(?:s|ing)?\s+(?:through|hard|at|over|into)\b|\bapproach(?:es|ing)?\s+(?:and|to)\s+(?:hit|attack|swing|jump)\b|\bhits?\s+(?:it|back|down|over|into|(?:(?:the|a|that|this)\s+)?(?:ball|set)|(?:(?:the|a|an)\s+)?(?:back|front|quick|high|outside|right[- ]side|middle)[- ]set(?:\s+ball)?)\b|\b(?:player|hitter|team|they|everyone|who)\s+(?:[a-z'-]+[\s,]+){0,6}attacks\b|\battack(?:ed|ing)\b|\battack\s+(?:it|over|into|back|(?:(?:the|a)\s+)?(?:ball|set|counter)|(?:(?:the|a|an)\s+)?(?:back|front|quick|high|outside|right[- ]side|middle)[- ]set(?:\s+ball)?)\b|\b(?:player|hitter)\s+rolls?\s+(?:the\s+|a\s+)?ball\b/i),
     detector("block", /\bblocking\s+(?:footwork|hands|timing|movement)\b|\bblockers?\s+(?:move|moves|jump|jumps|close|closes|press|presses|land|lands|read|reads|block|blocks)\b|\bblocks?\s+(?:it|the|a|that|this|ball)\b|\bblock[- ]jump\b|\bdouble block\b|\bswing block\b|\bcommit block\b|\bpress(?:es|ed|ing)?\s+(?:the\s+)?hands?\b|\bseal(?:s|ed|ing)?\b/i),
     detector("defense", /\bdigs?\s+(?:it|the|a|that|this|ball|back|up|to)\b|\bwho\s+digs?\b|\bdigging\b|\bsprawl(?:s|ed|ing)?\b|\bpancake(?:s|d|ing)?\b|\bpursuit\b|\bemergency\s+(?:defense|save)\b|\bcollapse(?:s|d|ing)?\b|\bshoulder roll\b|\broll or sprawl\b|\bdiv(?:e|es|ed|ing)\b|\brun[- ]through\b|\bdeflect(?:s|ed|ing)?\s+(?:it|the|a|each|ball)\b/i),
-    detector("jump", /\bjump(?:s|ed|ing)?\b|\btake[- ]?off\b|\bland(?:s|ed|ing)?\b|\bairborne\b|\bhop(?:s|ped|ping)?\b|\bdepth[- ](?:drop|jump)\b/i),
-    detector("run", /\bsprint(?:s|ed|ing)?\b|\bjog(?:s|ged|ging)?\b|\bruns?\s+(?:to|toward|back|forward|onto|through|down|across|around|along|after|off|out|up|under|into)\b|\brunning\s+(?:stride|start|takeoff|pace)\b/i),
-    detector("footwork", /\bfootwork\b|\bshuffle(?:s|d|ing)?\b|\bcrossover\b|\bdrop[- ]step\b|\bbackpedal(?:s|ed|ing)?\b|\bquick feet\b|\bagility ladder\b|\bcarioca\b|\bgrapevine\b|\bside[- ]steps?\b|\bsplit step\b|\bapproach\s+(?:steps?|footwork|rhythm)\b|\brelease\s+(?:from|to)\b|\bjump rope\b|\bquicksteps?\b|\b(?:pulls?|pushes?|crosses?|transitions?)\s+(?:to|toward|back|off|out|across|down|under|into)\b|\bsets?\s+(?:the|your)\s+feet\b/i),
-    detector("warmup", /\bhigh knees\b|\bbutt[- ]?kicks?\b|\blunges?\b|\bleg swings?\b|\barm circles?\b|\bbear crawl\b|\bcrab walk\b|\binchworms?\b|\bactivation\b|\bwarm[- ]?up\b/i),
+    detector("jump", /\bjump(?:s|ed|ing)?\b|\btake[- ]?off\b|\bairborne\b|\bhop(?:s|ped|ping)?\b|\bdepth[- ](?:drop|jump)\b|\bstick(?:s|ing)?\s+(?:the\s+)?landing\b|\bland(?:s|ed|ing)?\s+(?:softly|quietly|balanced|under control|ready|on\s+(?:one|two|both|your)|with\s+(?:balance|bent knees|both feet|two feet))\b|\bland\s+(?:soft|quiet|inside|past)\b|\b(?:every|the|your)\s+landing\s+(?:(?:must|should)\s+be\s+)?(?:soft|quiet|balanced|controlled|under control)\b|\b(?:you|player|athlete|hitter|blocker|server|setter|they|everyone)\s+lands?\b/i),
+    detector("run", /\bsprint(?:s|ed|ing)?\b|\bjog(?:s|ged|ging)?\b|\bruns?\s+(?:at|to|toward|back|forward|onto|through|down|across|around|along|after|off|out|up|under|into)\b|\brunning\s+(?:stride|start|takeoff|pace)\b/i),
+    detector("footwork", /\bfootwork\b|\bshuffle(?:s|d|ing)?\b|\bcrossover\b|\bdrop[- ]step\b|\bbackpedal(?:s|ed|ing)?\b|\bquick feet\b|\bagility ladder\b|\bcarioca\b|\bgrapevine\b|\bside[- ]steps?\b|\bsplit step\b|\bapproach\s+(?:steps?|footwork|rhythm)\b|\brelease\s+(?:from|to)\b|\bjump rope\b|\bquicksteps?\b|\bmov(?:e|es|ed|ing)\s+(?:(?:the|your|their)\s+)?feet\b|\bmov(?:e|es|ed|ing)\s+(?:forward|back(?:ward)?|left|right)\b|\bwalk(?:s|ed|ing)?\s+(?:the|through)\s+(?:steps?|pattern)\b|\b(?:pulls?|pushes?|crosses?|transitions?)\s+(?:to|toward|back|off|out|across|down|under|into)\b|\bsets?\s+(?:the|your)\s+feet\b/i),
+    detector("warmup", /\bhigh knees\b|\bbutt[- ]?kicks?\b|\blunges?\b|\bleg swings?\b|\bswing(?:s|ing)?\s+(?:the|your)\s+legs?\b|\barm circles?\b|\bbear crawl\b|\bcrab walk\b|\binchworms?\b|\bactivation\b|\bwarm[- ]?up\b/i),
     detector("recovery", /\bfoam\s*roll(?:er|ing)?\b|\bstatic stretch\b|\bstretch(?:es|ed|ing)?\b/i),
     detector("cooldown", /\brecovery walk\b|\bcool[- ]?down walk\b|\bwalk(?:s|ed|ing)?\s+(?:slowly|easily)\b|\bbreath(?:e|es|ing|s)?\b|\breflect(?:s|ed|ing|ion)?\b|\bteam talk\b|\byoga\b|\bchild'?s pose\b|\bwind down\b|\bheart rate\s+(?:come|comes|coming)\s+down\b/i)
   ];
@@ -139,9 +144,10 @@ RR.drillHumanMotion = (function () {
     detector("defense", /\bdefenders?\b|\bdiggers?\b|\bdefensive\s+(?:base|stance|position|spot)\b/i)
   ];
 
-  function action(id, label, width, height, mode, phases) {
-    return { id: id, label: label, asset: BASE + id + "-atlas.webp",
-      width: width, height: height, mode: mode, phases: phases };
+  function action(id, label, width, height, mode, phases, assetId, internal, kind) {
+    return { id: id, label: label, asset: BASE + (assetId || id) + "-atlas.webp",
+      width: width, height: height, mode: mode, phases: phases,
+      internal: internal === true, kind: kind || "technique" };
   }
 
   function phase(label, cue) { return { label: label, cue: cue }; }
@@ -158,7 +164,9 @@ RR.drillHumanMotion = (function () {
         "target amount")
       .replace(/\btarget\s+set(?:\s+of)?\b/gi, "target round")
       .replace(/\bset\s+up\b/gi, "arrange")
-      .replace(/\bset\s+(?:(?:a|the|your)\s+)?(?:base|ladder|box|hoop|team|formation|court|station|timer|arm angle)\b/gi,
+      .replace(/\bsets?\s+(?:(?:a|the|your|each|all|these|those)\s+)?(?:cones?|hoops?|boxes?|mats?|bands?|ladders?|nets?|ropes?|targets?|stations?|timers?|boundaries|lanes?|courts?|teams?|formations?|equipment)\b/gi,
+        "position the equipment")
+      .replace(/\bset\s+(?:(?:a|the|your)\s+)?(?:base|arm angle)\b/gi,
         "position the equipment");
   }
 
@@ -180,6 +188,7 @@ RR.drillHumanMotion = (function () {
     if (id === "box-depth-jump-landings") return "jump";
     if (id === "box-block-reach" || id === "block-timing-box") return "block";
     if (id === "box-hitting-reps") return "attack";
+    if (id === "slide-approach-attack") return "attack";
     return "";
   }
 
@@ -202,6 +211,12 @@ RR.drillHumanMotion = (function () {
   // its actions at the phrase location so the first actual learner action is
   // primary while every later contact remains visible as a technique chip.
   function addCompoundMatches(drill, source, matches) {
+    addSequence(matches, source,
+      /\b(?:bump|pass)(?:es|ed|ing)?\b[\s\S]{0,24}?\bset(?:s|ting)?\b/i,
+      ["pass", "set"], -16);
+    addSequence(matches, source,
+      /\bset(?:s|ting)?\b[\s\S]{0,18}?(?:,|\bthen\b|\band\b)\s*(?:(?:the|a|one|next)\s+)?(?:bump|pass)(?:es|ed|ing)?\b/i,
+      ["set", "pass"], -16);
     addSequence(matches, source,
       /\bpass(?:es|ed|ing)?\s*[-–—,/]\s*set(?:s|ting)?\s*[-–—,/]\s*(?:hit|attack)(?:s|ting)?\b/i,
       ["pass", "set", "attack"], -20);
@@ -240,11 +255,42 @@ RR.drillHumanMotion = (function () {
     }
   }
 
-  function feedActorAt(source, index, actionId) {
-    var before = source.slice(Math.max(0, index - 24), index);
-    if (actionId === "serve") return /\bservers?\s*$/i.test(before);
-    if (actionId === "attack") return /\b(?:coach|feeder|tosser)\s*$/i.test(before);
-    return false;
+  function actorBefore(source, index) {
+    return source.slice(Math.max(0, index - 48), index)
+      .replace(/^.*[.!?;:]/, "").trim();
+  }
+
+  // A support-role feed is part of the court operation, but it is not the
+  // learner's technique. Ignore the support person's verb and continue looking
+  // for the athlete response later in the same instruction.
+  function supportActorAt(source, index) {
+    var before = actorBefore(source, index);
+    return /\b(?:coach|feeder|tosser)(?:\s+(?:then|also|now|quickly|gently|softly|deliberately|randomly))*\s*$/i.test(before) ||
+      /\b(?:coach|feeder|tosser)\b[^.!?;:]{0,28}\b(?:or|and)\s*$/i.test(before);
+  }
+
+  function servingFeedActorAt(drill, source, index) {
+    return !!(drill && drill.skill !== "Serving" &&
+      /\bservers?\s*$/i.test(actorBefore(source, index)));
+  }
+
+  // "Hit a back-set ball" describes the hitter's object, not an overhead-set
+  // action by that hitter. The set still appears when another actor explicitly
+  // performs it elsewhere in the sentence.
+  function referencedSetObjectAt(source, index, matchedText) {
+    if (!/\b(?:front|back|quick|shoot|high|outside|right[- ]side|middle)[- ]set\b/i.test(matchedText)) {
+      return false;
+    }
+    return /\b(?:hit|hits|hitting|attack|attacks|attacking|swing|swings|swinging)\s+(?:(?:a|an|the)\s+)?$/i
+      .test(actorBefore(source, index));
+  }
+
+  function onlyReferencesSetAsAttackObject(source) {
+    var objectPhrase = /\b(?:hit|hits|hitting|attack|attacks|attacking|swing|swings|swinging)\s+(?:(?:a|an|the)\s+)?(?:front|back|quick|shoot|high|outside|right[- ]side|middle)[- ]set(?:\s+ball)?\b/i;
+    if (!objectPhrase.test(source)) return false;
+    var remaining = source.replace(objectPhrase, "");
+    return !/\bsetter\s+(?:sets?|delivers?)\b|\bsets?\s+(?:it|that|this|(?:(?:the|a)\s+)?(?:(?:high|low|quick|fast|front|back|outside|right[- ]side|middle)\s+){0,2}(?:ball|rebound))\b/i
+      .test(remaining);
   }
 
   function actionWordOffset(actionId, value) {
@@ -270,8 +316,17 @@ RR.drillHumanMotion = (function () {
       item.regex.lastIndex = 0;
       var match = item.regex.exec(source);
       if (!match) return;
-      if (drill && ((item.id === "serve" && drill.skill !== "Serving") ||
-          item.id === "attack") && feedActorAt(source, match.index, item.id)) return;
+      if (supportActorAt(source, match.index)) return;
+      if (item.id === "serve" && servingFeedActorAt(drill, source, match.index)) return;
+      if (item.id === "jump" && drill && drill.skill === "Defense" &&
+          /\b(?:mat|slide|dive|pancake|sprawl|extend)\b/i.test(source)) return;
+      if (item.id === "pass" && /serve[- ]receive/i.test(match[0]) &&
+          /\b(?:formation|rotation|position the equipment)\b/i.test(source) &&
+          !/\b(?:pass(?:es|ed|ing)?|bump(?:s|ed|ing)?)\b/i.test(source)) return;
+      if (item.id === "set" && referencedSetObjectAt(source, match.index, match[0])) return;
+      if (item.id === "set" && drill && drill.skill === "Passing" &&
+          /\b(?:overhead|emergency|defensive hands?)\b/i.test(source) &&
+          !/\b(?:sets?|setting|setter)\b/i.test(source)) return;
       if (item.id === "attack" && drill && drill.skill === "Serving" &&
           !/\b(?:attack|spik|kill|roll[- ]shot|tip|dump|down[- ]ball)\b/i.test(match[0])) return;
       if (item.id === "recovery" && drill && drill.skill !== "Cooldown" &&
@@ -293,28 +348,110 @@ RR.drillHumanMotion = (function () {
     return result;
   }
 
+  // Use a technique atlas for a non-contact instruction only when the saved
+  // words describe that technique's real body shape. This replaces the old
+  // category-wide fallback that made scoring rules look like passes and team
+  // rotations look like generic footwork.
+  function postureActionFor(drill, source) {
+    var skill = clean(drill && drill.skill);
+    if ((skill === "Passing" || skill === "Ball Control") &&
+        /\b(?:passing platform|straight arms|thumbs together|angle (?:the|your|their) arms|arms angled|hips? (?:at|to|toward)|shoulders? (?:at|to|toward)|forearms? (?:out|together)|low,? balanced (?:stance|base)|clean touch|firm (?:overhead )?touch|controlled,? playable ball)\b/i.test(source)) {
+      return "pass";
+    }
+    if (skill === "Setting" &&
+        /\b(?:hands? (?:above|over) (?:the |your )?forehead|triangle window|setting window|finger pads?|fingers? spread|elbows? (?:up|out)|square (?:the |your )?(?:hips|shoulders|body)|push (?:it|the|a) ball|one knee)\b/i.test(source)) {
+      return "set";
+    }
+    if (skill === "Serving" &&
+        /\b(?:feet staggered|staggered stance|weight back|hitting (?:arm|elbow|hand|shoulder)|hold (?:the |a )?ball|toss (?:it|the ball)|hit (?:the )?(?:middle|lower back) of (?:the )?ball|hand at contact|stop (?:the |your )?hand|no follow[- ]through|follow through|snap (?:the |your )?wrist|snap over the top|swing hard|full arm swing|no spin|bow and arrow|face (?:the |your )?target|pre[- ]serve routine)\b/i.test(source)) {
+      return "serve";
+    }
+    if (skill === "Hitting" &&
+        /\b(?:first step|big step|swing both arms|reach high|hitting elbow|arm (?:back|loaded)|bow and arrow|contact (?:point|in front)|high elbow|snap (?:the |your )?wrist|throw (?:it|the|a|for) |overhand throw|swing in (?:the )?air|hit (?:the|a|an) |hitting (?:it|the|a) ball)\b/i.test(source)) {
+      return "attack";
+    }
+    if (skill === "Blocking" &&
+        /\b(?:hands? high|hands? (?:firm|spread)|firm,? spread hands|square to (?:the )?net|blocking stance|knees? loaded|show (?:the |your )?hands|ready at (?:the )?net|reach (?:both )?hands|press (?:them|the hands)|slide step to block|balanced landing)\b/i.test(source)) {
+      return "block";
+    }
+    if (skill === "Defense" &&
+        /\b(?:defensive (?:base|stance|position)|hips? low|low,? balanced stance|low body|weight forward|arms? ready|hands? available|ready to dig|chases? it down|plays? it up|pop (?:right )?back up|flat hand|slide the hand|extend(?:s|ed|ing)? forward|after the save|recover to ready|controlled,? high dig)\b/i.test(source)) {
+      return "defense";
+    }
+    if (skill === "Warmup" &&
+        /\b(?:ladder|feet in (?:each|the)|in-in(?:-out)?|out-out|hopscotch|quick feet|centered in (?:the )?box|touch every line|change direction sharply)\b/i.test(source)) {
+      return "footwork";
+    }
+    if (skill === "Warmup" &&
+        /\b(?:two-foot bounces?|skipping foot to foot|fast skipping|single-leg|over the rope|quick skip)\b/i.test(source)) {
+      return "jump";
+    }
+    if (skill === "Cooldown" &&
+        /\b(?:walk (?:the|a|one|another|last)|shake out|sit comfortably|lie still|slow breathing)\b/i.test(source)) {
+      return "cooldown";
+    }
+    return "";
+  }
+
+  function administrativeReason(source) {
+    if (!source) return "No explicit athlete motion";
+    if (/\b(?:score|scoring|points?|streak|winner|wins?|loses?|personal best|team total|target score|track(?:s|ed|ing)?|count(?:s|ed|ing)?|record|beat (?:the|your|their)|play (?:short games|to a target|for a set time))\b/i.test(source)) {
+      return "Scoring or outcome";
+    }
+    if (/\b(?:switch (?:who|roles?|jobs?|sides?|positions?|places?|partners?|leaders?|feeders?|servers?|setters?|hitters?|passers?)|rotate(?:s|d|ing)? (?:off|on|spots?|roles?|positions?|players?|partners?|groups?|teams?|servers?|setters?|hitters?|passers?|through)|trade places|change roles?|next (?:player|group|team|turn)|wait(?:s|ing)? (?:behind|off|for)|take turns?)\b/i.test(source)) {
+      return "Role change or waiting";
+    }
+    if (/\b(?:rest fully|full rest|take a break|reset and|reset to|retrieve (?:the|your)|shag(?:s|ged|ging)? (?:the|your)|pick (?:it|the ball) up|go again|do it again)\b/i.test(source)) {
+      return "Reset or recovery between repetitions";
+    }
+    if (/^(?:put|place|position the equipment|mark|split|pair|make (?:even )?teams?|choose|assign|spread|line up|form)\b/i.test(source) ||
+        /\b(?:players?|partners?|teams?|groups?)\s+(?:stand|line up|wait|split|form|start)\b/i.test(source) ||
+        /\b(?:one|first) player\s+(?:is|becomes|starts as)\b/i.test(source)) {
+      return "Setup or role assignment";
+    }
+    if (/\b(?:coach|feeder|tosser)\s+(?:serves?|hits?|attacks?|sets?|tosses?|throws?|rolls?|bounces?|sends?|feeds?|calls?|yells?)\b/i.test(source)) {
+      return "Coach or feeder action";
+    }
+    return "";
+  }
+
+  function isSelectableAction(actionId) {
+    return !!(actions[actionId] && !actions[actionId].internal);
+  }
+
   function actionsFor(drill, text) {
-    if (drill && drill.custom && actions[drill.motionType]) return [drill.motionType];
+    if (drill && drill.custom && isSelectableAction(drill.motionType)) return [drill.motionType];
     if (drill && drill.custom) return [];
     var source = sanitizedText(text);
     var matches = [];
     var special = specialAction(drill, source);
-    if (special) addMatch(matches, special, -1, -100);
     addCompoundMatches(drill, source, matches);
     collectDetectorMatches(drill, source, detectors, matches, 0);
     var result = orderedActions(matches);
-    // The dedicated underhand progression must never cycle into the overhand
-    // atlas merely because its saved copy also contains the generic word
-    // "serve". The reviewed underhand sequence is the complete serving action.
-    if (special === "underhand") result = result.filter(function (id) { return id !== "serve"; });
-    // Only use role/shape nouns when the saved step contains no exact learner
-    // action. This keeps "the hitter starts ... and digs" on defense while a
-    // feed explicitly sent to a passer can still resolve as passing.
+    if (result.length && special) {
+      addMatch(matches, special, -1, -100);
+      result = orderedActions(matches);
+    }
+    // Administrative prose must be resolved before weak role nouns or an
+    // equipment-derived family. "Rotate the setters" is organization, and
+    // "rest between medicine-ball sets" is not another power throw.
     if (!result.length) {
+      var posture = postureActionFor(drill, source);
+      var adminReason = administrativeReason(source);
+      if (adminReason && !posture) return ["organize"];
+      if (special) addMatch(matches, special, -1, -100);
+      if (posture) addMatch(matches, posture, -1, -90);
       collectDetectorMatches(drill, source, weakDetectors, matches, 100);
       result = orderedActions(matches);
     }
-    if (!result.length) result.push(FALLBACK_BY_SKILL[drill && drill.skill] || "footwork");
+    if (!result.length) result.push("organize");
+    if (onlyReferencesSetAsAttackObject(source)) {
+      result = result.filter(function (id) { return id !== "set"; });
+    }
+    // The dedicated underhand progression must never cycle into the overhand
+    // atlas merely because its saved copy also contains generic serving words.
+    // Apply this after posture/weak resolution as well as direct detection.
+    if (special === "underhand") result = result.filter(function (id) { return id !== "serve"; });
     return result;
   }
 
@@ -322,6 +459,20 @@ RR.drillHumanMotion = (function () {
     var found = actionsFor(drill, text);
     if (!found.length) return null;
     return found[0];
+  }
+
+  function classificationFor(drill, text) {
+    var resolved = actionsFor(drill, text);
+    var primary = resolved.length ? resolved[0] : null;
+    var administrative = primary === "organize";
+    return {
+      kind: administrative ? "administrative" : primary ? "technique" : "unclassified",
+      reason: administrative ? (administrativeReason(sanitizedText(text)) ||
+        "No explicit athlete motion") : primary ? "Explicit athlete mechanic" :
+        "Custom drill requires a selected motion type",
+      action: primary,
+      actions: resolved
+    };
   }
 
   function catalogFrame(actionId, text) {
@@ -440,6 +591,20 @@ RR.drillHumanMotion = (function () {
 
   function bestSceneIndex(drill, instruction, stepIndex, stepCount, specs) {
     if (!specs.length) return -1;
+    var reviewedStepScenes = {
+      // Four exact hitting locations are authored as four court scenes. The
+      // combined prose step names middle then right; the right-side scene is
+      // inserted as the adjacent authored coverage phase, while the saved
+      // steps bind deterministically to outside, middle, and back-row pipe.
+      "hitting-from-all-positions": [0, 1, 3, 3],
+      // The final instruction returns to the steady back set and one-foot
+      // takeoff; only scene zero contains both the setter and curved route.
+      "slide-approach-attack": [0, 0, 1, 0]
+    };
+    var reviewed = reviewedStepScenes[clean(drill && drill.id)];
+    if (reviewed && typeof reviewed[stepIndex] === "number" &&
+        Math.floor(reviewed[stepIndex]) === reviewed[stepIndex] && reviewed[stepIndex] >= 0 &&
+        reviewed[stepIndex] < specs.length) return reviewed[stepIndex];
     if (stepCount === specs.length) return stepIndex;
 
     var stepActions = explicitSceneActions(drill, instruction);
@@ -474,7 +639,7 @@ RR.drillHumanMotion = (function () {
   function programFor(drill, specs) {
     drill = drill || {};
     specs = Array.isArray(specs) ? specs : [];
-    if (drill.custom && !actions[drill.motionType]) return [];
+    if (drill.custom && !isSelectableAction(drill.motionType)) return [];
     var instructions = list(drill.steps);
     var setupOnly = false;
     if (!instructions.length) {
@@ -484,7 +649,7 @@ RR.drillHumanMotion = (function () {
       setupOnly = true;
     }
     var cues = list(drill.cues);
-    return instructions.map(function (instruction, index) {
+    var program = instructions.map(function (instruction, index) {
       var allActions = actionsFor(drill, instruction);
       var primary = actionFor(drill, instruction);
       allActions = [primary].concat(allActions.filter(function (actionId) {
@@ -504,17 +669,64 @@ RR.drillHumanMotion = (function () {
         scene: sceneIndex >= 0 ? specs[sceneIndex] : null
       };
     });
+
+    // A drill can author more court formations than it has prose steps (for
+    // example, six legal rotations described by four instructions). Preserve
+    // every saved-step item, then insert any missing factual scene as its own
+    // selectable walkthrough phase. Supplemental copy comes only from the
+    // authored scene caption/setup; no inferred or placeholder drill text is
+    // introduced.
+    var coveredScenes = {};
+    program.forEach(function (entry) {
+      if (entry.sceneIndex >= 0) coveredScenes[entry.sceneIndex] = true;
+    });
+    specs.forEach(function (spec, sceneIndex) {
+      if (coveredScenes[sceneIndex]) return;
+      var sceneInstruction = clean(spec && spec.caption) || clean(drill.setup);
+      if (!sceneInstruction) return;
+      var allActions = actionsFor(drill, sceneInstruction);
+      var primary = actionFor(drill, sceneInstruction);
+      allActions = [primary].concat(allActions.filter(function (actionId) {
+        return actionId !== primary;
+      }));
+      var insertAt = program.length;
+      program.some(function (entry, entryIndex) {
+        if (entry.sceneIndex > sceneIndex) {
+          insertAt = entryIndex;
+          return true;
+        }
+        return false;
+      });
+      program.splice(insertAt, 0, {
+        sourceStep: -1,
+        index: insertAt,
+        title: clean(spec && spec.title) || clean(drill.name),
+        instruction: sceneInstruction,
+        action: primary,
+        actions: allActions,
+        frame: actions[primary].mode === "catalog" ? catalogFrame(primary, sceneInstruction) : 0,
+        cue: cues.length ? cues[Math.min(sceneIndex, cues.length - 1)] : "",
+        sceneIndex: sceneIndex,
+        scene: spec,
+        supplementalScene: true
+      });
+      coveredScenes[sceneIndex] = true;
+    });
+    program.forEach(function (entry, index) { entry.index = index; });
+    return program;
   }
 
   function assetFor(actionId) { return actions[actionId] || null; }
   function options() {
-    return Object.keys(actions).map(function (id) { return { value: id, label: actions[id].label }; });
+    return Object.keys(actions).filter(isSelectableAction)
+      .map(function (id) { return { value: id, label: actions[id].label }; });
   }
 
   return {
     actions: actions,
     actionsFor: actionsFor,
     actionFor: actionFor,
+    classificationFor: classificationFor,
     assetFor: assetFor,
     frameFor: catalogFrame,
     programFor: programFor,
