@@ -2021,6 +2021,13 @@ RR.drillAnimation = (function () {
   }
 
   function figure(drill) {
+    // Authored CoachCam experiences own their complete continuous timeline and
+    // show the same 3D scene through synchronized court + mechanics cameras.
+    // All other drills continue through the established factual SVG renderer.
+    if (RR.coachCam3D && RR.coachCam3D.isEligible &&
+        RR.coachCam3D.isEligible(drill) && RR.coachCam3D.figure) {
+      return RR.coachCam3D.figure(drill);
+    }
     var specs = scenesFor(drill);
     var humanApi = RR.drillHumanMotion;
     var program = humanApi && humanApi.programFor ? humanApi.programFor(drill, specs) : [];

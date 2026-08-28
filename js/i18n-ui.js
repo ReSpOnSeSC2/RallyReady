@@ -93,6 +93,115 @@
     "Current step": "Pasul curent",
     "this drill": "acest exercițiu",
 
+    // ---- Blender CoachCam: Rolls and Sprawls -------------------------------
+    // Keep the English strings identical to coachcam-3d.js. The phase labels,
+    // long-form mechanics and compact safety keys are deliberately translated
+    // separately because each is also announced by assistive technology.
+    "Rolls and Sprawls": "Rostogoliri și plonjoane",
+    "3D CoachCam": "CoachCam 3D",
+    "Playback speed": "Viteza redării",
+    "Full court": "Teren complet",
+    "player · coach · ball": "jucător · antrenor · minge",
+    "Full court. player · coach · ball": "Teren complet. jucător · antrenor · minge",
+    "Mechanics": "Execuție tehnică",
+    "active athlete close-up": "prim-plan cu sportivul activ",
+    "Mechanics. active athlete close-up": "Execuție tehnică. prim-plan cu sportivul activ",
+    "Preparing the synchronized 3D court…": "Se pregătește terenul 3D sincronizat…",
+    "3D CoachCam ready": "CoachCam 3D este pregătit",
+    "Court-aware phase guide": "Ghid pe faze, cu poziționare pe teren",
+    "Current technique": "Tehnica actuală",
+    "Mechanics cue": "Indicație tehnică",
+    "Safety focus": "Accent pe siguranță",
+    "Current body mechanics coaching": "Indicații pentru mecanica mișcării actuale",
+    "Scrub through the complete Rolls and Sprawls demonstration":
+      "Derulează demonstrația completă de rostogoliri și plonjoane",
+    "Animation phases. The complete sequence plays automatically.":
+      "Fazele animației. Secvența completă rulează automat.",
+    "Ready, 0 seconds of 14": "Pregătire, 0 secunde din 14",
+    "The 3D view could not start on this device. Use the complete, court-aware phase timeline and coaching cues above; no instructional steps are hidden.":
+      "Vizualizarea 3D nu a putut porni pe acest dispozitiv. Folosește cronologia completă a fazelor, cu poziționarea pe teren, și indicațiile de mai sus; niciun pas de învățare nu este ascuns.",
+    "Animation paused.": "Animația este oprită.",
+
+    // Fallback-diagram text. These keys are also kept here for the accessible
+    // non-WebGL representation when the labels are built as translated nodes.
+    "FULL COURT · BALL + PLAYER PATH": "TEREN COMPLET · TRASEUL MINGII + JUCĂTORULUI",
+    "SHOULDER": "UMĂR",
+    "OPPOSITE HIP": "ȘOLDUL OPUS",
+    "MECHANICS · SAFE DIAGONAL ROLL": "EXECUȚIE · ROSTOGOLIRE SIGURĂ PE DIAGONALĂ",
+
+    // Continuous 14-second phase labels.
+    "Read · low toss right": "Citește · minge joasă la dreapta",
+    "Ball first · reach": "Întâi mingea · întinde-te",
+    "Right shoulder roll": "Rostogolire pe umărul drept",
+    "Read · low toss left": "Citește · minge joasă la stânga",
+    "Left shoulder roll": "Rostogolire pe umărul stâng",
+    "Read · short toss": "Citește · minge scurtă",
+    "One-hand save": "Salvare cu o mână",
+    "Chest + hips sprawl": "Plonjon pe piept + șolduri",
+    "Ready again": "Din nou în poziție",
+
+    // Detailed body-mechanics coaching, synchronized to the Blender clip.
+    "Load through the hips with the chest over the knees, heels light, and hands quiet in front.":
+      "Coboară din șolduri, cu pieptul deasupra genunchilor, călcâiele ușoare și mâinile liniștite în față.",
+    "Read the ball before moving. Turn the outside toe toward the target and keep the shoulders level.":
+      "Citește traiectoria mingii înainte să pornești. Orientează vârful piciorului exterior spre țintă și păstrează umerii la același nivel.",
+    "Step through the ball, lock the platform early, and make contact in front before the body goes down.":
+      "Pășește prin minge, fixează devreme platforma și atinge mingea în față înainte ca trupul să coboare la sol.",
+    "Tuck the chin and round the outside shoulder. Travel diagonally from shoulder blade to opposite hip — never over the neck or straight down the spine.":
+      "Trage bărbia în piept și rotunjește umărul exterior. Rostogolește-te pe diagonală, de la omoplat spre șoldul opus — niciodată peste gât sau drept pe coloană.",
+    "Carry the roll onto the outside foot, drive through the floor, and regain a balanced defensive base.":
+      "Continuă rostogolirea până pe talpa exterioară, împinge în podea și revino într-o poziție defensivă echilibrată.",
+    "Stay low as the toss changes sides. Lead with the left foot without crossing the feet.":
+      "Rămâi jos când mingea schimbă partea. Pornește cu piciorul stâng, fără să încrucișezi picioarele.",
+    "Reach the platform through the ball and angle the rebound high toward middle court before descending.":
+      "Întinde platforma prin minge și dirijează ricoșeul sus, spre centrul terenului, înainte să cobori la sol.",
+    "Tuck the chin, soften the left shoulder, and roll on the diagonal across the upper back to the opposite hip.":
+      "Trage bărbia în piept, relaxează umărul stâng și rostogolește-te pe diagonală peste partea superioară a spatelui, spre șoldul opus.",
+    "Use the rolling momentum to bring the feet underneath the hips and return directly to ready.":
+      "Folosește impulsul rostogolirii ca să aduci tălpile sub șolduri și să revii direct în poziția de bază.",
+    "Recognize the ball dying short. Drop the center of mass and accelerate forward under control.":
+      "Recunoaște mingea care cade scurt. Coboară centrul de greutate și accelerează controlat înainte.",
+    "Reach the heel of the hand or a firm one-arm platform under the ball. Play the ball before committing the torso to the floor.":
+      "Bagă podul palmei sau o platformă fermă cu un braț sub minge. Joacă mingea înainte să lași trunchiul să coboare la sol.",
+    "Lengthen forward and absorb the floor with chest and hips together. Keep the chin lifted, elbows free, and knees from striking first.":
+      "Întinde-te înainte și amortizează contactul cu solul simultan pe piept și șolduri. Ține bărbia ridicată, coatele libere, iar genunchii să nu lovească primii.",
+    "Press the hands under the shoulders, draw one knee through, and rise without turning away from the court.":
+      "Împinge în palmele așezate sub umeri, adu un genunchi înainte și ridică-te fără să întorci spatele terenului.",
+    "Finish balanced, eyes on the coach, and prepared to move in either direction for the next repetition.":
+      "Încheie echilibrat, cu privirea la antrenor, pregătit să pleci în oricare direcție la următoarea repetare.",
+
+    // Short safety keys beside the live mechanics cue.
+    "Balanced base": "Bază echilibrată",
+    "See ball first": "Întâi citește mingea",
+    "Platform before floor": "Întâi platforma, apoi solul",
+    "Shoulder → opposite hip": "Umăr → șoldul opus",
+    "Eyes up · rally alive": "Privirea sus · faza continuă",
+    "Low and outside": "Jos și în exterior",
+    "Control the rebound": "Controlează revenirea mingii",
+    "No neck · no spine": "Protejează gâtul · protejează coloana",
+    "Feet under hips": "Tălpile sub șolduri",
+    "Forward, not upward": "Înainte, nu în sus",
+    "Ball first": "Întâi mingea",
+    "Chest + hips together": "Pieptul + șoldurile împreună",
+    "Face the next play": "Cu fața spre faza următoare",
+    "Reset · breathe · repeat": "Revino · respiră · repetă",
+
+    // Phase + safety status text shown in the CoachCam header.
+    "Ready · Balanced base": "Pregătire · Bază echilibrată",
+    "Read · low toss right · See ball first": "Citește · minge joasă la dreapta · Întâi citește mingea",
+    "Ball first · reach · Platform before floor": "Întâi mingea · întinde-te · Întâi platforma, apoi solul",
+    "Right shoulder roll · Shoulder → opposite hip": "Rostogolire pe umărul drept · Umăr → șoldul opus",
+    "Recover · Eyes up · rally alive": "Revino · Privirea sus · faza continuă",
+    "Read · low toss left · Low and outside": "Citește · minge joasă la stânga · Jos și în exterior",
+    "Ball first · reach · Control the rebound": "Întâi mingea · întinde-te · Controlează revenirea mingii",
+    "Left shoulder roll · No neck · no spine": "Rostogolire pe umărul stâng · Protejează gâtul · protejează coloana",
+    "Recover · Feet under hips": "Revino · Tălpile sub șolduri",
+    "Read · short toss · Forward, not upward": "Citește · minge scurtă · Înainte, nu în sus",
+    "One-hand save · Ball first": "Salvare cu o mână · Întâi mingea",
+    "Chest + hips sprawl · Chest + hips together": "Plonjon pe piept + șolduri · Pieptul + șoldurile împreună",
+    "Recover · Face the next play": "Revino · Cu fața spre faza următoare",
+    "Ready again · Reset · breathe · repeat": "Din nou în poziție · Revino · respiră · repetă",
+
     // ---- human drill actions, phases + body cues ----
     "Forearm pass": "Preluare cu antebrațele",
     "Overhead set": "Ridicare de sus",
@@ -1003,6 +1112,22 @@
   RR.i18n.addPatterns([
     // fallback screen-load error (app.js)
     { re: /^Couldn't load (.+)$/, ro: function (m) { return "Nu s-a putut încărca " + t(m[1]); } },
+
+    // coachcam-3d.js — composed aria labels, timeline values and announcements.
+    { re: /^3D CoachCam demonstration for (.+)$/,
+      ro: function (m) { return "Demonstrație CoachCam 3D pentru " + t(m[1]); } },
+    { re: /^(.+), (\d+:\d{2}) of (\d+:\d{2})$/,
+      ro: function (m) { return t(m[1]) + ", " + m[2] + " din " + m[3]; } },
+    { re: /^Showing ([^.]+)\. (.+)$/,
+      ro: function (m) { return "Se afișează " + t(m[1]) + ". " + t(m[2]); } },
+    { re: /^Showing (.+)\.$/,
+      ro: function (m) { return "Se afișează " + t(m[1]) + "."; } },
+    { re: /^Animation playing at (0\.5|1) times speed\.$/,
+      ro: function (m) { return "Animația rulează la viteza " + m[1].replace(".", ",") + "×."; } },
+    { re: /^Replaying the complete demonstration from Ready at (0\.5|1) times speed\.$/,
+      ro: function (m) { return "Demonstrația completă este reluată de la Pregătire, la viteza " + m[1].replace(".", ",") + "×."; } },
+    { re: /^Playback speed (0\.5|1) times\.$/,
+      ro: function (m) { return "Viteza redării: " + m[1].replace(".", ",") + "×."; } },
 
     // format.js
     { re: /^In small groups of (\d+)\.$/, ro: function (m) { return "În grupe mici de câte " + m[1] + "."; } },

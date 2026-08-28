@@ -385,7 +385,8 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
   assertStepActions("pass-to-the-hoop-target", 0, ["organize"]);
   assertStepActions("perimeter-defense-system", 0, ["organize"]);
   assertStepActions("deep-corner-roll-shots", 1, ["attack"]);
-  assertStepActions("rolls-and-sprawls", 1, ["defense"]);
+  [0, 1, 2, 3].forEach((stepIndex) =>
+    assertStepActions("rolls-and-sprawls", stepIndex, ["defense"]));
   assertStepActions("overhead-emergency-pass", 0, ["organize"]);
   assertStepActions("mini-band-defensive-shuffle", 1, ["band", "footwork"]);
   assertStepActions("band-arm-speed", 1, ["band"]);
@@ -515,6 +516,7 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
   assertSceneBinding("pepper", [0, 0, 1, 1, 1]);
   assertSceneBinding("tempo-setting", [0, 1, 2, 2]);
   assertSceneBinding("setter-footwork-to-target", [1, 1, 2, 2]);
+  assertSceneBinding("rolls-and-sprawls", [0, 1, 2, 3]);
 
   // Free-form custom text is not enough evidence to invent body mechanics.
   // A coach must explicitly select one of the registered motion types.

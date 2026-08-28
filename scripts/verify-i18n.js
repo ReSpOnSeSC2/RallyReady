@@ -8,6 +8,8 @@
 //     with curly quotes can never match and is a dead entry;
 //   • no key is registered twice with two different translations (last write
 //     wins silently, so one of them is a lie);
+//   • every phase label, mechanics cue, safety key, composed status and
+//     accessible announcement in the Blender CoachCam contract translates;
 // and then REPORTS (informational, never a failure) how much of the drill
 // library actually translates: names, setup, steps, cues, easier/harder.
 // Untranslated strings fall back to English by design, so coverage is a
@@ -60,6 +62,11 @@ RR.i18n.add = function (map, lang) {
 const DICT_FILES = ["js/i18n-ui.js", "js/i18n-content.js", "js/i18n-content2.js", "js/i18n-positions.js"];
 DICT_FILES.forEach(load);
 
+// CoachCam exposes its immutable phase copy without touching the DOM. Loading
+// it here lets the i18n gate track the production timeline instead of a second,
+// hand-maintained copy that could silently drift.
+load("js/coachcam-3d.js");
+
 // The drill library, for coverage reporting.
 for (let i = 1; i <= 11; i++) load("js/drills" + (i === 1 ? "" : "-" + i) + ".js");
 
@@ -94,6 +101,52 @@ ok(conflicts.length === 0,
 RR.state.update({ lang: "ro" });
 const t = RR.i18n.t;
 function translated(s) { return !s || t(s) !== s; }
+
+// ---- CoachCam localization (gating) -----------------------------------------
+const coachCam = RR.coachCam3D;
+ok(!!coachCam && Array.isArray(coachCam.phases), "CoachCam phase copy is available to the i18n verifier");
+ok(coachCam.phases.length === 14, "CoachCam exposes all 14 localized continuous phases");
+coachCam.phases.forEach((phase) => {
+  ok(translated(phase.label), "CoachCam phase label is translated: " + phase.id);
+  ok(translated(phase.cue), "CoachCam mechanics cue is translated: " + phase.id);
+  ok(translated(phase.key), "CoachCam safety key is translated: " + phase.id);
+  ok(translated(phase.label + " · " + phase.key),
+    "CoachCam header status is translated: " + phase.id);
+  ok(translated("Showing " + phase.label + ". " + phase.cue),
+    "CoachCam detailed announcement is translated: " + phase.id);
+  ok(translated("Showing " + phase.label + "."),
+    "CoachCam phase announcement is translated: " + phase.id);
+  ok(translated(phase.label + ", 0:00 of 0:14"),
+    "CoachCam scrubber value is translated: " + phase.id);
+});
+
+[
+  "Rolls and Sprawls", "3D CoachCam", "Playback speed", "Full court",
+  "player · coach · ball", "Full court. player · coach · ball", "Mechanics",
+  "active athlete close-up", "Mechanics. active athlete close-up",
+  "Preparing the synchronized 3D court…", "3D CoachCam ready",
+  "Court-aware phase guide", "Current technique", "Mechanics cue", "Safety focus",
+  "Current body mechanics coaching",
+  "Scrub through the complete Rolls and Sprawls demonstration",
+  "Animation phases. The complete sequence plays automatically.",
+  "Ready, 0 seconds of 14", "Animation paused.",
+  "The 3D view could not start on this device. Use the complete, court-aware phase timeline and coaching cues above; no instructional steps are hidden.",
+  "FULL COURT · BALL + PLAYER PATH", "SHOULDER", "OPPOSITE HIP",
+  "MECHANICS · SAFE DIAGONAL ROLL",
+  "3D CoachCam demonstration for Rolls and Sprawls",
+  "Animation playing at 0.5 times speed.",
+  "Animation playing at 1 times speed.",
+  "Replaying the complete demonstration from Ready at 0.5 times speed.",
+  "Replaying the complete demonstration from Ready at 1 times speed.",
+  "Playback speed 0.5 times.", "Playback speed 1 times."
+].forEach((source) => ok(translated(source), "CoachCam UI copy is translated: " + source));
+
+ok(t("Chest + hips sprawl") === "Plonjon pe piept + șolduri",
+  "CoachCam floor-defense terminology uses natural Romanian volleyball language");
+ok(t("Shoulder → opposite hip") === "Umăr → șoldul opus",
+  "CoachCam roll safety path retains its exact directional meaning in Romanian");
+ok(t("Animation playing at 0.5 times speed.") === "Animația rulează la viteza 0,5×.",
+  "CoachCam Romanian speed announcement uses locale-appropriate decimal punctuation");
 
 const fields = { name: [0, 0], setup: [0, 0], steps: [0, 0], cues: [0, 0], "easier/harder": [0, 0] };
 const missedNames = [];

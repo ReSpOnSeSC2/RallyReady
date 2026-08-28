@@ -10,6 +10,7 @@
 //   • the manifest, its icons, and the preloaded fonts are precached;
 //   • all 15 close-up atlases, 11 full-scene WebP grids, and the reviewed PNG
 //     defensive-performance grid exist and are precached for offline demos;
+//   • the local Three.js CoachCam runtime + Blender GLB are precached;
 //   • every js/*.js and css/*.css on disk is precached (a new module that loads
 //     fine online but was never added to APP_SHELL breaks ONLY offline — the
 //     worst kind of bug to spot in a gym with no signal).
@@ -172,6 +173,30 @@ if (defensivePerformanceExists) {
     defensivePerformanceRel + " has a valid PNG signature");
 }
 ok(!!inShell[defensivePerformanceRel], defensivePerformanceRel + " is precached in APP_SHELL");
+
+// ---- 7. CoachCam's lazy runtime remains completely same-origin + offline ----
+const coachCamAssets = [
+  "models/coachcam/rolls-and-sprawls.glb",
+  "vendor/three/three.core.min.js",
+  "vendor/three/three.module.min.js",
+  "vendor/three/addons/loaders/GLTFLoader.js",
+  "vendor/three/addons/utils/BufferGeometryUtils.js",
+  "vendor/three/addons/utils/SkeletonUtils.js"
+];
+coachCamAssets.forEach((rel) => {
+  const abs = path.join(ROOT, rel);
+  ok(fs.existsSync(abs), rel + " exists on disk");
+  if (fs.existsSync(abs)) ok(fs.statSync(abs).size > 100, rel + " is non-empty");
+  ok(!!inShell[rel], rel + " is precached in APP_SHELL");
+});
+const coachCamGlb = path.join(ROOT, "models", "coachcam", "rolls-and-sprawls.glb");
+if (fs.existsSync(coachCamGlb)) {
+  const bytes = fs.readFileSync(coachCamGlb);
+  ok(bytes.subarray(0, 4).toString("ascii") === "glTF",
+    "Rolls and Sprawls has a valid binary glTF signature");
+  ok(bytes.readUInt32LE(4) === 2, "Rolls and Sprawls uses glTF 2.0");
+  ok(bytes.readUInt32LE(8) === bytes.length, "Rolls and Sprawls GLB declares its exact file length");
+}
 
 console.log("──────────────────────────────────────────");
 if (fail) {

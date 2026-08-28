@@ -51,6 +51,17 @@ RR.drillChoreography = (function () {
     "defensive-ready": motion("defensive-ready", "Stationary defensive ready", "defensePro", 0, 1000),
     "down-ball-hit": motion("down-ball-hit", "Coach down-ball attack", "defensePro", 3, 1250),
 
+    // Rolls & Sprawls uses an explicit safety-first vocabulary shared by the
+    // 2D fallback and CoachCam. These are not aliases for generic running or a
+    // single catch-all sprawl: each id describes one observable body phase.
+    "low-toss": motion("low-toss", "Soft low toss", "volleyball", 2, 900),
+    "one-arm-save": motion("one-arm-save", "One-arm floor save", "defense", 2, 1150),
+    "platform-save": motion("platform-save", "Two-arm platform save", "defensePro", 0, 1100),
+    "shoulder-roll-right": motion("shoulder-roll-right", "Right shoulder roll", "boxMat", 3, 1450),
+    "shoulder-roll-left": motion("shoulder-roll-left", "Left shoulder roll", "boxMat", 3, 1450),
+    "chest-hip-sprawl": motion("chest-hip-sprawl", "Chest-and-hip sprawl", "defense", 2, 1450),
+    "floor-recovery": motion("floor-recovery", "Floor-to-ready recovery", "boxMat", 3, 1250),
+
     ladder: motion("ladder", "Agility-ladder footwork", "equipment", 0, 1200),
     "jump-rope": motion("jump-rope", "Jump-rope rhythm", "equipment", 1, 1200),
     "mini-band": motion("mini-band", "Mini-band lateral movement", "equipment", 2, 1250),
@@ -92,6 +103,9 @@ RR.drillChoreography = (function () {
   MOTIONS["defensive-ready"].loop = false;
   MOTIONS["defensive-ready"].frameOrder = [0];
   MOTIONS["defensive-ready"].posterFrame = 0;
+  MOTIONS["shoulder-roll-right"].direction = "right";
+  MOTIONS["shoulder-roll-left"].direction = "left";
+  MOTIONS["shoulder-roll-left"].mirror = true;
 
   var APPEARANCE_IDS = [
     "roster-athlete-01", "roster-athlete-02",
@@ -99,6 +113,13 @@ RR.drillChoreography = (function () {
   ];
 
   var ACTION_PATTERNS = [
+    pattern("shoulder-roll-right", /\bshoulder[- ]roll[- ]right\b|\bright[- ]shoulder\s+roll\b/gi, -52),
+    pattern("shoulder-roll-left", /\bshoulder[- ]roll[- ]left\b|\bleft[- ]shoulder\s+roll\b/gi, -52),
+    pattern("chest-hip-sprawl", /\bchest[- ](?:and[- ]|&[- ]?)?hip\s+sprawl\b|\bchest[- ]hip[- ]sprawl\b/gi, -52),
+    pattern("one-arm-save", /\bone[- ]arm\s+(?:floor\s+)?save\b/gi, -52),
+    pattern("platform-save", /\b(?:two[- ]arm\s+)?platform\s+save\b/gi, -52),
+    pattern("floor-recovery", /\bfloor[- ](?:to[- ]ready\s+)?recovery\b/gi, -52),
+    pattern("low-toss", /\b(?:soft\s+)?low[- ]toss\b/gi, -52),
     pattern("jump-topspin", /\bjump[- ]topspin\s+serv(?:e|es|ed|ing)\b/gi, -48),
     pattern("jump-float", /\bjump[- ]float\s+serv(?:e|es|ed|ing)\b/gi, -48),
     pattern("underhand", /\bunderhand\s+serv(?:e|es|ed|ing)\b/gi, -47),
@@ -377,6 +398,9 @@ RR.drillChoreography = (function () {
       serve: true, jump: true, sprint: true, shuffle: true, backpedal: true,
       block: true, dig: true, sprawl: true, "run-through": true,
       "defensive-ready": true, "down-ball-hit": true,
+      "low-toss": true, "one-arm-save": true, "platform-save": true,
+      "shoulder-roll-right": true, "shoulder-roll-left": true,
+      "chest-hip-sprawl": true, "floor-recovery": true,
       ladder: true, "jump-rope": true,
       "tip-roll": true,
       band: true, "band-upper": true, "band-arm-swing": true,
@@ -419,6 +443,26 @@ RR.drillChoreography = (function () {
     if (id === "digging-coach-down-balls" &&
         /\bshag\s+the\s+ball\b[^.]*\brotate\s+to\s+the\s+next\s+defender\b/.test(source)) {
       return ["shuffle"];
+    }
+    if (id === "rolls-and-sprawls") {
+      if (/from a low stance[^.]*tossed low ball/.test(source)) {
+        return ["defensive-ready", "low-toss", "one-arm-save"];
+      }
+      if (/momentum[^.]*\broll\b[^.]*\bsprawl\b/.test(source)) {
+        return ["low-toss", "one-arm-save", "shoulder-roll-right", "floor-recovery",
+          "low-toss", "platform-save", "chest-hip-sprawl"];
+      }
+      if (/pop right back up[^.]*ready stance/.test(source)) {
+        return ["floor-recovery", "defensive-ready"];
+      }
+      if (/practice both directions[^.]*both moves/.test(source)) {
+        return ["low-toss", "one-arm-save", "shoulder-roll-right", "floor-recovery",
+          "shoulder-roll-left", "platform-save", "chest-hip-sprawl"];
+      }
+      // Setup and scene captions describe the whole safety progression. Keep
+      // that complete vocabulary available without collapsing it to `sprawl`.
+      return ["low-toss", "one-arm-save", "platform-save", "shoulder-roll-right",
+        "shoulder-roll-left", "chest-hip-sprawl", "floor-recovery"];
     }
     if (id === "overhead-defensive-hands") return ["dig"];
     if (id === "overhead-emergency-pass") {
@@ -968,7 +1012,7 @@ RR.drillChoreography = (function () {
       if (/^(?:digging-coach-down-balls|free-ball-transition)$/.test(id)) {
         return ["defensive-ready"];
       }
-      if (id === "rolls-and-sprawls") return ["dig"];
+      if (id === "rolls-and-sprawls") return ["one-arm-save"];
       if (id === "swing-blocking") return ["block"];
       if (/^(?:quadrant-reaction-footwork|net-shuffle-footwork-youth)$/.test(id)) {
         return ["shuffle"];
@@ -1057,7 +1101,14 @@ RR.drillChoreography = (function () {
       "box-block": { box: 1, block: 1 },
       "mat-defense": { stretch: 1, dig: 1, sprawl: 1 },
       "approach-jump": { jump: 1 },
-      "run-through": { sprint: 1, dig: 1 }
+      "run-through": { sprint: 1, dig: 1 },
+      "low-toss": { feed: 1 },
+      "one-arm-save": { dig: 1, sprawl: 1 },
+      "platform-save": { dig: 1 },
+      "shoulder-roll-right": { dig: 1, sprawl: 1 },
+      "shoulder-roll-left": { dig: 1, sprawl: 1 },
+      "chest-hip-sprawl": { dig: 1, sprawl: 1 },
+      "floor-recovery": { ready: 1, recovery: 1 }
     };
     var hidden = {};
     result.forEach(function (id) {
@@ -1658,6 +1709,7 @@ RR.drillChoreography = (function () {
     var patterns = {
       signal: /\b(?:coach|caller|cue|signal)\b/,
       feed: /\b(?:coach|feeder|tosser|tosses|feeds?|partner\s+on\s+(?:a\s+)?box)\b/,
+      "low-toss": /\b(?:coach|feeder|tosser|soft\s+low[- ]toss|low[- ]toss)\b|^c(?:\s|$)/,
       serve: /\bserver\b|^s(?:\s|$)|\bserves?\b/,
       underhand: /\bserver\b|^s(?:\s|$)|\bserves?\b/,
       "jump-float": /\bserver\b|^s(?:\s|$)|\bserves?\b/,
@@ -1671,6 +1723,12 @@ RR.drillChoreography = (function () {
       block: /\bblocker\b|^b(?:\s|$)|\bblocks?\b/,
       dig: /\b(?:digger|defender|libero|floor\s+defen[cs]e|covers?\s+low|cover\s+player)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
       sprawl: /\b(?:digger|defender|libero|diver|pancake|sprawl)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
+      "one-arm-save": /\b(?:digger|defender|libero|floor\s+defen[cs]e|one[- ]arm)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
+      "platform-save": /\b(?:digger|defender|libero|platform|floor\s+defen[cs]e)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
+      "shoulder-roll-right": /\b(?:digger|defender|libero|right\s+shoulder|roll)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
+      "shoulder-roll-left": /\b(?:digger|defender|libero|left\s+shoulder|roll)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
+      "chest-hip-sprawl": /\b(?:digger|defender|libero|chest|hip|sprawl)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
+      "floor-recovery": /\b(?:digger|defender|libero|floor|recover|ready)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
       "run-through": /\b(?:digger|defender|libero|pursuit|chases?|save)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
       "mat-defense": /\b(?:digger|defender|libero|diver|pursuit|sprawl)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
       "defensive-ready": /\b(?:digger|defender|libero|defen[cs]e|back\s+row)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
@@ -1688,7 +1746,7 @@ RR.drillChoreography = (function () {
     if (skill === "setting" && motionId === "set" && !actor.support) return 1;
     if (skill === "hitting" && /^(?:attack|tip-roll|approach-jump)$/.test(motionId) && !actor.support) return 1;
     if (skill === "blocking" && motionId === "block" && !actor.support) return 1;
-    if (skill === "defense" && /^(?:dig|sprawl|run-through|mat-defense|defensive-ready)$/.test(motionId) && !actor.support) return 1;
+    if (skill === "defense" && /^(?:dig|sprawl|run-through|mat-defense|defensive-ready|one-arm-save|platform-save|shoulder-roll-right|shoulder-roll-left|chest-hip-sprawl|floor-recovery)$/.test(motionId) && !actor.support) return 1;
     return 0;
   }
 
@@ -1701,7 +1759,11 @@ RR.drillChoreography = (function () {
         motionId !== "signal" && motionId !== "feed";
     });
     var receiverFamilies = {
-      defense: { "mat-defense": 1, sprawl: 1, "run-through": 1, dig: 1, "defensive-ready": 1 },
+      defense: {
+        "mat-defense": 1, sprawl: 1, "run-through": 1, dig: 1, "defensive-ready": 1,
+        "one-arm-save": 1, "platform-save": 1, "shoulder-roll-right": 1,
+        "shoulder-roll-left": 1, "chest-hip-sprawl": 1, "floor-recovery": 1
+      },
       blocking: { block: 1 },
       passing: { pass: 1 },
       setting: { set: 1 },
@@ -1772,7 +1834,7 @@ RR.drillChoreography = (function () {
     // currently be defending; it must not steal the coach's delivery merely
     // because its stable role also scores as attack-capable.
     if (source.actor && source.actor.support &&
-        /^(?:attack|down-ball-hit|tip-roll|feed|serve)$/.test(motionId)) {
+        /^(?:attack|down-ball-hit|tip-roll|feed|low-toss|serve)$/.test(motionId)) {
       return { actor: source.actor, partner: recipient.actor,
         source: "support-source-contact" };
     }
@@ -1799,7 +1861,7 @@ RR.drillChoreography = (function () {
     if (source.actor && sourceScore > 0) {
       return { actor: source.actor, partner: recipient.actor, source: "source-role-compatible" };
     }
-    if (recipient.actor && /^(?:block|dig|sprawl|run-through|mat-defense|defensive-ready)$/.test(motionId)) {
+    if (recipient.actor && /^(?:block|dig|sprawl|run-through|mat-defense|defensive-ready|one-arm-save|platform-save|shoulder-roll-right|shoulder-roll-left|chest-hip-sprawl|floor-recovery)$/.test(motionId)) {
       return { actor: recipient.actor, partner: source.actor, source: "receiver-mechanic" };
     }
     return { actor: source.actor || recipient.actor,
@@ -2296,7 +2358,7 @@ RR.drillChoreography = (function () {
       if (/\bresisted\s+swing\b/.test(label)) return "band-arm-swing";
     }
     var ids = routeLabelMotionIds(route.label, drill).filter(function (motionId) {
-      return /^(?:sprint|shuffle|backpedal|jump|approach-jump|block|sprawl|run-through|mat-defense|defensive-ready|ladder|jump-rope|mini-band|box|depth-drop|box-block|band-arm-swing|free-arm-swing|band-upper|band|warmup|stretch|recovery)$/.test(motionId);
+      return /^(?:sprint|shuffle|backpedal|jump|approach-jump|block|sprawl|run-through|mat-defense|defensive-ready|one-arm-save|platform-save|shoulder-roll-right|shoulder-roll-left|chest-hip-sprawl|floor-recovery|ladder|jump-rope|mini-band|box|depth-drop|box-block|band-arm-swing|free-arm-swing|band-upper|band|warmup|stretch|recovery)$/.test(motionId);
     });
     if (ids.length) return ids[0];
 
@@ -2315,6 +2377,7 @@ RR.drillChoreography = (function () {
       signal: /\bsignal partner\b|\bcaller\b|\bcoach\b|\bcue\b/i,
       serve: /\bserver\b|^s\b/i,
       feed: /\bfeeder\b|\bcoach\b|\btosser\b/i,
+      "low-toss": /\bfeeder\b|\bcoach\b|\btosser\b|\blow[- ]toss\b|^c\b/i,
       pass: /\bpasser\b|\breceiver\b|^p\b/i,
       set: /\bsetter\b|^st\b/i,
       attack: /\bhitter\b|\bmiddle\b|^h\b|^m\b/i,
@@ -2324,7 +2387,13 @@ RR.drillChoreography = (function () {
       "free-arm-swing": /\bhitter\b|\bathlete\b|\bplayer\b|^h\b/i,
       block: /\bblocker\b|^b\b/i,
       dig: /\bdigger\b|\bdefender\b|\blibero\b|\bcovers?\s+low\b|^d\b|^l\b/i,
-      sprawl: /\bdefender\b|\blibero\b|^d\b|^l\b/i
+      sprawl: /\bdefender\b|\blibero\b|^d\b|^l\b/i,
+      "one-arm-save": /\bdigger\b|\bdefender\b|\blibero\b|^d\b|^l\b/i,
+      "platform-save": /\bdigger\b|\bdefender\b|\blibero\b|^d\b|^l\b/i,
+      "shoulder-roll-right": /\bdigger\b|\bdefender\b|\blibero\b|^d\b|^l\b/i,
+      "shoulder-roll-left": /\bdigger\b|\bdefender\b|\blibero\b|^d\b|^l\b/i,
+      "chest-hip-sprawl": /\bdigger\b|\bdefender\b|\blibero\b|^d\b|^l\b/i,
+      "floor-recovery": /\bdigger\b|\bdefender\b|\blibero\b|^d\b|^l\b/i
     };
     rolePatterns["run-through"] = /\bdigger\b|\bdefender\b|\blibero\b|\bpursuit\b|^d\b|^l\b/i;
     rolePatterns["mat-defense"] = /\bdigger\b|\bdefender\b|\blibero\b|\bdiver\b|^d\b|^l\b/i;
@@ -2335,7 +2404,7 @@ RR.drillChoreography = (function () {
     var available = actors.filter(function (actor) { return !actor.staged; });
     if (!available.length) available = actors.slice();
 
-    if (/^(?:feed|signal|down-ball-hit)$/.test(motionId) ||
+    if (/^(?:feed|signal|down-ball-hit|low-toss)$/.test(motionId) ||
         (motionId === "attack" && /\bcoach\s+(?:hits?|attacks?|drives?|tips?)\b/.test(source))) {
       var support = available.filter(function (actor) {
         return actor.support || /\b(?:coach|feeder|tosser|tosses|feeds?|partner|caller|signal)\b/.test(actorIdentity(actor));
@@ -2459,8 +2528,9 @@ RR.drillChoreography = (function () {
 
   function motionFamily(id) {
     if (/^(?:serve|underhand|jump-float|jump-topspin)$/.test(id)) return "serve";
+    if (id === "low-toss") return "feed";
     if (/^(?:attack|down-ball-hit|tip-roll|box-hit|band-arm-swing|free-arm-swing|approach-jump)$/.test(id)) return "attack";
-    if (/^(?:dig|sprawl|run-through|mat-defense|defensive-ready)$/.test(id)) return "defense";
+    if (/^(?:dig|sprawl|run-through|mat-defense|defensive-ready|one-arm-save|platform-save|shoulder-roll-right|shoulder-roll-left|chest-hip-sprawl|floor-recovery)$/.test(id)) return "defense";
     if (/^(?:sprint|shuffle|backpedal|ladder)$/.test(id)) return "locomotion";
     return id;
   }
@@ -2486,13 +2556,15 @@ RR.drillChoreography = (function () {
 
   function sequenceRank(motionId) {
     var ranks = {
-      signal: 5, feed: 10, serve: 10, underhand: 10,
+      signal: 5, feed: 10, "low-toss": 10, serve: 10, underhand: 10,
       "jump-float": 10, "jump-topspin": 10,
       sprint: 15, shuffle: 17, backpedal: 17, ladder: 18,
       pass: 20, jump: 24, "approach-jump": 24, set: 25,
       attack: 40, "down-ball-hit": 40, "tip-roll": 40, "box-hit": 40,
-      block: 45, dig: 50, sprawl: 50, "run-through": 50,
-      "mat-defense": 50, "defensive-ready": 52, admin: 90,
+      block: 45, dig: 50, "one-arm-save": 50, "platform-save": 50,
+      "shoulder-roll-right": 54, "shoulder-roll-left": 54,
+      sprawl: 50, "chest-hip-sprawl": 55, "run-through": 50,
+      "mat-defense": 50, "floor-recovery": 58, "defensive-ready": 52, admin: 90,
       recovery: 95
     };
     return finite(ranks[motionId]) ? ranks[motionId] : 60;
@@ -2501,6 +2573,29 @@ RR.drillChoreography = (function () {
   function reviewedBeatSequence(drill, instruction) {
     var id = clean(drill && drill.id).toLowerCase();
     var source = sanitizedMotionText(instruction).toLowerCase();
+
+    if (id === "rolls-and-sprawls") {
+      if (/from a low stance[^.]*tossed low ball/.test(source)) {
+        return { ids: ["defensive-ready", "low-toss", "one-arm-save"] };
+      }
+      if (/momentum[^.]*\broll\b[^.]*\bsprawl\b/.test(source)) {
+        return { ids: [
+          "low-toss", "one-arm-save", "shoulder-roll-right", "floor-recovery",
+          "low-toss", "platform-save", "chest-hip-sprawl"
+        ] };
+      }
+      if (/pop right back up[^.]*ready stance/.test(source)) {
+        return { ids: ["floor-recovery", "defensive-ready"] };
+      }
+      if (/practice both directions[^.]*both moves/.test(source)) {
+        return { ids: [
+          "low-toss", "one-arm-save", "shoulder-roll-right", "floor-recovery",
+          "low-toss", "one-arm-save", "shoulder-roll-left", "floor-recovery",
+          "low-toss", "platform-save", "chest-hip-sprawl", "floor-recovery",
+          "low-toss", "platform-save", "chest-hip-sprawl", "floor-recovery"
+        ] };
+      }
+    }
 
     if (id === "pursuit-emergency-defense") {
       if (/first player chases it down[^.]*plays it up/.test(source)) {

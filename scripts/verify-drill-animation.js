@@ -393,10 +393,10 @@ RR.drills.forEach((drill) => {
 ok(authored === 210, `expected 210 authored drill animations, found ${authored}`);
 ok(derived === 31, `expected 31 field-derived bundled animations, found ${derived}`);
 ok(multi === 79, `expected 79 multi-step drills, found ${multi}`);
-ok(sceneCount === 335, `expected 335 resolved scenes (304 authored + 31 derived), found ${sceneCount}`);
-ok(authoredLegendScenes === 258, `expected 258 authored scenes with legends, found ${authoredLegendScenes}`);
+ok(sceneCount === 337, `expected 337 resolved scenes (306 authored + 31 derived), found ${sceneCount}`);
+ok(authoredLegendScenes === 260, `expected 260 authored scenes with legends, found ${authoredLegendScenes}`);
 ok(authoredLegendItems >= 513, `expected at least 513 authored legend items, found ${authoredLegendItems}`);
-ok(reviewedChainCount === 123, `expected 123 reviewed single-ball chains, found ${reviewedChainCount}`);
+ok(reviewedChainCount === 130, `expected 130 reviewed single-ball chains, found ${reviewedChainCount}`);
 
 // Exercise the exact render path used by every saved written step, not just one
 // representative instruction per resolved scene. Each sampled beat retains
@@ -834,10 +834,100 @@ ok(boundRunThroughBeat &&
 
 const pancakeSavePlan = semanticP0Plan("pancake-and-recover", 1);
 const rollSprawlPlan = semanticP0Plan("rolls-and-sprawls", 1);
-ok([pancakeSavePlan, rollSprawlPlan].every((plan) =>
-  plan.beats.some((beat) => beat.motionId === "sprawl") &&
-  !plan.beats.some((beat) => /^(?:sprint|run-through)$/.test(beat.motionId))),
-  "pancake or sprawl instruction was rewritten as running");
+ok(pancakeSavePlan.beats.some((beat) => beat.motionId === "sprawl") &&
+  !pancakeSavePlan.beats.some((beat) => /^(?:sprint|run-through)$/.test(beat.motionId)) &&
+  rollSprawlPlan.beats.some((beat) => beat.motionId === "shoulder-roll-right") &&
+  rollSprawlPlan.beats.some((beat) => beat.motionId === "chest-hip-sprawl") &&
+  !rollSprawlPlan.beats.some((beat) => /^(?:sprint|run-through|sprawl)$/.test(beat.motionId)),
+  "pancake or authored roll/sprawl mechanics were rewritten as running or a generic floor move");
+
+// Rolls & Sprawls is a four-step, one-athlete safety progression rather than a
+// gallery of interchangeable stills. Every scene keeps the same coach and
+// defender identities while the exact saved instruction selects a truthful
+// segment of the progression.
+const rollSprawlMotions = [
+  "low-toss", "one-arm-save", "platform-save", "shoulder-roll-right",
+  "shoulder-roll-left", "chest-hip-sprawl", "floor-recovery"
+];
+ok(rollSprawlMotions.every((motionId) => RR.drillChoreography.motions[motionId]) &&
+  RR.drillChoreography.motions["shoulder-roll-left"].mirror === true &&
+  RR.drillChoreography.motions["shoulder-roll-right"].direction === "right" &&
+  RR.drillChoreography.motions["shoulder-roll-left"].direction === "left",
+  "Rolls & Sprawls does not expose the seven CoachCam/fallback semantic phases");
+
+const rollSprawlPlans = [0, 1, 2, 3].map((sourceStep) =>
+  semanticP0Plan("rolls-and-sprawls", sourceStep));
+const persistentRollActorIds = rollSprawlPlans.map((plan) =>
+  plan.actors.filter((actor) => actor.authored &&
+    /^(?:rolls-coach|rolls-defender)$/.test(actor.authored.id))
+    .map((actor) => actor.id).sort().join("|"));
+ok(JSON.stringify(savedStepSceneMap("rolls-and-sprawls")) === JSON.stringify([0, 1, 2, 3]) &&
+  rollSprawlPlans.every((plan) => plan && plan.valid &&
+    plan.actors.some((actor) => actor.authored && actor.authored.id === "rolls-coach") &&
+    plan.actors.some((actor) => actor.authored && actor.authored.id === "rolls-defender") &&
+    !plan.beats.some((beat) => /^(?:sprint|run-through|sprawl)$/.test(beat.motionId))) &&
+  new Set(persistentRollActorIds).size === 1,
+  "Rolls & Sprawls saved steps do not keep the persistent coach/defender on their authored scenes");
+
+const rollSprawlExpectedPhases = [
+  ["defensive-ready", "low-toss", "one-arm-save"],
+  ["low-toss", "one-arm-save", "shoulder-roll-right", "floor-recovery",
+    "low-toss", "platform-save", "chest-hip-sprawl"],
+  ["floor-recovery", "defensive-ready"],
+  ["low-toss", "one-arm-save", "shoulder-roll-right", "floor-recovery",
+    "low-toss", "one-arm-save", "shoulder-roll-left", "floor-recovery",
+    "low-toss", "platform-save", "chest-hip-sprawl", "floor-recovery",
+    "low-toss", "platform-save", "chest-hip-sprawl", "floor-recovery"]
+];
+ok(JSON.stringify(rollSprawlPlans.map(semanticP0Phases)) ===
+  JSON.stringify(rollSprawlExpectedPhases),
+  `Rolls & Sprawls saved instructions lost their detailed phase order: ${
+    rollSprawlPlans.map((plan) => semanticP0Phases(plan).join(">")).join(" | ")}`);
+
+const rollSprawlReach = rollSprawlPlans[0];
+ok(rollSprawlReach.contacts.length === 2 &&
+  rollSprawlReach.contacts[0].motionId === "low-toss" &&
+  authoredActorId(rollSprawlReach, rollSprawlReach.contacts[0].performerActorId) === "rolls-coach" &&
+  rollSprawlReach.contacts[1].motionId === "one-arm-save" &&
+  authoredActorId(rollSprawlReach, rollSprawlReach.contacts[1].performerActorId) === "rolls-defender" &&
+  rollSprawlReach.contacts[1].recipientEndpoint &&
+  rollSprawlReach.contacts[1].recipientEndpoint.type === "target",
+  "Rolls & Sprawls first rep does not connect the coach's low toss to the defender's playable one-arm save");
+
+const rollSprawlFloor = rollSprawlPlans[1];
+const rightRollRoute = rollSprawlFloor.routes.find((route) =>
+  route.authored && route.authored.action === "shoulder-roll-right");
+const chestHipRoute = rollSprawlFloor.routes.find((route) =>
+  route.authored && route.authored.action === "chest-hip-sprawl");
+ok(rightRollRoute && rightRollRoute.actorId && rightRollRoute.authored.direction === "right" &&
+  /never roll straight over the spine or neck/i.test(rightRollRoute.authored.safetyCue) &&
+  chestHipRoute && chestHipRoute.actorId &&
+  /head and neck clear/i.test(chestHipRoute.authored.safetyCue) &&
+  /padded chest and hips/i.test(chestHipRoute.authored.bodyCue),
+  "Rolls & Sprawls floor finishes do not carry the authored shoulder-path and chest/hip safety mechanics");
+
+const rollSprawlRecovery = rollSprawlPlans[2];
+ok(semanticP0Phases(rollSprawlRecovery).join(">") ===
+  "floor-recovery>defensive-ready" &&
+  rollSprawlRecovery.beats.every((beat) =>
+    authoredActorId(rollSprawlRecovery, beat.actorId) === "rolls-defender"),
+  "Rolls & Sprawls recovery does not return the same defender from the floor to a ready base");
+
+const rollSprawlMastery = rollSprawlPlans[3];
+const masteryMoveRoutes = rollSprawlMastery.routes.filter((route) => route.type === "move");
+const masteryActions = masteryMoveRoutes.map((route) => route.authored.action);
+ok(["right", "left"].every((direction) =>
+  masteryMoveRoutes.some((route) => route.authored.action === "one-arm-save" &&
+    route.authored.direction === direction) &&
+  masteryMoveRoutes.some((route) => route.authored.action === "platform-save" &&
+    route.authored.direction === direction)) &&
+  ["shoulder-roll-right", "shoulder-roll-left"].every((action) =>
+    masteryActions.includes(action)) &&
+  masteryActions.filter((action) => action === "chest-hip-sprawl").length === 2 &&
+  masteryActions.filter((action) => action === "floor-recovery").length === 4 &&
+  rollSprawlMastery.contacts.filter((contact) => contact.motionId === "low-toss").length === 4 &&
+  !rollSprawlMastery.beats.some((beat) => /^(?:sprint|run-through|sprawl)$/.test(beat.motionId)),
+  "Rolls & Sprawls mastery loop does not show bilateral one-arm/platform saves, both shoulder rolls, two sprawls, and four recoveries");
 
 const reactionSprintPlan = semanticP0Plan("reaction-sprint-starts", 1);
 const serveSprintPlan = semanticP0Plan("serve-and-sprint", 1);

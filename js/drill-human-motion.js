@@ -429,6 +429,13 @@ RR.drillHumanMotion = (function () {
   function actionsFor(drill, text) {
     if (drill && drill.custom && isSelectableAction(drill.motionType)) return [drill.motionType];
     if (drill && drill.custom) return [];
+    // The Rolls & Sprawls learner is always performing one connected floor-
+    // defense progression. Coach toss language and the word "momentum" must
+    // not introduce a running atlas, while the safety-specific subphases live
+    // in the authored choreography (`one-arm-save`, shoulder rolls, sprawl,
+    // and floor recovery). Keep the technique lens on the reviewed defense
+    // atlas for every saved instruction.
+    if (drill && clean(drill.id) === "rolls-and-sprawls") return ["defense"];
     var source = sanitizedText(text);
     var matches = [];
     var special = specialAction(drill, source);

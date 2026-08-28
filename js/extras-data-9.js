@@ -257,28 +257,246 @@ RR.extras = RR.extras || {};
   E["rolls-and-sprawls"] = {
     diagrams: dk.seq(
       {
-        title: "Reach for the low ball", caption: "From a low stance, the coach tosses a low ball to one side. The player steps OUT toward it and reaches to play it with one or two arms. Start with easy, slow tosses.",
-        w: 9, h: 8,
+        title: "1 · Low toss, step and save",
+        caption: "From a low stance, the coach gives an easy low toss outside the defender's right knee. The defender reads the ball, steps OUT before reaching, plays the ball first with a palm-up one-arm platform, and keeps the saved ball high in the middle of the court.",
+        w: 9, h: 10, operation: "rotation",
+        court: [{ x: 0.35, y: 0.45, w: 8.3, h: 9.05 }],
+        lines: [{ y: 4.75 }],
+        zones: [{ x: 3.75, y: 3.65, w: 1.5, h: 1.15, tone: "target", label: "HIGH SAVE" }],
         players: [
-          { x: 4.5, y: 1.8, label: "C", team: "coach", note: "soft low toss" },
-          { x: 4.5, y: 5.8, label: "D", team: "a", note: "ready" }
+          { id: "rolls-coach", x: 4.5, y: 1.45, label: "C", team: "coach", note: "soft low-toss coach" },
+          { id: "rolls-defender", x: 4.5, y: 7.65, label: "D", team: "a", note: "low defensive base" }
         ],
-        paths: [{ from: [4.4, 2.2], to: [6.6, 5.6], kind: "ball", label: "low toss wide", curve: 0.15 }],
-        legend: [{ tone: "coach", text: "Coach" }, { tone: "a", text: "Player" }]
+        paths: [
+          { from: [4.5, 7.65], to: [4.5, 7.65], kind: "move", actor: "rolls-defender",
+            action: "defensive-ready", label: "read from a low base", stepIndices: [0],
+            sequenceOrder: 0, hideLabel: true,
+            bodyCue: "Hips below shoulders, weight on the front half of the feet, hands separated and available." },
+          { from: [4.5, 1.85], via: [[5.25, 3.65], [5.8, 5.35]], to: [6.05, 7.1],
+            kind: "ball", fromActor: "rolls-coach", toActor: "rolls-defender",
+            action: "low-toss", label: "soft low-toss · right", direction: "right",
+            stepIndices: [0], sequenceOrder: 1, hideLabel: true,
+            coachCue: "Toss below knee height and just outside the defender's normal platform range; accuracy before speed." },
+          { from: [4.5, 7.65], via: [[5.2, 7.45]], to: [6.05, 7.1], kind: "move",
+            actor: "rolls-defender", action: "one-arm-save", label: "one-arm-save · right",
+            direction: "right", stepIndices: [0], sequenceOrder: 2,
+            simultaneousGroup: "rolls-step-one-contact", hideLabel: true,
+            bodyCue: "Push from the left foot, place the right foot outside the ball line, and present a palm-up forearm before the body descends.",
+            safetyCue: "Play the ball before touching the floor; keep the reaching elbow soft instead of locking it." },
+          { from: [6.05, 7.1], via: [[5.7, 5.75]], to: [4.5, 4.2], kind: "ball",
+            fromActor: "rolls-defender", toEndpoint: { type: "target", label: "high middle save" },
+            action: "one-arm-save", label: "one-arm-save · high middle", direction: "right",
+            stepIndices: [0], sequenceOrder: 2,
+            simultaneousGroup: "rolls-step-one-contact", hideLabel: true,
+            bodyCue: "Contact the lower half of the ball on the broad forearm surface and lift it high toward middle court." }
+        ],
+        motionChains: [[1, 3]],
+        contacts: [
+          { pathIndex: 1, actor: "rolls-coach", toActor: "rolls-defender", action: "low-toss", order: 1 },
+          { pathIndex: 3, actor: "rolls-defender", action: "one-arm-save", order: 2 }
+        ],
+        legend: [
+          { tone: "coach", text: "Coach · accurate low toss" },
+          { tone: "a", text: "Defender · step, reach, save" },
+          { tone: "target", text: "Playable high-middle save" }
+        ]
       },
       {
-        title: "Roll or sprawl, then up", caption: "The player lets the momentum carry into a ROLL (over the shoulder) or a SPRAWL (chest to the floor) to reach the ball, then pops right back up to ready. Practice both directions and both moves.",
-        w: 9, h: 8,
+        title: "2 · Ball first, then roll or sprawl",
+        caption: "After playing the ball, the defender follows the existing momentum into one of two safe finishes: a diagonal shoulder roll across the upper back — never the spine or neck — or a long chest-and-hip sprawl with the head and neck clear. The animation demonstrates both finishes as separate controlled repetitions.",
+        w: 9, h: 10, operation: "rotation",
+        court: [{ x: 0.35, y: 0.45, w: 8.3, h: 9.05 }],
+        lines: [{ y: 4.75 }],
+        zones: [{ x: 3.75, y: 3.65, w: 1.5, h: 1.15, tone: "target", label: "HIGH SAVE" }],
         players: [
-          { x: 4.5, y: 5.8, label: "D", team: "a", note: "reached out" },
-          { x: 6.6, y: 6.4, label: "", team: "n", note: "roll/sprawl out" }
+          { id: "rolls-coach", x: 4.5, y: 1.45, label: "C", team: "coach", note: "soft low-toss coach" },
+          { id: "rolls-defender", x: 4.5, y: 7.65, label: "D", team: "a", note: "performs both safe finishes" }
         ],
-        paths: [{
-          from: [4.7, 5.9], via: [[6.4, 6.3]], to: [5.5, 5.2],
-          kind: "move", label: "extend & roll → pop up", curve: 0,
-          playerIndex: 0
-        }],
-        legend: [{ tone: "a", text: "Player" }, { tone: "n", text: "Floor move" }]
+        paths: [
+          { from: [4.5, 1.85], via: [[5.25, 3.65], [5.8, 5.35]], to: [6.0, 7.05],
+            kind: "ball", fromActor: "rolls-coach", toActor: "rolls-defender",
+            action: "low-toss", label: "soft low-toss · roll rep", direction: "right",
+            stepIndices: [1], sequenceOrder: 0, hideLabel: true },
+          { from: [4.5, 7.65], to: [6.0, 7.05], kind: "move", actor: "rolls-defender",
+            action: "one-arm-save", label: "one-arm-save before roll", direction: "right",
+            stepIndices: [1], sequenceOrder: 1,
+            simultaneousGroup: "rolls-shoulder-contact", hideLabel: true,
+            bodyCue: "Reach outside the knee and make forearm contact while the shoulders are still above the floor." },
+          { from: [6.0, 7.05], via: [[5.7, 5.7]], to: [4.5, 4.2], kind: "ball",
+            fromActor: "rolls-defender", toEndpoint: { type: "target", label: "high middle save" },
+            action: "one-arm-save", label: "save before the roll", direction: "right",
+            stepIndices: [1], sequenceOrder: 1,
+            simultaneousGroup: "rolls-shoulder-contact", hideLabel: true },
+          { from: [6.0, 7.05], via: [[6.35, 7.45], [6.15, 7.9]], to: [5.4, 8.0],
+            kind: "move", actor: "rolls-defender", action: "shoulder-roll-right",
+            label: "shoulder-roll-right", direction: "right", stepIndices: [1],
+            sequenceOrder: 2, hideLabel: true,
+            bodyCue: "Tuck the chin away from contact, round the right shoulder, and travel diagonally from the shoulder blade toward the opposite hip.",
+            safetyCue: "Cross the upper back diagonally — never roll straight over the spine or neck." },
+          { from: [5.4, 8.0], via: [[5.0, 7.7]], to: [4.5, 7.65], kind: "move",
+            actor: "rolls-defender", action: "floor-recovery", label: "balanced reset between reps",
+            stepIndices: [1], sequenceOrder: 3, hideLabel: true,
+            bodyCue: "Plant the near foot, draw a knee under the hips, and regain the low base while still facing the court." },
+          { from: [4.5, 1.85], via: [[4.5, 3.7], [4.5, 5.25]], to: [4.5, 6.55],
+            kind: "ball", fromActor: "rolls-coach", toActor: "rolls-defender",
+            action: "low-toss", label: "soft low-toss · sprawl rep", direction: "forward",
+            stepIndices: [1], sequenceOrder: 4, hideLabel: true },
+          { from: [4.5, 7.65], to: [4.5, 6.55], kind: "move", actor: "rolls-defender",
+            action: "platform-save", label: "platform-save before sprawl", direction: "forward",
+            stepIndices: [1], sequenceOrder: 5,
+            simultaneousGroup: "rolls-sprawl-contact", hideLabel: true,
+            bodyCue: "Join the platform early, reach it beyond the knees, and contact before the chest descends." },
+          { from: [4.5, 6.55], via: [[4.5, 5.45]], to: [4.5, 4.2], kind: "ball",
+            fromActor: "rolls-defender", toEndpoint: { type: "target", label: "high middle save" },
+            action: "platform-save", label: "platform-save · high middle", direction: "forward",
+            stepIndices: [1], sequenceOrder: 5,
+            simultaneousGroup: "rolls-sprawl-contact", hideLabel: true },
+          { from: [4.5, 6.55], via: [[4.5, 6.15]], to: [4.5, 5.75], kind: "move",
+            actor: "rolls-defender", action: "chest-hip-sprawl", label: "chest-hip-sprawl",
+            direction: "forward", stepIndices: [1], sequenceOrder: 6, hideLabel: true,
+            bodyCue: "Reach long after contact, keep the chin and eyes up, and lower the padded chest and hips in one controlled slide.",
+            safetyCue: "Keep the head and neck clear; do not take the landing on the spine, knees, or locked wrists." }
+        ],
+        motionChains: [[0, 2], [5, 7]],
+        contacts: [
+          { pathIndex: 0, actor: "rolls-coach", toActor: "rolls-defender", action: "low-toss", order: 1 },
+          { pathIndex: 2, actor: "rolls-defender", action: "one-arm-save", order: 2 },
+          { pathIndex: 5, actor: "rolls-coach", toActor: "rolls-defender", action: "low-toss", order: 5 },
+          { pathIndex: 7, actor: "rolls-defender", action: "platform-save", order: 6 }
+        ],
+        legend: [
+          { tone: "coach", text: "Coach · one controlled toss per repetition" },
+          { tone: "a", text: "Defender · ball first, safe floor finish second" },
+          { tone: "target", text: "Every save stays playable" }
+        ]
+      },
+      {
+        title: "3 · Recover without losing the court",
+        caption: "The defender completes the floor move, plants the nearest foot, brings one knee under the hips, and rises through a balanced base instead of turning away. The recovery ends in the same low ready stance, facing the coach and available for the next ball.",
+        w: 9, h: 10, operation: "rotation",
+        court: [{ x: 0.35, y: 0.45, w: 8.3, h: 9.05 }],
+        lines: [{ y: 4.75 }],
+        players: [
+          { id: "rolls-coach", x: 4.5, y: 1.45, label: "C", team: "coach", note: "holds the next ball" },
+          { id: "rolls-defender", x: 5.4, y: 8.0, label: "D", team: "a", note: "finishes on the floor, then recovers" }
+        ],
+        paths: [
+          { from: [5.4, 8.0], via: [[5.15, 7.75], [4.85, 7.6]], to: [4.5, 7.65],
+            kind: "move", actor: "rolls-defender", action: "floor-recovery",
+            label: "floor-recovery", stepIndices: [2], sequenceOrder: 0, hideLabel: true,
+            bodyCue: "Plant the near foot, slide a knee underneath the hips, push the floor away, and keep the chest facing the coach.",
+            safetyCue: "Win balance before accelerating; never wrench the neck or twist up from the spine." },
+          { from: [4.5, 7.65], to: [4.5, 7.65], kind: "move", actor: "rolls-defender",
+            action: "defensive-ready", label: "ready for the next ball", stepIndices: [2],
+            sequenceOrder: 1, hideLabel: true,
+            bodyCue: "Finish low, stopped, weight forward, and able to move in either direction." }
+        ],
+        legend: [
+          { tone: "coach", text: "Coach · waits until the defender is balanced" },
+          { tone: "a", text: "Defender · floor → feet → ready" }
+        ]
+      },
+      {
+        title: "4 · Four-corner mastery loop",
+        caption: "Practice four complete controlled repetitions without changing athlete identity: right one-arm save into a right shoulder roll, left one-arm save into a left shoulder roll, right two-arm platform into a chest-and-hip sprawl, then the mirrored left platform sprawl. Every repetition begins with a soft low toss, plays the ball before floor contact, and recovers to ready.",
+        w: 9, h: 10, operation: "rotation",
+        court: [{ x: 0.35, y: 0.45, w: 8.3, h: 9.05 }],
+        lines: [{ y: 4.75 }],
+        zones: [{ x: 3.75, y: 3.65, w: 1.5, h: 1.15, tone: "target", label: "HIGH SAVE" }],
+        players: [
+          { id: "rolls-coach", x: 4.5, y: 1.45, label: "C", team: "coach", note: "alternates four soft low tosses" },
+          { id: "rolls-defender", x: 4.5, y: 7.65, label: "D", team: "a", note: "same defender for every repetition" }
+        ],
+        paths: [
+          { from: [4.5, 1.85], to: [6.0, 7.05], kind: "ball", fromActor: "rolls-coach", toActor: "rolls-defender",
+            action: "low-toss", label: "low-toss · rep 1 right", direction: "right", stepIndices: [3], sequenceOrder: 0, hideLabel: true,
+            coachCue: "Rep 1: soft and low outside the right knee." },
+          { from: [4.5, 7.65], to: [6.0, 7.05], kind: "move", actor: "rolls-defender", action: "one-arm-save",
+            label: "one-arm-save · right", direction: "right", stepIndices: [3], sequenceOrder: 1,
+            simultaneousGroup: "rolls-loop-r1-contact", hideLabel: true,
+            bodyCue: "Step right, present the right forearm palm-up, contact first, then follow the ball." },
+          { from: [6.0, 7.05], to: [4.5, 4.2], kind: "ball", fromActor: "rolls-defender",
+            toEndpoint: { type: "target", label: "high middle save" }, action: "one-arm-save",
+            label: "one-arm-save · playable", direction: "right", stepIndices: [3], sequenceOrder: 1,
+            simultaneousGroup: "rolls-loop-r1-contact", hideLabel: true },
+          { from: [6.0, 7.05], via: [[6.35, 7.45]], to: [5.4, 8.0], kind: "move", actor: "rolls-defender",
+            action: "shoulder-roll-right", label: "shoulder-roll-right", direction: "right", stepIndices: [3], sequenceOrder: 2, hideLabel: true,
+            bodyCue: "Round across the right shoulder blade toward the opposite hip.",
+            safetyCue: "Diagonal upper-back path only — never the spine or neck." },
+          { from: [5.4, 8.0], to: [4.5, 7.65], kind: "move", actor: "rolls-defender", action: "floor-recovery",
+            label: "floor-recovery · reset 1", stepIndices: [3], sequenceOrder: 3, hideLabel: true },
+
+          { from: [4.5, 1.85], to: [3.0, 7.05], kind: "ball", fromActor: "rolls-coach", toActor: "rolls-defender",
+            action: "low-toss", label: "low-toss · rep 2 left", direction: "left", stepIndices: [3], sequenceOrder: 4, hideLabel: true,
+            coachCue: "Rep 2: mirror the same soft toss outside the left knee." },
+          { from: [4.5, 7.65], to: [3.0, 7.05], kind: "move", actor: "rolls-defender", action: "one-arm-save",
+            label: "one-arm-save · left", direction: "left", stepIndices: [3], sequenceOrder: 5,
+            simultaneousGroup: "rolls-loop-r2-contact", hideLabel: true,
+            bodyCue: "Step left, present the left forearm palm-up, and keep the shoulder behind the ball." },
+          { from: [3.0, 7.05], to: [4.5, 4.2], kind: "ball", fromActor: "rolls-defender",
+            toEndpoint: { type: "target", label: "high middle save" }, action: "one-arm-save",
+            label: "one-arm-save · playable", direction: "left", stepIndices: [3], sequenceOrder: 5,
+            simultaneousGroup: "rolls-loop-r2-contact", hideLabel: true },
+          { from: [3.0, 7.05], via: [[2.65, 7.45]], to: [3.6, 8.0], kind: "move", actor: "rolls-defender",
+            action: "shoulder-roll-left", label: "shoulder-roll-left", direction: "left", stepIndices: [3], sequenceOrder: 6, hideLabel: true,
+            bodyCue: "Round across the left shoulder blade toward the opposite hip.",
+            safetyCue: "Diagonal upper-back path only — never the spine or neck." },
+          { from: [3.6, 8.0], to: [4.5, 7.65], kind: "move", actor: "rolls-defender", action: "floor-recovery",
+            label: "floor-recovery · reset 2", stepIndices: [3], sequenceOrder: 7, hideLabel: true },
+
+          { from: [4.5, 1.85], to: [5.55, 6.55], kind: "ball", fromActor: "rolls-coach", toActor: "rolls-defender",
+            action: "low-toss", label: "low-toss · rep 3 right-front", direction: "right", stepIndices: [3], sequenceOrder: 8, hideLabel: true,
+            coachCue: "Rep 3: short right-front toss for a two-arm platform." },
+          { from: [4.5, 7.65], to: [5.55, 6.55], kind: "move", actor: "rolls-defender", action: "platform-save",
+            label: "platform-save · right-front", direction: "right", stepIndices: [3], sequenceOrder: 9,
+            simultaneousGroup: "rolls-loop-r3-contact", hideLabel: true,
+            bodyCue: "Join both forearms before contact and reach the platform beyond the knees." },
+          { from: [5.55, 6.55], to: [4.5, 4.2], kind: "ball", fromActor: "rolls-defender",
+            toEndpoint: { type: "target", label: "high middle save" }, action: "platform-save",
+            label: "platform-save · playable", direction: "right", stepIndices: [3], sequenceOrder: 9,
+            simultaneousGroup: "rolls-loop-r3-contact", hideLabel: true },
+          { from: [5.55, 6.55], to: [5.8, 5.75], kind: "move", actor: "rolls-defender", action: "chest-hip-sprawl",
+            label: "chest-hip-sprawl · right", direction: "right", stepIndices: [3], sequenceOrder: 10, hideLabel: true,
+            bodyCue: "Contact first, reach long, then lower the padded chest and hips together with the chin clear.",
+            safetyCue: "Do not brace on locked wrists, knees, spine, or neck." },
+          { from: [5.8, 5.75], to: [4.5, 7.65], kind: "move", actor: "rolls-defender", action: "floor-recovery",
+            label: "floor-recovery · reset 3", stepIndices: [3], sequenceOrder: 11, hideLabel: true },
+
+          { from: [4.5, 1.85], to: [3.45, 6.55], kind: "ball", fromActor: "rolls-coach", toActor: "rolls-defender",
+            action: "low-toss", label: "low-toss · rep 4 left-front", direction: "left", stepIndices: [3], sequenceOrder: 12, hideLabel: true,
+            coachCue: "Rep 4: mirror the short platform toss to left-front." },
+          { from: [4.5, 7.65], to: [3.45, 6.55], kind: "move", actor: "rolls-defender", action: "platform-save",
+            label: "platform-save · left-front", direction: "left", stepIndices: [3], sequenceOrder: 13,
+            simultaneousGroup: "rolls-loop-r4-contact", hideLabel: true,
+            bodyCue: "Move the feet first, then present a quiet two-arm platform under the ball." },
+          { from: [3.45, 6.55], to: [4.5, 4.2], kind: "ball", fromActor: "rolls-defender",
+            toEndpoint: { type: "target", label: "high middle save" }, action: "platform-save",
+            label: "platform-save · playable", direction: "left", stepIndices: [3], sequenceOrder: 13,
+            simultaneousGroup: "rolls-loop-r4-contact", hideLabel: true },
+          { from: [3.45, 6.55], to: [3.2, 5.75], kind: "move", actor: "rolls-defender", action: "chest-hip-sprawl",
+            label: "chest-hip-sprawl · left", direction: "left", stepIndices: [3], sequenceOrder: 14, hideLabel: true,
+            bodyCue: "Contact first, reach long, then lower the padded chest and hips together with the chin clear.",
+            safetyCue: "Keep the head and neck clear and avoid a locked-arm landing." },
+          { from: [3.2, 5.75], to: [4.5, 7.65], kind: "move", actor: "rolls-defender", action: "floor-recovery",
+            label: "floor-recovery · ready", stepIndices: [3], sequenceOrder: 15, hideLabel: true,
+            bodyCue: "Draw a knee under the hips, rise facing the coach, and finish low and stopped." }
+        ],
+        motionChains: [[0, 2], [5, 7], [10, 12], [15, 17]],
+        contacts: [
+          { pathIndex: 0, actor: "rolls-coach", toActor: "rolls-defender", action: "low-toss", order: 1 },
+          { pathIndex: 2, actor: "rolls-defender", action: "one-arm-save", order: 2 },
+          { pathIndex: 5, actor: "rolls-coach", toActor: "rolls-defender", action: "low-toss", order: 5 },
+          { pathIndex: 7, actor: "rolls-defender", action: "one-arm-save", order: 6 },
+          { pathIndex: 10, actor: "rolls-coach", toActor: "rolls-defender", action: "low-toss", order: 9 },
+          { pathIndex: 12, actor: "rolls-defender", action: "platform-save", order: 10 },
+          { pathIndex: 15, actor: "rolls-coach", toActor: "rolls-defender", action: "low-toss", order: 13 },
+          { pathIndex: 17, actor: "rolls-defender", action: "platform-save", order: 14 }
+        ],
+        legend: [
+          { tone: "coach", text: "Coach · right / left / right-front / left-front" },
+          { tone: "a", text: "One defender · same identity for all four reps" },
+          { tone: "target", text: "Ball first · playable save · safe floor finish · recover" }
+        ]
       }
     )
   };
