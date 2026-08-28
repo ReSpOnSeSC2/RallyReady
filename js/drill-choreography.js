@@ -116,7 +116,7 @@ RR.drillChoreography = (function () {
     pattern("shoulder-roll-right", /\bshoulder[- ]roll[- ]right\b|\bright[- ]shoulder\s+roll\b/gi, -52),
     pattern("shoulder-roll-left", /\bshoulder[- ]roll[- ]left\b|\bleft[- ]shoulder\s+roll\b/gi, -52),
     pattern("chest-hip-sprawl", /\bchest[- ](?:and[- ]|&[- ]?)?hip\s+sprawl\b|\bchest[- ]hip[- ]sprawl\b/gi, -52),
-    pattern("one-arm-save", /\bone[- ]arm\s+(?:floor\s+)?save\b/gi, -52),
+    pattern("one-arm-save", /\bone[- ]arm\s+(?:floor\s+)?save\b|\bpancake(?:s|d|ing)?\b/gi, -52),
     pattern("platform-save", /\b(?:two[- ]arm\s+)?platform\s+save\b/gi, -52),
     pattern("floor-recovery", /\bfloor[- ](?:to[- ]ready\s+)?recovery\b/gi, -52),
     pattern("low-toss", /\b(?:soft\s+)?low[- ]toss\b/gi, -52),
@@ -143,7 +143,7 @@ RR.drillChoreography = (function () {
     pattern("box", /\b(?:on|onto|off|from|facing)\s+(?:a|the)\s+(?:(?:low|stable|knee[- ]height|plyo(?:metric)?)\s+)?box\b|\b(?:low|stable|knee[- ]height|plyo(?:metric)?)\s+box\b|\bbox\s+or\s+step\b|\bstep[- ]?ups?\b|\bdepth\s+(?:drop|jump)s?\b/gi, -34),
     pattern("foam", /\bfoam\s*(?:roller|roll|rolling)\b|\broll\s+(?:(?:the|your)\s+)?(?:quads?|calves|upper back|legs?|thighs?|outside\s+of\s+the\s+hip)\b/gi, -34),
     pattern("stretch", /\bstretch(?:es|ed|ing)?\b|\bhamstring\b|\bhip[- ]flexor\b|\bfigure[- ]?four\b|\bcalf\s+release\b/gi, -30),
-    pattern("sprawl", /\bsprawl(?:s|ed|ing)?\b|\bpancake(?:s|d|ing)?\b|\bdiv(?:e|es|ed|ing)\b|\bshoulder\s+roll\b|\bemergency\s+save\b/gi, -28),
+    pattern("sprawl", /\bsprawl(?:s|ed|ing)?\b|\bdiv(?:e|es|ed|ing)\b|\bshoulder\s+roll\b|\bemergency\s+save\b/gi, -28),
     pattern("run-through", /\brun(?:s|ning)?[- ]through(?:\s+(?:the\s+)?ball|\s+save)?\b|\b(?:sprint(?:s|ed|ing)?|explod(?:e|es|ed|ing))\s+forward\s+to\s+play\s+it\s+up\b|\bexplod(?:e|es|ed|ing)\s+forward\s+when\s+they\s+read\s+a\s+tip\b/gi, -27),
     pattern("feed", /\b(?:toss(?:es|ed|ing)?|feed(?:s|ed|ing)?)\b/gi, -26),
     pattern("block", /\bblock(?:s|ed|ing)?\b|\bpress(?:es|ed|ing)?\s+(?:both\s+)?hands?\b|\bseal(?:s|ed|ing)?\s+(?:the\s+)?net\b|\bblockers?\b[^.]{0,48}\b(?:jumps?|press(?:es|ed|ing)?|seal(?:s|ed|ing)?)\b/gi, -26),
@@ -510,7 +510,7 @@ RR.drillChoreography = (function () {
       return ["pass"];
     }
     if (id === "pancake-and-recover" && /practice both hands|toss the ball farther/.test(source)) {
-      return ["feed", "sprawl"];
+      return ["feed", "one-arm-save"];
     }
     if (id === "pursuit-emergency-defense") {
       if (/coach throws a wild ball/.test(source)) return ["feed"];
@@ -1040,7 +1040,7 @@ RR.drillChoreography = (function () {
         }
         return ids;
       }
-      if (id === "pancake-and-recover") return ["sprawl"];
+      if (id === "pancake-and-recover") return ["one-arm-save"];
       if (id === "reach-over-the-net") return ["block"];
       if (id === "bodyweight-shoulder-activation") return ["warmup"];
       if (id === "passing-box-drill") return ["pass"];
@@ -1722,8 +1722,8 @@ RR.drillChoreography = (function () {
       "box-hit": /\b(?:hitter|outside)\b|^h(?:\s|$)|^oh(?:\s|$)/,
       block: /\bblocker\b|^b(?:\s|$)|\bblocks?\b/,
       dig: /\b(?:digger|defender|libero|floor\s+defen[cs]e|covers?\s+low|cover\s+player)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
-      sprawl: /\b(?:digger|defender|libero|diver|pancake|sprawl)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
-      "one-arm-save": /\b(?:digger|defender|libero|floor\s+defen[cs]e|one[- ]arm)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
+      sprawl: /\b(?:digger|defender|libero|diver|sprawl)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
+      "one-arm-save": /\b(?:digger|defender|libero|floor\s+defen[cs]e|one[- ]arm|pancake)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
       "platform-save": /\b(?:digger|defender|libero|platform|floor\s+defen[cs]e)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
       "shoulder-roll-right": /\b(?:digger|defender|libero|right\s+shoulder|roll)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
       "shoulder-roll-left": /\b(?:digger|defender|libero|left\s+shoulder|roll)\b|^d\d*(?:\s|$)|^l(?:\s|$)/,
@@ -1792,7 +1792,7 @@ RR.drillChoreography = (function () {
         !/keep tosses out|stage is all about|stop the moment|quality high/.test(sanitizedMotionText(instruction).toLowerCase())) {
       preferred = "mat-defense";
     }
-    if (id === "pancake-and-recover") preferred = "sprawl";
+    if (id === "pancake-and-recover") preferred = "one-arm-save";
 
     if (preferred && (actorMotionScore(sourceActor, preferred, drill) ||
         actorMotionScore(recipientActor, preferred, drill) ||
@@ -2330,7 +2330,8 @@ RR.drillChoreography = (function () {
     if (/\bapproach|penultimate|take[- ]?off\b/.test(label)) return "approach-jump";
     if (/\b(?:commit|press|seal|block|close\s+the\s+block)\b/.test(label)) return "block";
     if (/\b(?:ladder|quick\s+feet)\b/.test(label)) return "ladder";
-    if (/\b(?:sprawl|pancake|div(?:e|ing)|roll\s*(?:out|and|\u2192)|reach\s*&\s*slide)\b/.test(label)) {
+    if (/\bpancake(?:s|d|ing)?\b/.test(label)) return "one-arm-save";
+    if (/\b(?:sprawl|div(?:e|ing)|roll\s*(?:out|and|\u2192)|reach\s*&\s*slide)\b/.test(label)) {
       return clean(drill && drill.id).indexOf("mat-") === 0 ? "mat-defense" : "sprawl";
     }
     // A run-through is a volleyball contact performed while moving through a
@@ -2597,6 +2598,21 @@ RR.drillChoreography = (function () {
       }
     }
 
+    if (id === "pancake-and-recover") {
+      if (/from a low position[^.]*coach tosses/.test(source)) {
+        return { ids: ["feed"] };
+      }
+      if (/reaches out[^.]*one flat hand[^.]*bounce up off/.test(source)) {
+        return { ids: ["feed", "one-arm-save"] };
+      }
+      if (/pop right back up[^.]*ready stance/.test(source)) {
+        return { ids: ["floor-recovery", "defensive-ready"] };
+      }
+      if (/practice both hands[^.]*toss the ball farther/.test(source)) {
+        return { ids: ["feed", "one-arm-save", "floor-recovery"] };
+      }
+    }
+
     if (id === "pursuit-emergency-defense") {
       if (/first player chases it down[^.]*plays it up/.test(source)) {
         return { ids: ["sprint", "dig"], preferFirst: { dig: 1 } };
@@ -2803,6 +2819,23 @@ RR.drillChoreography = (function () {
   function buildBeats(drill, routes, contacts, actors, instruction, operation, options) {
     options = options || {};
     var events = buildEvents(drill, routes, contacts, actors, instruction);
+    var instructionSource = sanitizedMotionText(instruction).toLowerCase();
+    var usesAgilityLadder = list(drill && drill.equipment).some(function (item) {
+      return clean(item && typeof item === "object" ? (item.label || item.type) : item).toLowerCase() ===
+        "agility ladder";
+    });
+    var isLadderPattern = /\b(?:ladder|rungs?|boxes|in-in|out-out|icky shuffle|hopscotch)\b/.test(instructionSource);
+    var isSprintExit = /\b(?:finish|last box)[^.]*\bsprint|\bsprint[^.]*\b(?:out|last box)\b/.test(instructionSource);
+    if (usesAgilityLadder && isLadderPattern && !isSprintExit) {
+      // The authored path is the athlete travelling through the ladder. Bind
+      // that route to the quick-feet clip itself; a generic sprint followed by
+      // stationary ladder feet teaches the exact opposite of the saved step.
+      events.forEach(function (event) {
+        if (event.motionId !== "sprint" || !event.routeId) return;
+        event.motionId = "ladder";
+        event.label = MOTIONS.ladder.label;
+      });
+    }
     var instructionIds = exactMotionIds(instruction, { drill: drill });
     if (!instructionIds.length) instructionIds = ["admin"];
     var showFullScene = options.showFullScene === true;

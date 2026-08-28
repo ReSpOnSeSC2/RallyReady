@@ -2028,6 +2028,14 @@ RR.drillAnimation = (function () {
         RR.coachCam3D.isEligible(drill) && RR.coachCam3D.figure) {
       return RR.coachCam3D.figure(drill);
     }
+    // Every other bundled drill uses the shared Blender production library.
+    // Its compact compiler reads the same factual people, routes, contacts,
+    // equipment, and saved-step text as this established court renderer.
+    if (RR.coachCamLibrary3D && RR.coachCamLibrary3D.isEligible &&
+        RR.coachCamLibrary3D.isEligible(drill) && RR.coachCamLibrary3D.figure) {
+      var coachCam = RR.coachCamLibrary3D.figure(drill);
+      if (coachCam) return coachCam;
+    }
     var specs = scenesFor(drill);
     var humanApi = RR.drillHumanMotion;
     var program = humanApi && humanApi.programFor ? humanApi.programFor(drill, specs) : [];

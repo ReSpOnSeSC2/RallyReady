@@ -733,7 +733,7 @@ const defensiveSemanticCases = [
   ["The defender digs the ball high to the middle.", ["dig"]],
   ["The defender stops and digs the down-ball high to the middle.", ["dig"]],
   ["The defender runs through the short ball and plays it up.", ["run-through"]],
-  ["The defender pancakes the ball and sprawls safely.", ["sprawl"]],
+  ["The defender pancakes the ball and sprawls safely.", ["one-arm-save"]],
   ["The athlete sprints five yards to the cone.", ["sprint"]]
 ];
 const defensiveSemanticFailures = defensiveSemanticCases.filter(([instruction, expected]) =>
@@ -834,7 +834,8 @@ ok(boundRunThroughBeat &&
 
 const pancakeSavePlan = semanticP0Plan("pancake-and-recover", 1);
 const rollSprawlPlan = semanticP0Plan("rolls-and-sprawls", 1);
-ok(pancakeSavePlan.beats.some((beat) => beat.motionId === "sprawl") &&
+ok(pancakeSavePlan.beats.some((beat) => beat.motionId === "one-arm-save") &&
+  !pancakeSavePlan.beats.some((beat) => beat.motionId === "sprawl") &&
   !pancakeSavePlan.beats.some((beat) => /^(?:sprint|run-through)$/.test(beat.motionId)) &&
   rollSprawlPlan.beats.some((beat) => beat.motionId === "shoulder-roll-right") &&
   rollSprawlPlan.beats.some((beat) => beat.motionId === "chest-hip-sprawl") &&

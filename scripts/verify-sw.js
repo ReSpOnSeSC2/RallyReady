@@ -177,6 +177,7 @@ ok(!!inShell[defensivePerformanceRel], defensivePerformanceRel + " is precached 
 // ---- 7. CoachCam's lazy runtime remains completely same-origin + offline ----
 const coachCamAssets = [
   "models/coachcam/rolls-and-sprawls.glb",
+  "models/coachcam/coachcam-library.glb",
   "vendor/three/three.core.min.js",
   "vendor/three/three.module.min.js",
   "vendor/three/addons/loaders/GLTFLoader.js",
@@ -196,6 +197,16 @@ if (fs.existsSync(coachCamGlb)) {
     "Rolls and Sprawls has a valid binary glTF signature");
   ok(bytes.readUInt32LE(4) === 2, "Rolls and Sprawls uses glTF 2.0");
   ok(bytes.readUInt32LE(8) === bytes.length, "Rolls and Sprawls GLB declares its exact file length");
+}
+const coachCamLibraryGlb = path.join(ROOT, "models", "coachcam", "coachcam-library.glb");
+if (fs.existsSync(coachCamLibraryGlb)) {
+  const bytes = fs.readFileSync(coachCamLibraryGlb);
+  ok(bytes.subarray(0, 4).toString("ascii") === "glTF",
+    "shared CoachCam library has a valid binary glTF signature");
+  ok(bytes.readUInt32LE(4) === 2, "shared CoachCam library uses glTF 2.0");
+  ok(bytes.readUInt32LE(8) === bytes.length,
+    "shared CoachCam library GLB declares its exact file length");
+  ok(bytes.length < 3 * 1024 * 1024, "shared CoachCam library remains below 3 MiB");
 }
 
 console.log("──────────────────────────────────────────");
