@@ -53,6 +53,11 @@ function authoredActorId(plan, planActorId) {
   return actor && actor.authored && (actor.authored.id || actor.authored.actor || actor.authored.playerId) || null;
 }
 
+function animatedActorCount(beats) {
+  return new Set((beats || []).filter((beat) => beat && beat.actorId && beat.motion &&
+    beat.motion.animate !== false).map((beat) => beat.actorId)).size;
+}
+
 function generatedPlan(drill, scene, instruction, sceneIndex, stepIndex) {
   return RR.drillChoreography.planFor(drill, scene, instruction, {
     sceneIndex,
@@ -446,8 +451,11 @@ RR.drills.forEach((drill) => {
         `${drill.id} walkthrough ${itemIndex + 1} beat ${beatIndex + 1}: movement actor is not bound to its route`);
       if (beat.actorId && beat.motion && beat.motion.transparent === false) {
         opaqueCourtMotionCount++;
+        const animationClassIsCorrect = beat.motion.animate === false
+          ? !markup.includes("dam-scene-sprite is-performing")
+          : markup.includes("dam-scene-sprite is-performing");
         ok(markup.includes("dam-scene-person--studio") &&
-          markup.includes("dam-scene-sprite is-performing") &&
+          animationClassIsCorrect &&
           markup.includes(beat.motion.asset),
           `${drill.id} walkthrough ${itemIndex + 1} beat ${beatIndex + 1}: opaque full-body motion fell back to a static roster`);
       }
@@ -459,10 +467,9 @@ RR.drills.forEach((drill) => {
       parallelGroupCount++;
       const markup = RR.drillAnimation.renderSvg(spec,
         `parallel-${drill.id}-${itemIndex}-${beatIndex}`, facts, plan, group);
-      const activeActors = new Set(group.map((item) => item.actorId).filter(Boolean));
       const activeTracks = new Set(group.filter((item) => item.contactId)
         .map((item) => item.trackId || item.contactId));
-      ok((markup.match(/dam-scene-sprite is-performing/g) || []).length === activeActors.size &&
+      ok((markup.match(/dam-scene-sprite is-performing/g) || []).length === animatedActorCount(group) &&
         (markup.match(/class="dam-flight [^"]*dam-live-ball"/g) || []).length === activeTracks.size &&
         markup.includes(`data-active-beats="${group.length}"`),
         `${drill.id} walkthrough ${itemIndex + 1}: simultaneous planner beats do not render every athlete and ball together`);
@@ -515,6 +522,75 @@ ok((sharedTrackMarkup.match(/dam-scene-sprite is-performing/g) || []).length ===
   (sharedTrackMarkup.match(/data-track-id="independent-feed"/g) || []).length === 1 &&
   sharedTrackMarkup.includes('data-active-actors="2"'),
   "parallel renderer duplicates one athlete/shared-chain ball or drops an independent ball track");
+
+const broadcastScene = {
+  w: 9, h: 8, court: [{ x: 0, y: 0.5, w: 9, h: 7 }], net: 4,
+  players: [],
+  paths: [
+    { from: [2, 6], to: [3, 4], kind: "move", actor: "near", label: "release" },
+    { from: [2, 6], to: [7, 2], kind: "ball", label: "dig" },
+    { from: [7, 2], to: [6, 3], kind: "move", actor: "far", label: "reset" }
+  ]
+};
+const broadcastPlan = {
+  id: "broadcast-layer-audit", height: 8,
+  actors: [
+    { id: "near", x: 2, y: 6, team: "a", role: "digger" },
+    { id: "far", x: 7, y: 2, team: "b", role: "target" }
+  ],
+  routes: [
+    { id: "route-1", sourcePathIndex: 0, type: "move", actorId: "near",
+      from: [2, 6], via: [], to: [3, 4] },
+    { id: "route-2", sourcePathIndex: 1, type: "ball", actorId: null,
+      from: [2, 6], via: [], to: [7, 2] },
+    { id: "route-3", sourcePathIndex: 2, type: "move", actorId: "far",
+      from: [7, 2], via: [], to: [6, 3] }
+  ],
+  contacts: [{ id: "contact-1", routeId: "route-2", chainId: "rally",
+    from: [2, 6], via: [], to: [7, 2], kind: "ball", object: "volleyball",
+    sourceActorId: "near", recipientActorId: "far" }],
+  beats: [], equipment: []
+};
+const broadcastBeats = [
+  { id: "move-beat", actorId: "near", routeId: "route-1", motionId: "sprint",
+    motion: RR.drillChoreography.motions.sprint, durationMs: 1000 },
+  { id: "ball-beat", actorId: "near", routeId: "route-2", contactId: "contact-1",
+    trackId: "rally", motionId: "pass", motion: RR.drillChoreography.motions.pass,
+    durationMs: 1000 }
+];
+const broadcastBefore = JSON.stringify(broadcastScene);
+const broadcastMarkup = RR.drillAnimation.renderSvg(
+  broadcastScene, "broadcast-layer-audit", {}, broadcastPlan, broadcastBeats
+);
+const broadcastLayerOrder = ["surface", "markings", "guides", "shadows",
+  "equipment", "actors", "effects", "foreground"]
+  .map((name) => broadcastMarkup.indexOf(`data-layer="${name}"`));
+ok(broadcastMarkup.includes('class="dam-svg dam-svg--broadcast"') &&
+  broadcastMarkup.includes('data-camera="broadcast-elevated"') &&
+  broadcastMarkup.includes('data-plan-mode="walkthrough"') &&
+  broadcastMarkup.includes('data-active-routes="2"') &&
+  broadcastLayerOrder.every((index, position) => index >= 0 &&
+    (position === 0 || index > broadcastLayerOrder[position - 1])),
+  "broadcast renderer lacks a stable, correctly ordered elevated-court layer stack");
+ok((broadcastMarkup.match(/class="dam-athlete-shadow"/g) || []).length === 2 &&
+  broadcastMarkup.indexOf('data-actor-id="far"') < broadcastMarkup.indexOf('data-actor-id="near"') &&
+  /data-actor-id="far"[^>]*data-depth="0\.25"[^>]*data-depth-order="0"/.test(broadcastMarkup) &&
+  /data-actor-id="near"[^>]*data-depth="0\.75"[^>]*data-depth-order="1"/.test(broadcastMarkup),
+  "broadcast athletes are not grounded or painted deterministically from far court to camera");
+ok(/class="dam-route dam-route--move dam-route--active"[^>]*data-route-id="route-1"/.test(broadcastMarkup) &&
+  /class="dam-route dam-route--ball dam-route--active"[^>]*data-route-id="route-2"/.test(broadcastMarkup) &&
+  /class="dam-route dam-route--move dam-route--context"[^>]*data-route-id="route-3"/.test(broadcastMarkup),
+  "active routes are not separated from quiet contextual routes during playback");
+ok((broadcastMarkup.match(/class="dam-ball-shadow-track"/g) || []).length === 1 &&
+  (broadcastMarkup.match(/class="dam-flight__body"/g) || []).length === 1 &&
+  (broadcastMarkup.match(/class="dam-contact-impact"/g) || []).length === 1 &&
+  broadcastMarkup.includes('data-flight-profile="pass"') &&
+  broadcastMarkup.includes('data-contact-target="far"') &&
+  /--dam-arc-height:-\d+(?:\.\d+)?px/.test(broadcastMarkup),
+  "active ball does not carry a grounded shadow, readable arc, and recipient contact cue");
+ok(JSON.stringify(broadcastScene) === broadcastBefore,
+  "broadcast rendering mutated authored coordinates while deriving presentation layers");
+
 ok(reviewedBallPathCount === 6, `expected 6 reviewed move-styled object paths, found ${reviewedBallPathCount}`);
 ok(multiplayerSceneCount > 0, "participant accounting never covered a multi-player scene");
 ok(additionalParticipantScenes > 0,
@@ -648,6 +724,126 @@ function semanticP0Phases(plan) {
   return (plan && plan.beats || []).map((beat) => beat.motionId).filter((motionId, index, ids) =>
     index === 0 || motionId !== ids[index - 1]);
 }
+
+// Defensive mechanics must remain visually and semantically distinct. The
+// reported regression came from a ready beat using a locomotion row whose
+// third frame is a running drive step. These probes cover the resolver, the
+// exact Down Balls program, floor saves, run-through saves, and true sprints.
+const defensiveSemanticCases = [
+  ["The defender digs the ball high to the middle.", ["dig"]],
+  ["The defender stops and digs the down-ball high to the middle.", ["dig"]],
+  ["The defender runs through the short ball and plays it up.", ["run-through"]],
+  ["The defender pancakes the ball and sprawls safely.", ["sprawl"]],
+  ["The athlete sprints five yards to the cone.", ["sprint"]]
+];
+const defensiveSemanticFailures = defensiveSemanticCases.filter(([instruction, expected]) =>
+  JSON.stringify(Array.from(RR.drillChoreography.motionForText(instruction, {
+    drill: { id: "defensive-semantic-probe", skill: "Defense" }, fallback: false
+  }), (motion) => motion.id)) !== JSON.stringify(expected));
+ok(defensiveSemanticCases.length === 5 && defensiveSemanticFailures.length === 0,
+  `dig, run-through, sprawl, and sprint semantics collapsed together: ${
+    defensiveSemanticFailures.map(([instruction]) => instruction).join(" | ")}`);
+ok(RR.drillChoreography.motions["defensive-ready"].grid === "defensePro" &&
+  RR.drillChoreography.motions["defensive-ready"].row === 0 &&
+  RR.drillChoreography.motions["defensive-ready"].asset ===
+    RR.drillChoreography.motions.dig.asset &&
+  RR.drillChoreography.motions["defensive-ready"].animate === false &&
+  RR.drillChoreography.motions["defensive-ready"].posterFrame === 0,
+  "defensive ready still cycles through the locomotion row and visually breaks into a run");
+ok(RR.drillChoreography.motions["down-ball-hit"].grid === "defensePro" &&
+  RR.drillChoreography.motions["down-ball-hit"].row === 3 &&
+  RR.drillChoreography.motions.dig.grid === "defensePro" &&
+  RR.drillChoreography.grids.defensePro.asset ===
+    "images/drill-motion/scene-defense-pro-grid.png" &&
+  RR.drillChoreography.grids.defensePro.width === 1277 &&
+  RR.drillChoreography.grids.defensePro.height === 1232,
+  "professional defense grid is not mapped to ready, dig, and coach down-ball mechanics");
+
+const downBallPlans = [0, 1, 2, 3].map((sourceStep) =>
+  semanticP0Plan("digging-coach-down-balls", sourceStep));
+ok(JSON.stringify(downBallPlans.map(semanticP0Phases)) === JSON.stringify([
+  ["defensive-ready"], ["down-ball-hit"], ["dig"], ["shuffle"]
+]),
+  `Down Balls saved steps do not remain ready > coach attack > defender dig > three-player rotation: ${
+    downBallPlans.map((plan) => semanticP0Phases(plan).join(">")).join(" | ")}`);
+
+const downBallReady = downBallPlans[0];
+const downBallReadyIds = downBallReady.beats.map((beat) =>
+  authoredActorId(downBallReady, beat.actorId));
+ok(downBallReady.beats.length === 3 &&
+  JSON.stringify(downBallReadyIds) === JSON.stringify([
+    "downball-left", "downball-middle", "downball-right"
+  ]) && downBallReady.beats.every((beat) => beat.startMs === 0 &&
+    beat.motionId === "defensive-ready" &&
+    downBallReady.routes.find((route) => route.id === beat.routeId).type === "move"),
+  "Down Balls does not show all three back-court defenders stopped and ready together");
+const downBallDrill = RR.drills.find((drill) => drill.id === "digging-coach-down-balls");
+const downBallReadyScene = RR.drillAnimation.scenesFor(downBallDrill)[downBallReady.sceneIndex];
+const downBallReadyMarkup = RR.drillAnimation.renderSvg(downBallReadyScene,
+  "down-ball-static-ready-audit", {}, downBallReady, downBallReady.beats);
+ok((downBallReadyMarkup.match(/<foreignObject\b/g) || []).length === 4 &&
+  (downBallReadyMarkup.match(/dam-scene-sprite is-performing/g) || []).length === 0 &&
+  (downBallReadyMarkup.match(/scene-defense-pro-grid\.png/g) || []).length === 3 &&
+  downBallReadyMarkup.includes('data-active-actors="3"') &&
+  downBallReadyMarkup.includes('data-motion="defensive-ready"'),
+  "stationary Down Balls ready phase still advances frames or drops a factual court actor");
+
+const downBallAttack = downBallPlans[1];
+const downBallAttackRecipients = ["downball-left", "downball-middle", "downball-right"];
+ok(downBallAttack.contacts.length === 3 && downBallAttack.contacts.every((contact, index) =>
+  contact.motionId === "down-ball-hit" &&
+  authoredActorId(downBallAttack, contact.performerActorId) === "downball-coach" &&
+  authoredActorId(downBallAttack, contact.recipientActorId) === downBallAttackRecipients[index]),
+  "Down Balls coach attacks are not explicitly delivered to LB, MB, then RB");
+
+const downBallDig = downBallPlans[2];
+ok(downBallDig.contacts.length === 3 && downBallDig.contacts.every((contact, index) =>
+  contact.motionId === "dig" &&
+  authoredActorId(downBallDig, contact.performerActorId) === downBallAttackRecipients[index] &&
+  !contact.recipientActorId && contact.recipientEndpoint &&
+  contact.recipientEndpoint.type === "target"),
+  "Down Balls digs are not owned by each defender and directed to the high middle target");
+
+const downBallRotation = downBallPlans[3];
+const downBallRotationIds = downBallRotation.beats.map((beat) =>
+  authoredActorId(downBallRotation, beat.actorId));
+ok(downBallRotation.beats.length === 3 &&
+  JSON.stringify(downBallRotationIds) === JSON.stringify([
+    "downball-left", "downball-middle", "downball-right"
+  ]) && downBallRotation.beats.every((beat) => {
+    const route = downBallRotation.routes.find((item) => item.id === beat.routeId);
+    return beat.motionId === "shuffle" && beat.startMs === 0 && route &&
+      route.type === "move" && route.authored.action === "shuffle" &&
+      route.authored.simultaneousGroup === "downball-defender-rotation";
+  }) && !downBallRotation.beats.some((beat) => beat.motionId === "sprint"),
+  "Down Balls rotation does not move LB, MB, and RB together on factual shuffle routes");
+ok(downBallPlans.every((plan) => plan.valid && plan.beats.every((beat) =>
+  !/^(?:sprint|run-through|sprawl)$/.test(beat.motionId))),
+  "Down Balls still substitutes running or an emergency floor move for a controlled dig");
+
+const liberoRunThroughPlan = semanticP0Plan("libero-dig-and-run-through", 2);
+const boundRunThroughBeat = liberoRunThroughPlan.beats.find((beat) => {
+  const route = liberoRunThroughPlan.routes.find((item) => item.id === beat.routeId);
+  return beat.motionId === "run-through" && route && route.type === "move";
+});
+ok(boundRunThroughBeat &&
+  liberoRunThroughPlan.routes.find((route) => route.id === boundRunThroughBeat.routeId)
+    .authored.label === "run through" &&
+  !liberoRunThroughPlan.beats.some((beat) => beat.motionId === "sprint"),
+  "libero run-through save is still rendered as a generic sprint or detached from its court route");
+
+const pancakeSavePlan = semanticP0Plan("pancake-and-recover", 1);
+const rollSprawlPlan = semanticP0Plan("rolls-and-sprawls", 1);
+ok([pancakeSavePlan, rollSprawlPlan].every((plan) =>
+  plan.beats.some((beat) => beat.motionId === "sprawl") &&
+  !plan.beats.some((beat) => /^(?:sprint|run-through)$/.test(beat.motionId))),
+  "pancake or sprawl instruction was rewritten as running");
+
+const reactionSprintPlan = semanticP0Plan("reaction-sprint-starts", 1);
+const serveSprintPlan = semanticP0Plan("serve-and-sprint", 1);
+ok([reactionSprintPlan, serveSprintPlan].every((plan) =>
+  plan.beats.some((beat) => beat.motionId === "sprint")),
+  "legitimate sprint drills lost their running stride while defensive saves were corrected");
 
 const semanticP0OrderCases = [
   ["transition-hitting-off-defense", 3, ["dig", "sprint", "set", "attack"]],

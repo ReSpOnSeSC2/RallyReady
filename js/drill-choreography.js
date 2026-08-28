@@ -15,6 +15,7 @@ RR.drillChoreography = (function () {
     locomotion: grid("locomotion", "scene-locomotion-grid.webp", 1230, 1278, true),
     volleyball: grid("volleyball", "scene-volleyball-grid.webp", 1246, 1262, true),
     defense: grid("defense", "scene-defense-grid.webp", 1254, 1254, true),
+    defensePro: grid("defensePro", "scene-defense-pro-grid.png", 1277, 1232, true),
     equipment: grid("equipment", "scene-equipment-grid.webp", 1536, 1024, false),
     power: grid("power", "scene-power-grid.webp", 1536, 1024, false),
     recovery: grid("recovery", "scene-recovery-grid.webp", 1536, 1024, false),
@@ -41,12 +42,14 @@ RR.drillChoreography = (function () {
     attack: motion("attack", "Attack / send", "volleyball", 3, 1300),
 
     block: motion("block", "Block and press", "defense", 0, 1050),
-    dig: motion("dig", "Dig / floor defense", "defense", 1, 1000),
+    dig: motion("dig", "Platform dig", "defensePro", 0, 1100),
     sprawl: motion("sprawl", "Sprawl / emergency save", "defense", 2, 1450),
     // Defense row 3 is a forward run-through save, not a static base. The
-    // reviewed full-body ready pose lives in locomotion row 0.
+    // professional defensive sheet separates a true stationary ready frame
+    // from the complete platform-dig sequence so neither can become a sprint.
     "run-through": motion("run-through", "Run-through defensive save", "defense", 3, 1200),
-    "defensive-ready": motion("defensive-ready", "Defensive ready position", "locomotion", 0, 850),
+    "defensive-ready": motion("defensive-ready", "Stationary defensive ready", "defensePro", 0, 1000),
+    "down-ball-hit": motion("down-ball-hit", "Coach down-ball attack", "defensePro", 3, 1250),
 
     ladder: motion("ladder", "Agility-ladder footwork", "equipment", 0, 1200),
     "jump-rope": motion("jump-rope", "Jump-rope rhythm", "equipment", 1, 1200),
@@ -85,6 +88,10 @@ RR.drillChoreography = (function () {
   MOTIONS["jump-float"] = motion("jump-float", "Jump-float serve", "servingAttack", 1, 1400);
   MOTIONS["jump-topspin"] = motion("jump-topspin", "Jump-topspin serve", "servingAttack", 2, 1450);
   MOTIONS["tip-roll"] = motion("tip-roll", "Tip and roll-shot control", "servingAttack", 3, 1250);
+  MOTIONS["defensive-ready"].animate = false;
+  MOTIONS["defensive-ready"].loop = false;
+  MOTIONS["defensive-ready"].frameOrder = [0];
+  MOTIONS["defensive-ready"].posterFrame = 0;
 
   var APPEARANCE_IDS = [
     "roster-athlete-01", "roster-athlete-02",
@@ -285,6 +292,14 @@ RR.drillChoreography = (function () {
       .test(phraseBefore(source, index));
   }
 
+  function incomingDownBallAt(source, index, matchedText) {
+    if (!/\bdown[- ]balls?\b/i.test(matchedText)) return false;
+    // In defensive copy, "dig/pass/read the down-ball" names the incoming
+    // object. It must not add an attack performed by the receiver.
+    return /\b(?:dig(?:s|ging)?|pass(?:es|ing)?|receiv(?:e|es|ing)|defend(?:s|ing)?|read(?:s|ing)?)\s+(?:(?:a|the|that|this|incoming)\b\s*)?$/i
+      .test(phraseBefore(source, index));
+  }
+
   function onlyReferencesSetAsAttackObject(source) {
     var objectPhrase = /\b(?:hit|hits|hitting|attack|attacks|attacking|swing|swings|swinging)\s+(?:(?:a|an|the)\s+)?(?:front|back|quick|shoot|high|outside|right[- ]side|middle)[- ]set(?:\s+ball)?\b/i;
     if (!objectPhrase.test(source)) return false;
@@ -306,6 +321,10 @@ RR.drillChoreography = (function () {
         }
         if (entry.id === "attack" && /^hits?$/i.test(match[0]) &&
             nonAthleteImpactAt(source, match.index)) {
+          if (!match[0].length) entry.regex.lastIndex += 1;
+          continue;
+        }
+        if (entry.id === "attack" && incomingDownBallAt(source, match.index, match[0])) {
           if (!match[0].length) entry.regex.lastIndex += 1;
           continue;
         }
@@ -357,7 +376,8 @@ RR.drillChoreography = (function () {
       admin: true, ready: true, set: true, pass: true, attack: true,
       serve: true, jump: true, sprint: true, shuffle: true, backpedal: true,
       block: true, dig: true, sprawl: true, "run-through": true,
-      "defensive-ready": true, ladder: true, "jump-rope": true,
+      "defensive-ready": true, "down-ball-hit": true,
+      ladder: true, "jump-rope": true,
       "tip-roll": true,
       band: true, "band-upper": true, "band-arm-swing": true,
       "free-arm-swing": true, signal: true,
@@ -392,6 +412,14 @@ RR.drillChoreography = (function () {
     // targets, equipment, or an opponent's action; they are not mechanics the
     // demonstrated athlete performs.
     if (id === "platform-angle-passing") return ["pass"];
+    if (id === "digging-coach-down-balls" &&
+        /\bcoach\s+hits?\s+(?:a|the)\s+ball\b|\bcontrolled down[- ]ball attack\b/.test(source)) {
+      return ["down-ball-hit"];
+    }
+    if (id === "digging-coach-down-balls" &&
+        /\bshag\s+the\s+ball\b[^.]*\brotate\s+to\s+the\s+next\s+defender\b/.test(source)) {
+      return ["shuffle"];
+    }
     if (id === "overhead-defensive-hands") return ["dig"];
     if (id === "overhead-emergency-pass") {
       if (/server serves|mix in high and low serves/.test(source)) return ["serve", "pass"];
@@ -1637,6 +1665,7 @@ RR.drillChoreography = (function () {
       pass: /\b(?:passer|receiver|serve[- ]receive)\b|^p(?:\s|$)/,
       set: /\bsetter\b|^st(?:\s|$)/,
       attack: /\b(?:hitter|attacker|outside|opposite|right[- ]side|middle|pin)\b|^h(?:\s|$)|^oh(?:\s|$)|^op(?:\s|$)|^m(?:\s|$)/,
+      "down-ball-hit": /\b(?:coach|feeder|tosser|down[- ]ball|attacks?)\b|^c(?:\s|$)/,
       "tip-roll": /\b(?:hitter|attacker|outside|opposite|right[- ]side|middle|pin|setter)\b|^h(?:\s|$)|^st(?:\s|$)/,
       "box-hit": /\b(?:hitter|outside)\b|^h(?:\s|$)|^oh(?:\s|$)/,
       block: /\bblocker\b|^b(?:\s|$)|\bblocks?\b/,
@@ -1650,7 +1679,8 @@ RR.drillChoreography = (function () {
     var regex = patterns[motionId];
     if (regex && regex.test(identity)) return 4;
     if ((motionId === "feed" || motionId === "signal") && actor.support) return 3;
-    if (motionId === "attack" && actor.support && /\b(?:hit|attack|down[- ]ball|tip)\b/.test(identity)) {
+    if (/^(?:attack|down-ball-hit)$/.test(motionId) && actor.support &&
+        /\b(?:hit|attack|down[- ]ball|tip)\b/.test(identity)) {
       return 4;
     }
     if (skill === "serving" && /^(?:serve|underhand|jump-float|jump-topspin)$/.test(motionId) && !actor.support) return 1;
@@ -1742,7 +1772,7 @@ RR.drillChoreography = (function () {
     // currently be defending; it must not steal the coach's delivery merely
     // because its stable role also scores as attack-capable.
     if (source.actor && source.actor.support &&
-        /^(?:attack|tip-roll|feed|serve)$/.test(motionId)) {
+        /^(?:attack|down-ball-hit|tip-roll|feed|serve)$/.test(motionId)) {
       return { actor: source.actor, partner: recipient.actor,
         source: "support-source-contact" };
     }
@@ -1934,6 +1964,14 @@ RR.drillChoreography = (function () {
     var action = clean(contact && contact.action);
     var drillId = clean(drill && drill.id).toLowerCase();
     var normalizedAction = action.toLowerCase();
+
+    // Scene contacts may opt into a reviewed motion id directly. Resolve that
+    // stable semantic id before prose matching so a purpose-built delivery such
+    // as `down-ball-hit` cannot collapse back into a generic attack or run.
+    if (MOTIONS[normalizedAction] &&
+        !/^(?:ready|defensive-ready|recovery|admin)$/.test(normalizedAction)) {
+      return { ids: [normalizedAction], source: "authored-contact-action" };
+    }
 
     // A handful of terse saved contact labels are deliberately sport-specific.
     // Resolve them before the broad prose detector so the coach's delivery is
@@ -2233,6 +2271,13 @@ RR.drillChoreography = (function () {
     if (/\b(?:sprawl|pancake|div(?:e|ing)|roll\s*(?:out|and|\u2192)|reach\s*&\s*slide)\b/.test(label)) {
       return clean(drill && drill.id).indexOf("mat-") === 0 ? "mat-defense" : "sprawl";
     }
+    // A run-through is a volleyball contact performed while moving through a
+    // short ball, not a conditioning sprint. Resolve it before the broad
+    // run/chase matcher so the authored body route, defensive frames, and ball
+    // contact stay bound to the same defender.
+    if (/\brun(?:s|ning)?[- ]through\b|\b(?:sprint|explode)s?\s+forward\b[^.]{0,38}\b(?:play|save|dig)s?\s+(?:it|the\s+ball|a\s+ball)?\s*up\b/.test(label)) {
+      return "run-through";
+    }
     if (/\b(?:backpedal|drop\s+back|retreat)\b/.test(label)) return "backpedal";
     if (/\b(?:sprint|run|chase|break|pursu|scramble|shag|retrieve|return|release|explode|save\s+and\s+go)\b/.test(label)) {
       return "sprint";
@@ -2273,6 +2318,7 @@ RR.drillChoreography = (function () {
       pass: /\bpasser\b|\breceiver\b|^p\b/i,
       set: /\bsetter\b|^st\b/i,
       attack: /\bhitter\b|\bmiddle\b|^h\b|^m\b/i,
+      "down-ball-hit": /\bcoach\b|\bfeeder\b|\btosser\b|\bdown[- ]ball\b|^c\b/i,
       "box-hit": /\bhitter\b|\boutside\b|^h\b|^oh\b/i,
       "band-arm-swing": /\bhitter\b|\bathlete\b|\bplayer\b|^h\b/i,
       "free-arm-swing": /\bhitter\b|\bathlete\b|\bplayer\b|^h\b/i,
@@ -2289,7 +2335,7 @@ RR.drillChoreography = (function () {
     var available = actors.filter(function (actor) { return !actor.staged; });
     if (!available.length) available = actors.slice();
 
-    if (/^(?:feed|signal)$/.test(motionId) ||
+    if (/^(?:feed|signal|down-ball-hit)$/.test(motionId) ||
         (motionId === "attack" && /\bcoach\s+(?:hits?|attacks?|drives?|tips?)\b/.test(source))) {
       var support = available.filter(function (actor) {
         return actor.support || /\b(?:coach|feeder|tosser|tosses|feeds?|partner|caller|signal)\b/.test(actorIdentity(actor));
@@ -2413,7 +2459,7 @@ RR.drillChoreography = (function () {
 
   function motionFamily(id) {
     if (/^(?:serve|underhand|jump-float|jump-topspin)$/.test(id)) return "serve";
-    if (/^(?:attack|tip-roll|box-hit|band-arm-swing|free-arm-swing|approach-jump)$/.test(id)) return "attack";
+    if (/^(?:attack|down-ball-hit|tip-roll|box-hit|band-arm-swing|free-arm-swing|approach-jump)$/.test(id)) return "attack";
     if (/^(?:dig|sprawl|run-through|mat-defense|defensive-ready)$/.test(id)) return "defense";
     if (/^(?:sprint|shuffle|backpedal|ladder)$/.test(id)) return "locomotion";
     return id;
@@ -2444,7 +2490,7 @@ RR.drillChoreography = (function () {
       "jump-float": 10, "jump-topspin": 10,
       sprint: 15, shuffle: 17, backpedal: 17, ladder: 18,
       pass: 20, jump: 24, "approach-jump": 24, set: 25,
-      attack: 40, "tip-roll": 40, "box-hit": 40,
+      attack: 40, "down-ball-hit": 40, "tip-roll": 40, "box-hit": 40,
       block: 45, dig: 50, sprawl: 50, "run-through": 50,
       "mat-defense": 50, "defensive-ready": 52, admin: 90,
       recovery: 95

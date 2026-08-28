@@ -28,6 +28,7 @@ RR.drillAnimation = (function () {
   var XHTML_NS = "http://www.w3.org/1999/xhtml";
   var GRID_DIMENSIONS = {
     locomotion: [1230, 1278], volleyball: [1246, 1262], defense: [1254, 1254],
+    defensePro: [1277, 1232],
     roster: [1233, 1275], equipment: [1536, 1024], power: [1536, 1024],
     recovery: [1536, 1024], servingAttack: [1536, 1024],
     boxMat: [1254, 1254], jumpBand: [1024, 1536], specialized: [1254, 1254]
@@ -913,12 +914,14 @@ RR.drillAnimation = (function () {
     // Opaque generated sheets are identified as studio frames so CSS can
     // contain their background without hiding the court or nearby people.
     if (motionMeta) {
+      var animate = motionMeta.animate !== false;
       return {
         asset: motionMeta.asset,
         grid: motionMeta.grid,
         row: motionMeta.row,
-        column: 0,
+        column: animate ? 0 : finiteNumber(motionMeta.posterFrame) ? motionMeta.posterFrame : 0,
         performing: true,
+        animate: animate,
         studio: motionMeta.transparent === false,
         durationMs: performingBeat.durationMs || motionMeta.durationMs || 1000
       };
@@ -929,6 +932,7 @@ RR.drillAnimation = (function () {
       row: finiteNumber(appearance.row) ? appearance.row : hashActorRow(actor.id),
       column: actor.staged ? 3 : performing ? 2 : partner ? 1 : 0,
       performing: false,
+      animate: false,
       studio: false,
       durationMs: performingBeat && performingBeat.durationMs || 1000
     };
@@ -991,10 +995,66 @@ RR.drillAnimation = (function () {
     var height = Math.max(28, (maxY - minY + padY * 2) * scale);
     return selfEl("rect", { x: x, y: y, width: width, height: height, rx: 8,
       class: "dam-scene-lane" }) + el("text", { x: x + 6, y: y + 11,
-        class: "dam-scene-lane-label" }, esc(lane.label || "Rotation lane"));
+      class: "dam-scene-lane-label" }, esc(lane.label || "Rotation lane"));
   }
 
-  function sceneActorMarkup(actor, plan, activeBeats, px, py, scale) {
+  // SVG does not have a z-axis. Paint athletes from the far baseline toward
+  // the camera and expose the normalized value to CSS so lighting/shadow scale
+  // can reinforce the elevated broadcast view. Authored x/y coordinates are
+  // never changed; an active route only informs deterministic paint order.
+  function sceneActorDepth(actor, activeRoute, sceneHeight) {
+    var depthY = finiteNumber(actor && actor.y) ? actor.y : 0;
+    if (activeRoute) {
+      [activeRoute.from].concat(activeRoute.via || []).concat([activeRoute.to])
+        .forEach(function (point) {
+          if (point && finiteNumber(point[1])) depthY = Math.max(depthY, point[1]);
+        });
+    }
+    var height = finiteNumber(sceneHeight) && sceneHeight > 0 ? sceneHeight : 10;
+    return Math.round(clamp(depthY / height, 0, 1) * 1000) / 1000;
+  }
+
+  function sortedSceneActors(plan, activeBeats) {
+    var activeRoutes = {};
+    (activeBeats || []).forEach(function (beat) {
+      var route = beat && routeById(plan, beat.routeId);
+      if (route && route.actorId) activeRoutes[route.actorId] = route;
+    });
+    return (plan && plan.actors || []).slice().sort(function (left, right) {
+      var leftDepth = sceneActorDepth(left, activeRoutes[left.id], plan.height);
+      var rightDepth = sceneActorDepth(right, activeRoutes[right.id], plan.height);
+      if (leftDepth !== rightDepth) return leftDepth - rightDepth;
+      if (left.x !== right.x) return left.x - right.x;
+      return String(left.id || "").localeCompare(String(right.id || ""));
+    });
+  }
+
+  function layerMarkup(name, items) {
+    return el("g", { class: "dam-layer dam-layer--" + name, "data-layer": name },
+      (items || []).join(""));
+  }
+
+  function plannedRouteForPath(plan, pathIndex) {
+    var match = null;
+    (plan && plan.routes || []).some(function (route) {
+      if (route.sourcePathIndex === pathIndex) { match = route; return true; }
+      return false;
+    });
+    return match;
+  }
+
+  function activeRouteIds(plan, activeBeats) {
+    var ids = {};
+    (activeBeats || []).forEach(function (beat) {
+      if (!beat) return;
+      if (beat.routeId) ids[beat.routeId] = true;
+      var contact = beat.contactId && contactById(plan, beat.contactId);
+      if (contact && contact.routeId) ids[contact.routeId] = true;
+    });
+    return ids;
+  }
+
+  function sceneActorMarkup(actor, plan, activeBeats, px, py, scale, depthOrder) {
     activeBeats = Array.isArray(activeBeats) ? activeBeats : activeBeats ? [activeBeats] : [];
     var performingBeat = null;
     var partner = false;
@@ -1021,6 +1081,7 @@ RR.drillAnimation = (function () {
     var active = !!performingBeat;
     var movingRoute = active ? routeById(plan, performingBeat.routeId) : null;
     var moving = !!(movingRoute && movingRoute.type === "move" && movingRoute.actorId === actor.id);
+    var actorDepth = sceneActorDepth(actor, movingRoute, plan && plan.height);
     var roleVisible = true;
     var spriteStyle = "--dam-scene-row:" + rowPosition(sprite.row) +
       ";--dam-scene-column:" + columnPosition(sprite.column) +
@@ -1028,7 +1089,9 @@ RR.drillAnimation = (function () {
       ";background-image:url('" + safeAsset(sprite.asset) + "')";
     var html = "<div xmlns=\"" + XHTML_NS + "\" class=\"dam-scene-person" +
       (sprite.studio ? " dam-scene-person--studio" : "") + "\">" +
-      "<div class=\"dam-scene-sprite" + (sprite.performing ? " is-performing" : "") +
+      "<div class=\"dam-scene-sprite" + (sprite.animate ? " is-performing" : "") +
+      (sprite.performing && !sprite.animate ? " is-static" : "") +
+      "\" data-animates=\"" + (sprite.animate ? "true" : "false") +
       "\" style=\"" + esc(spriteStyle) + "\"></div>" +
       (roleVisible ? "<span class=\"dam-scene-person__role\">" + esc(compactActorLabel(actor)) + "</span>" : "") +
       "</div>";
@@ -1040,19 +1103,64 @@ RR.drillAnimation = (function () {
       (partner ? " dam-scene-actor--partner" : "") +
       (actorCount > 6 ? " dam-scene-actor--crowded" : "");
     var map = { class: className, "data-actor-id": actor.id,
-      "data-appearance-id": actor.appearanceId || "", "data-role": actor.role || "" };
+      "data-appearance-id": actor.appearanceId || "", "data-role": actor.role || "",
+      "data-depth": String(actorDepth), "data-depth-order": finiteNumber(depthOrder) ? depthOrder : null,
+      "data-grounded": "true" };
     if (moving) {
       var d = pathData(movingRoute, px, py);
       map.class += " dam-mover dam-mover--bound";
       map.style = "--dam-delay:0s;--dam-duration:" +
-        Math.max(0.24, (performingBeat.durationMs || 1000) / 1000) + "s;offset-path:path('" + d + "')";
+        Math.max(0.24, (performingBeat.durationMs || 1000) / 1000) + "s;--dam-depth:" +
+        actorDepth + ";offset-path:path('" + d + "')";
       map["data-route-id"] = movingRoute.id;
     } else {
       map.transform = "translate(" + round(px(actor.x)) + " " + round(py(actor.y)) + ")";
+      map.style = "--dam-depth:" + actorDepth;
     }
+    var grounding = selfEl("ellipse", { cx: 0, cy: 1,
+      rx: actorWidth * 0.24, ry: Math.max(3.2, actorWidth * 0.064),
+      class: "dam-athlete-shadow", "aria-hidden": "true" });
     var halo = active ? selfEl("circle", { cx: 0, cy: -actorHeight * 0.38,
       r: actorWidth * 0.47, class: "dam-player-focus", style: "opacity:.9;animation:none" }) : "";
-    return el("g", map, el("title", {}, esc(actor.role || actor.label || "Athlete")) + halo + foreign);
+    return el("g", map, el("title", {}, esc(actor.role || actor.label || "Athlete")) +
+      grounding + halo + foreign);
+  }
+
+  function flightProfile(contact, activeBeat, px, py) {
+    var motion = cleanString(activeBeat && activeBeat.motionId).toLowerCase();
+    var object = cleanString(contact && contact.object).toLowerCase();
+    var endpoint = cleanString(contact && contact.recipientEndpoint &&
+      contact.recipientEndpoint.type).toLowerCase();
+    var kind = cleanString(contact && contact.kind).toLowerCase();
+    var profile = "controlled";
+    var liftRatio = 0.12;
+    if (object === "balloon") { profile = "float"; liftRatio = 0.22; }
+    else if (object === "reaction") { profile = "rebound"; liftRatio = 0.075; }
+    else if (object === "medicine") { profile = endpoint === "floor" ? "slam" : "power"; liftRatio = 0.08; }
+    else if (/roll|floor/.test(motion) || endpoint === "floor") { profile = "ground"; liftRatio = 0.025; }
+    else if (/set|toss|feed/.test(motion)) { profile = "loft"; liftRatio = 0.2; }
+    else if (/serve/.test(motion) || kind === "serve") { profile = "serve"; liftRatio = 0.14; }
+    else if (/attack|hit|spike|down-ball/.test(motion)) { profile = "drive"; liftRatio = 0.09; }
+    else if (/dig|pass|platform/.test(motion)) { profile = "pass"; liftRatio = 0.13; }
+
+    var from = contact.from || [0, 0];
+    var to = contact.to || from;
+    var dx = px(to[0]) - px(from[0]);
+    var dy = py(to[1]) - py(from[1]);
+    var distance = Math.sqrt(dx * dx + dy * dy);
+    var top = Math.min(py(from[1]), py(to[1]));
+    (contact.via || []).forEach(function (point) { top = Math.min(top, py(point[1])); });
+    var availableHeadroom = Math.max(8, top - 5);
+    var lift = clamp(distance * liftRatio, profile === "ground" ? 3 : 10,
+      profile === "float" || profile === "loft" ? 52 : 38);
+    lift = round(Math.min(lift, availableHeadroom));
+    return {
+      name: profile,
+      lift: lift,
+      distance: round(distance),
+      direction: Math.abs(dx) > Math.abs(dy) * 1.25 ? "cross-court" :
+        (dy < 0 ? "up-court" : dy > 0 ? "down-court" : "stationary")
+    };
   }
 
   function activeBallMarkup(plan, activeBeat, px, py) {
@@ -1064,25 +1172,52 @@ RR.drillAnimation = (function () {
     var kind = contact.kind === "serve" ? "serve" : "ball";
     var style = "--dam-delay:0s;--dam-duration:" +
       Math.max(0.24, (activeBeat.durationMs || 1000) / 1000) + "s;offset-path:path('" + d + "')";
-    return el("g", { class: "dam-flight dam-flight--" + kind + " dam-live-ball",
+    var profile = flightProfile(contact, activeBeat, px, py);
+    var profileStyle = "--dam-arc-height:-" + profile.lift + "px;--dam-flight-distance:" +
+      profile.distance + "px";
+    var target = contact.recipientActorId ||
+      contact.recipientEndpoint && contact.recipientEndpoint.type || "target";
+    var shadow = el("g", { class: "dam-ball-shadow-track",
+      "data-contact-id": contact.id, "data-flight-profile": profile.name,
+      style: style + ";" + profileStyle }, selfEl("ellipse", {
+      cx: 0, cy: 3.5, rx: 7.8, ry: 3.2, class: "dam-ball-shadow"
+    }));
+    var flight = el("g", { class: "dam-flight dam-flight--" + kind + " dam-live-ball",
       "data-contact-id": contact.id, "data-source-actor": contact.sourceActorId || "",
       "data-recipient-actor": contact.recipientActorId || "",
-      "data-track-id": activeBeat.trackId || contact.chainId || contact.id, style: style },
-    ballGlyph(contact.object));
+      "data-track-id": activeBeat.trackId || contact.chainId || contact.id,
+      "data-flight-profile": profile.name, "data-flight-direction": profile.direction,
+      "data-contact-action": activeBeat.motionId || "", style: style + ";" + profileStyle },
+      el("g", { class: "dam-flight__body", "aria-hidden": "true" }, ballGlyph(contact.object)));
+    var impact = el("g", { class: "dam-contact-impact",
+      transform: "translate(" + round(px(contact.to[0])) + " " + round(py(contact.to[1])) + ")",
+      "data-contact-id": contact.id, "data-contact-target": target,
+      "data-flight-profile": profile.name,
+      style: "--dam-delay:0s;--dam-duration:" +
+        Math.max(0.24, (activeBeat.durationMs || 1000) / 1000) + "s" },
+      selfEl("circle", { r: 13, class: "dam-contact-impact__ring" }) +
+      selfEl("circle", { r: 3.2, class: "dam-contact-impact__core" }));
+    return { shadow: shadow, flight: flight, impact: impact };
   }
 
   function activeBallMarkups(plan, activeBeats, px, py) {
     var seen = {};
-    return (activeBeats || []).map(function (beat) {
-      if (!beat || !beat.contactId) return "";
+    var markups = { shadows: [], flights: [], impacts: [] };
+    (activeBeats || []).forEach(function (beat) {
+      if (!beat || !beat.contactId) return;
       // Contacts on one shared rally chain are one traveling object. Separate
       // tracks remain separate balls even when their source athlete is shared.
       var trackId = cleanString(beat.trackId) || beat.contactId;
       var key = "track:" + trackId;
-      if (seen[key]) return "";
+      if (seen[key]) return;
       seen[key] = true;
-      return activeBallMarkup(plan, beat, px, py);
-    }).join("");
+      var markup = activeBallMarkup(plan, beat, px, py);
+      if (!markup) return;
+      markups.shadows.push(markup.shadow);
+      markups.flights.push(markup.flight);
+      markups.impacts.push(markup.impact);
+    });
+    return markups;
   }
 
   function normalizedActiveBeats(activeBeatOrBeats) {
@@ -1132,6 +1267,7 @@ RR.drillAnimation = (function () {
     facts = facts || {};
     var activeBeats = normalizedActiveBeats(activeBeatOrBeats);
     var activeBeat = activeBeats[0] || null;
+    var activeRoutes = activeRouteIds(plan, activeBeats);
     var w = spec.w || 9;
     var hUnits = spec.h || 12;
     var scale = Math.min(MAX_W / w, MAX_H / hUnits);
@@ -1147,14 +1283,24 @@ RR.drillAnimation = (function () {
     function px(x) { return PAD + x * scale; }
     function py(y) { return topPad + y * scale; }
 
-    var pieces = [defs(id)];
-    var movers = [];
+    // Stable painter's layers make the scene read like one broadcast frame:
+    // court below guides, grounded athletes painted back-to-front, live ball
+    // and contact effects above them. CSS can refine the camera treatment
+    // without coupling to authored drill coordinates or object insertion order.
+    var layers = {
+      surface: [], markings: [], guides: [], shadows: [],
+      equipment: [], actors: [], effects: [], foreground: []
+    };
+    layers.surface.push(selfEl("rect", {
+      x: PAD, y: topPad, width: w * scale, height: hUnits * scale,
+      rx: 10, class: "dam-broadcast-stage", "aria-hidden": "true"
+    }));
     if (stagedPeople) {
-      pieces.push(selfEl("rect", {
+      layers.surface.push(selfEl("rect", {
         x: PAD, y: 5, width: w * scale, height: topPad - PAD + 11,
         rx: 8, class: "dam-staging"
       }));
-      pieces.push(el("text", {
+      layers.foreground.push(el("text", {
         x: PAD + 8, y: 19, class: "dam-staging-label"
       }, esc(translated(facts.additionalMode || "Not individually plotted") + " · +" + stagedPeople)));
       for (var stagedIndex = 0; stagedIndex < stagedPeople; stagedIndex++) {
@@ -1162,7 +1308,7 @@ RR.drillAnimation = (function () {
         var stagedColumn = stagedIndex % stagingCapacity;
         var stagedX = PAD + 9 + stagedColumn * 15;
         var stagedY = 31 + stagedRow * 15;
-        pieces.push(el("g", {
+        layers.actors.push(el("g", {
           class: "dam-staged-person", transform: "translate(" + stagedX + " " + stagedY + ")"
         }, selfEl("circle", { cx: 0, cy: -3.5, r: 2.8, class: "dam-staged-person__head" }) +
           selfEl("path", { d: "M0 0v6M-4 2l4-2 4 2M0 6l-3 5M0 6l3 5", class: "dam-staged-person__body" })));
@@ -1170,22 +1316,34 @@ RR.drillAnimation = (function () {
     }
     var courts = spec.court || [];
     if (!Array.isArray(courts)) courts = [courts];
-    courts.forEach(function (court) {
-      pieces.push(selfEl("rect", {
+    courts.forEach(function (court, courtIndex) {
+      var courtX = px(court.x), courtY = py(court.y);
+      var courtWidth = court.w * scale, courtHeight = court.h * scale;
+      layers.surface.push(selfEl("rect", {
+        x: courtX + 1.5, y: courtY + Math.max(3, scale * 0.1),
+        width: Math.max(0, courtWidth - 3), height: courtHeight,
+        rx: 8, class: "dam-court-depth", "data-court-index": courtIndex
+      }));
+      layers.surface.push(selfEl("rect", {
         x: px(court.x), y: py(court.y), width: court.w * scale, height: court.h * scale,
-        rx: 7, class: "dam-court"
+        rx: 7, class: "dam-court", "data-court-index": courtIndex
+      }));
+      layers.surface.push(selfEl("rect", {
+        x: courtX, y: courtY, width: courtWidth, height: courtHeight,
+        rx: 7, class: "dam-court-vignette", "data-court-index": courtIndex,
+        "aria-hidden": "true"
       }));
     });
-    if (plan) pieces.push(sceneLaneMarkup(plan, px, py, scale));
+    if (plan) layers.markings.push(sceneLaneMarkup(plan, px, py, scale));
 
     (spec.zones || []).forEach(function (zone, index) {
-      pieces.push(selfEl("rect", {
+      layers.surface.push(selfEl("rect", {
         x: px(zone.x), y: py(zone.y), width: zone.w * scale, height: zone.h * scale,
         rx: 6, class: "dam-zone dam-zone--" + (zone.tone || "target"),
         style: "--dam-index:" + index
       }));
       if (zone.label) {
-        pieces.push(el("text", {
+        layers.markings.push(el("text", {
           x: px(zone.x + zone.w / 2), y: py(zone.y + zone.h / 2),
           class: "dam-zone-label", "text-anchor": "middle", "dominant-baseline": "central"
         }, esc(zone.label)));
@@ -1193,17 +1351,22 @@ RR.drillAnimation = (function () {
     });
 
     if (spec.net != null) {
-      pieces.push(selfEl("line", { x1: px(0), y1: py(spec.net), x2: px(w), y2: py(spec.net), class: "dam-net" }));
-      pieces.push(selfEl("circle", { cx: px(0), cy: py(spec.net), r: 4, class: "dam-post" }));
-      pieces.push(selfEl("circle", { cx: px(w), cy: py(spec.net), r: 4, class: "dam-post" }));
+      layers.shadows.push(selfEl("line", { x1: px(0), y1: py(spec.net) + 4,
+        x2: px(w), y2: py(spec.net) + 4, class: "dam-net-shadow", "aria-hidden": "true" }));
+      layers.markings.push(selfEl("line", { x1: px(0), y1: py(spec.net),
+        x2: px(w), y2: py(spec.net), class: "dam-net" }));
+      layers.equipment.push(selfEl("circle", { cx: px(0), cy: py(spec.net), r: 4, class: "dam-post" }));
+      layers.equipment.push(selfEl("circle", { cx: px(w), cy: py(spec.net), r: 4, class: "dam-post" }));
     }
     (spec.lines || []).forEach(function (line) {
-      if (line.y != null) pieces.push(selfEl("line", { x1: px(0), y1: py(line.y), x2: px(w), y2: py(line.y), class: "dam-line" }));
-      if (line.x != null) pieces.push(selfEl("line", { x1: px(line.x), y1: py(0), x2: px(line.x), y2: py(hUnits), class: "dam-line" }));
+      if (line.y != null) layers.markings.push(selfEl("line", { x1: px(0), y1: py(line.y),
+        x2: px(w), y2: py(line.y), class: "dam-line" }));
+      if (line.x != null) layers.markings.push(selfEl("line", { x1: px(line.x), y1: py(0),
+        x2: px(line.x), y2: py(hUnits), class: "dam-line" }));
     });
 
     (spec.rings || []).forEach(function (ring, index) {
-      pieces.push(selfEl("circle", {
+      layers.guides.push(selfEl("circle", {
         cx: px(ring.x), cy: py(ring.y), r: ring.r * scale,
         class: "dam-ring dam-ring--" + (ring.tone || "calm"), style: "--dam-index:" + index
       }));
@@ -1220,16 +1383,25 @@ RR.drillAnimation = (function () {
       var distance = pathLength(path);
       var duration = round(clamp(3.2 + distance * 0.16, 3.5, 5.6));
       var delay = round(index * 0.46);
-      pieces.push(selfEl("path", {
-        d: d, class: "dam-route dam-route--" + kind,
+      var plannedRoute = plannedRouteForPath(plan, index);
+      var routeId = plannedRoute && plannedRoute.id || "source-route-" + (index + 1);
+      var routeVisibility = plan ? activeRoutes[routeId] ? "active" : "context" : "overview";
+      layers.guides.push(selfEl("path", {
+        d: d, class: "dam-route dam-route--" + kind + " dam-route--" + routeVisibility,
         "marker-end": "url(#" + id + "-" + kind + ")",
+        "data-route-id": routeId, "data-source-path-index": index,
+        "data-route-visibility": routeVisibility,
+        "data-route-owner": plannedRoute && plannedRoute.actorId || "",
+        "data-route-type": plannedRoute && plannedRoute.type || kind,
         style: "--dam-delay:" + delay + "s;--dam-duration:" + duration + "s"
       }));
       if (path.label && !path.hideLabel) {
         var from = path.from || [0, 0], to = path.to || from;
-        pieces.push(el("text", {
+        layers.guides.push(el("text", {
           x: px((from[0] + to[0]) / 2), y: py((from[1] + to[1]) / 2) - 8,
-          class: "dam-path-label", "text-anchor": "middle"
+          class: "dam-path-label dam-path-label--" + routeVisibility,
+          "data-route-id": routeId, "data-route-visibility": routeVisibility,
+          "text-anchor": "middle"
         }, esc(path.label)));
       }
       // Preserve authored route styling while using the explicitly reviewed
@@ -1249,12 +1421,12 @@ RR.drillAnimation = (function () {
               "text-anchor": "middle", "dominant-baseline": "central"
             }, esc(movingPlayer.label));
           }
-          movers.push(el("g", {
+          layers.actors.push(el("g", {
             class: "dam-mover dam-mover--bound", style: style,
             "data-player-index": binding.playerIndex, "data-binding": binding.source
           }, glyph));
         } else {
-          movers.push(el("g", { class: "dam-mover", style: style },
+          layers.actors.push(el("g", { class: "dam-mover", style: style },
             selfEl("circle", { r: 10, class: "dam-mover__halo" }) +
             selfEl("circle", { r: 5.5, class: "dam-mover__dot" })));
         }
@@ -1277,51 +1449,76 @@ RR.drillAnimation = (function () {
           if (group[oi].path.object) { object = group[oi].path.object; break; }
         }
         var style = "--dam-delay:" + delay + "s;--dam-duration:" + duration + "s;offset-path:path('" + d + "')";
-        movers.push(el("g", { class: "dam-flight dam-flight--" + kind,
-          "data-route-legs": group.length, style: style }, ballGlyph(object)));
+        layers.effects.push(el("g", { class: "dam-flight dam-flight--" + kind,
+          "data-route-legs": group.length, "data-flight-profile": "overview", style: style },
+          el("g", { class: "dam-flight__body", "aria-hidden": "true" }, ballGlyph(object))));
       });
     }
 
     (spec.cones || []).forEach(function (cone) {
       var size = scale * 0.3;
       var x = px(cone.x), y = py(cone.y);
-      pieces.push(selfEl("path", { d: "M" + x + " " + (y - size) + "L" + (x + size) + " " + (y + size) + "L" + (x - size) + " " + (y + size) + "z", class: "dam-cone" }));
+      layers.equipment.push(selfEl("path", { d: "M" + x + " " + (y - size) +
+        "L" + (x + size) + " " + (y + size) + "L" + (x - size) + " " +
+        (y + size) + "z", class: "dam-cone" }));
     });
 
     (spec.balls || []).forEach(function (ball) {
-      pieces.push(el("g", { class: "dam-static-ball", transform: "translate(" + round(px(ball.x)) + " " + round(py(ball.y)) + ")" }, ballGlyph(ball.object)));
+      layers.equipment.push(el("g", { class: "dam-static-ball",
+        transform: "translate(" + round(px(ball.x)) + " " + round(py(ball.y)) + ")" },
+        ballGlyph(ball.object)));
     });
 
     if (plan) {
-      (plan.actors || []).forEach(function (actor) {
-        pieces.push(sceneActorMarkup(actor, plan, activeBeats, px, py, scale));
+      sortedSceneActors(plan, activeBeats).forEach(function (actor, depthOrder) {
+        layers.actors.push(sceneActorMarkup(actor, plan, activeBeats, px, py, scale, depthOrder));
       });
-      pieces.push(activeBallMarkups(plan, activeBeats, px, py));
+      var liveBall = activeBallMarkups(plan, activeBeats, px, py);
+      layers.shadows = layers.shadows.concat(liveBall.shadows);
+      layers.effects = layers.effects.concat(liveBall.flights, liveBall.impacts);
     } else {
-      players.forEach(function (player, index) {
+      players.map(function (player, index) { return { player: player, sourceIndex: index }; })
+        .sort(function (left, right) {
+          if (left.player.y !== right.player.y) return left.player.y - right.player.y;
+          if (left.player.x !== right.player.x) return left.player.x - right.player.x;
+          return left.sourceIndex - right.sourceIndex;
+        }).forEach(function (entry, depthOrder) {
+        var player = entry.player;
+        var index = entry.sourceIndex;
         var x = px(player.x), y = py(player.y);
         var tone = player.team || "n";
         var focus = !paths.length ? selfEl("circle", {
           cx: x, cy: y, r: playerR + 6, class: "dam-player-focus", style: "--dam-index:" + index
         }) : "";
-        pieces.push(focus);
-        pieces.push(selfEl("circle", { cx: x, cy: y, r: playerR, class: "dam-player dam-player--" + tone }));
+        layers.shadows.push(selfEl("ellipse", { cx: x, cy: y + playerR * 0.72,
+          rx: playerR * 0.72, ry: playerR * 0.23, class: "dam-athlete-shadow dam-athlete-shadow--legacy",
+          "data-depth-order": depthOrder, "aria-hidden": "true" }));
+        layers.actors.push(focus);
+        layers.actors.push(selfEl("circle", { cx: x, cy: y, r: playerR,
+          class: "dam-player dam-player--" + tone, "data-depth-order": depthOrder }));
         if (player.label != null && player.label !== "") {
-          pieces.push(el("text", {
+          layers.actors.push(el("text", {
             x: x, y: y, class: "dam-player-label dam-player-label--" + tone,
             "text-anchor": "middle", "dominant-baseline": "central"
           }, esc(player.label)));
         }
         if (player.note) {
-          pieces.push(el("text", { x: x, y: y + playerR + 13, class: "dam-player-note", "text-anchor": "middle" }, esc(player.note)));
+          layers.foreground.push(el("text", { x: x, y: y + playerR + 13,
+            class: "dam-player-note", "text-anchor": "middle" }, esc(player.note)));
         }
       });
     }
 
-    pieces = pieces.concat(movers);
+    var pieces = [defs(id), layerMarkup("surface", layers.surface),
+      layerMarkup("markings", layers.markings), layerMarkup("guides", layers.guides),
+      layerMarkup("shadows", layers.shadows), layerMarkup("equipment", layers.equipment),
+      layerMarkup("actors", layers.actors), layerMarkup("effects", layers.effects),
+      layerMarkup("foreground", layers.foreground)];
     return el("svg", {
-      viewBox: "0 0 " + round(width) + " " + round(height), class: "dam-svg",
+      viewBox: "0 0 " + round(width) + " " + round(height), class: "dam-svg dam-svg--broadcast",
       focusable: "false", "aria-hidden": "true", preserveAspectRatio: "xMidYMid meet",
+      "data-camera": "broadcast-elevated", "data-plan-mode": plan ? "walkthrough" : "overview",
+      "data-depth-axis": "top-to-bottom", "data-active-routes": Object.keys(activeRoutes).length,
       "data-plan-id": plan && plan.id || null,
       "data-beat-id": activeBeat && activeBeat.id || null,
       "data-beat-ids": activeBeats.map(function (beat) { return beat.id; }).join(" ") || null,
@@ -1784,9 +1981,24 @@ RR.drillAnimation = (function () {
     lens.root.setAttribute("data-active-actors", String(activeActorCount(beats)));
     lens.root.setAttribute("data-motion", beat.motionId || "");
     lens.root.setAttribute("data-actor-id", beat.actorId || "");
+    var animates = meta.animate !== false;
+    lens.root.setAttribute("data-animates", animates ? "true" : "false");
+    lens.visual.classList.toggle("is-animated", animates);
+    lens.visual.classList.toggle("is-static", !animates);
     lens.visual.style.setProperty("--dam-lens-row", rowPosition(meta.row));
     lens.visual.style.setProperty("--dam-lens-duration", Math.max(240,
       beat.durationMs || meta.durationMs || 1000) + "ms");
+    if (animates) {
+      // A previous static poster may have installed inline locks. Removing
+      // them—not assigning another animation string—re-enables the canonical
+      // responsive/reduced-motion CSS for every later action.
+      lens.visual.style.removeProperty("animation");
+      lens.visual.style.removeProperty("background-position-x");
+    } else {
+      lens.visual.style.setProperty("animation", "none");
+      lens.visual.style.setProperty("background-position-x",
+        columnPosition(finiteNumber(meta.posterFrame) ? meta.posterFrame : 0));
+    }
     lens.visual.style.backgroundImage = "url('" + safeAsset(meta.asset) + "')";
     lens.visual.style.aspectRatio = dimensions[0] + " / " + dimensions[1];
     var athleteCount = activeActorCount(beats);

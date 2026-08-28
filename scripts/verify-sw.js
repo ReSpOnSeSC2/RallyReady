@@ -8,8 +8,8 @@
 //     reject and the WHOLE install fail — the app would never work offline);
 //   • every <script src> and <link rel="stylesheet"> in index.html is precached;
 //   • the manifest, its icons, and the preloaded fonts are precached;
-//   • all 15 close-up atlases and 11 full-scene human grids exist, are non-empty
-//     WebP files, and are precached for offline drill demonstrations;
+//   • all 15 close-up atlases, 11 full-scene WebP grids, and the reviewed PNG
+//     defensive-performance grid exist and are precached for offline demos;
 //   • every js/*.js and css/*.css on disk is precached (a new module that loads
 //     fine online but was never added to APP_SHELL breaks ONLY offline — the
 //     worst kind of bug to spot in a gym with no signal).
@@ -159,6 +159,19 @@ expectedSceneGrids.forEach((f) => {
   }
   ok(!!inShell[rel], rel + " is precached in APP_SHELL");
 });
+
+const defensivePerformanceGrid = "scene-defense-pro-grid.png";
+const defensivePerformanceRel = "images/drill-motion/" + defensivePerformanceGrid;
+const defensivePerformanceAbs = path.join(motionDir, defensivePerformanceGrid);
+const defensivePerformanceExists = fs.existsSync(defensivePerformanceAbs);
+ok(defensivePerformanceExists, defensivePerformanceRel + " exists on disk");
+if (defensivePerformanceExists) {
+  const bytes = fs.readFileSync(defensivePerformanceAbs);
+  ok(bytes.length > 24, defensivePerformanceRel + " is non-empty");
+  ok(bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
+    defensivePerformanceRel + " has a valid PNG signature");
+}
+ok(!!inShell[defensivePerformanceRel], defensivePerformanceRel + " is precached in APP_SHELL");
 
 console.log("──────────────────────────────────────────");
 if (fail) {

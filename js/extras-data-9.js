@@ -95,10 +95,73 @@ RR.extras = RR.extras || {};
   // ---- Coach-hit digging lines & target digging -----------------------------
 
   E["digging-coach-down-balls"] = {
-    diagram: dk.coachFeed({
-      defenders: 3, sourceNote: "hits down-balls",
-      caption: "A coach hits down-balls from a box at the net at three back-court defenders. Each gets low and balanced, angles the platform, and digs the ball up HIGH toward the middle of the court. Shag, rotate to the next defender, repeat."
-    })
+    // This scene is deliberately explicit instead of using the generic coach
+    // feed template. Each ball has two factual contacts (coach attack, then
+    // defender dig) and every back-court player owns one complete repetition.
+    // That prevents an unlabeled ball arrow from becoming a running route or
+    // activating only the two outside defenders.
+    diagram: {
+      caption: "Three defenders work one at a time. The coach sends a controlled down-ball to left back, middle back, then right back. Each defender is stopped and low before contact, locks a clean platform, and digs HIGH to the middle target before the group rotates.",
+      w: 9, h: 10, net: 2.2, operation: "rotation",
+      lines: [{ y: 5.2 }],
+      court: [{ x: 0, y: 2.2, w: 9, h: 7.4 }],
+      zones: [{ x: 3.75, y: 4.45, w: 1.5, h: 1.15, tone: "target", label: "HIGH DIG TARGET" }],
+      players: [
+        { id: "downball-coach", x: 4.5, y: 0.9, label: "C", team: "coach", note: "controlled down-ball attack" },
+        { id: "downball-left", x: 1.6, y: 8.6, label: "LB", team: "a", note: "left-back defender" },
+        { id: "downball-middle", x: 4.5, y: 8.6, label: "MB", team: "a", note: "middle-back defender" },
+        { id: "downball-right", x: 7.4, y: 8.6, label: "RB", team: "a", note: "right-back defender" }
+      ],
+      paths: [
+        { from: [1.6, 8.6], to: [1.6, 8.6], kind: "move", actor: "downball-left",
+          action: "defensive-ready", hideLabel: true, stepIndices: [0], sequenceOrder: 0,
+          simultaneousGroup: "all-downball-defenders-ready" },
+        { from: [4.5, 8.6], to: [4.5, 8.6], kind: "move", actor: "downball-middle",
+          action: "defensive-ready", hideLabel: true, stepIndices: [0], sequenceOrder: 0,
+          simultaneousGroup: "all-downball-defenders-ready" },
+        { from: [7.4, 8.6], to: [7.4, 8.6], kind: "move", actor: "downball-right",
+          action: "defensive-ready", hideLabel: true, stepIndices: [0], sequenceOrder: 0,
+          simultaneousGroup: "all-downball-defenders-ready" },
+        { from: [4.5, 1.4], to: [1.6, 8.1], kind: "ball",
+          hideLabel: true, stepIndices: [1], sequenceOrder: 0 },
+        { from: [4.5, 1.4], to: [4.5, 8.1], kind: "ball",
+          hideLabel: true, stepIndices: [1], sequenceOrder: 1 },
+        { from: [4.5, 1.4], to: [7.4, 8.1], kind: "ball",
+          hideLabel: true, stepIndices: [1], sequenceOrder: 2 },
+        { from: [1.6, 8.1], to: [4.5, 5.05], kind: "ball",
+          hideLabel: true, stepIndices: [2], sequenceOrder: 0,
+          toEndpoint: { type: "target", label: "high middle dig target" } },
+        { from: [4.5, 8.1], to: [4.5, 5.05], kind: "ball",
+          hideLabel: true, stepIndices: [2], sequenceOrder: 1,
+          toEndpoint: { type: "target", label: "high middle dig target" } },
+        { from: [7.4, 8.1], to: [4.5, 5.05], kind: "ball",
+          hideLabel: true, stepIndices: [2], sequenceOrder: 2,
+          toEndpoint: { type: "target", label: "high middle dig target" } },
+        { from: [1.6, 8.6], to: [4.5, 8.6], kind: "move", actor: "downball-left",
+          action: "shuffle", hideLabel: true, stepIndices: [3], sequenceOrder: 0,
+          simultaneousGroup: "downball-defender-rotation" },
+        { from: [4.5, 8.6], to: [7.4, 8.6], kind: "move", actor: "downball-middle",
+          action: "shuffle", hideLabel: true, stepIndices: [3], sequenceOrder: 0,
+          simultaneousGroup: "downball-defender-rotation" },
+        { from: [7.4, 8.6], via: [[8.15, 9.3], [0.85, 9.3]], to: [1.6, 8.6],
+          kind: "move", actor: "downball-right", action: "shuffle", hideLabel: true,
+          stepIndices: [3], sequenceOrder: 0,
+          simultaneousGroup: "downball-defender-rotation" }
+      ],
+      contacts: [
+        { pathIndex: 3, actor: "downball-coach", toActor: "downball-left", action: "down-ball-hit", order: 1 },
+        { pathIndex: 4, actor: "downball-coach", toActor: "downball-middle", action: "down-ball-hit", order: 2 },
+        { pathIndex: 5, actor: "downball-coach", toActor: "downball-right", action: "down-ball-hit", order: 3 },
+        { pathIndex: 6, actor: "downball-left", action: "platform dig high to middle", order: 1 },
+        { pathIndex: 7, actor: "downball-middle", action: "platform dig high to middle", order: 2 },
+        { pathIndex: 8, actor: "downball-right", action: "platform dig high to middle", order: 3 }
+      ],
+      legend: [
+        { tone: "coach", text: "Coach / down-ball source" },
+        { tone: "a", text: "Defenders rotate LB → MB → RB" },
+        { tone: "target", text: "High middle dig target" }
+      ]
+    }
   };
   E["dig-to-target"] = {
     diagram: digRep({

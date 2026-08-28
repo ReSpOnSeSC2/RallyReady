@@ -127,7 +127,7 @@ RR.drillHumanMotion = (function () {
     detector("serve", /\b(?:standing|underhand|overhand|float|topspin|jump[- ]float|jump[- ]topspin|hybrid)\s+serv(?:e|es|ing)\b|\bserv(?:e|es|ed|ing)\s+(?:it|the|a|that|this|ball|to|at|into|over|from|for|real|tough|easy|high|deep)\b|\b(?:team|player|athlete|they)\s+serves?\b|\bserving\s+(?:toss|arm|contact|routine)\b|\bpre[- ]serve\b/i),
     detector("attack", /\bspik(?:e|es|ed|ing)\b|\barm swing\b|\broll[- ]shots?\b|\btip(?:s|ped|ping)?\s+(?:it|the|a|ball|over|to)\b|\bdump(?:s|ed|ing)?\s+(?:it|the|a|ball|over|to)\b|\bdown[- ]?balls?\b|\bkill(?:s|ed|ing)?\b|\bswing(?:s|ing)?\s+(?:through|hard|at|over|into)\b|\bapproach(?:es|ing)?\s+(?:and|to)\s+(?:hit|attack|swing|jump)\b|\bhits?\s+(?:it|back|down|over|into|(?:(?:the|a|that|this)\s+)?(?:ball|set)|(?:(?:the|a|an)\s+)?(?:back|front|quick|high|outside|right[- ]side|middle)[- ]set(?:\s+ball)?)\b|\b(?:player|hitter|team|they|everyone|who)\s+(?:[a-z'-]+[\s,]+){0,6}attacks\b|\battack(?:ed|ing)\b|\battack\s+(?:it|over|into|back|(?:(?:the|a)\s+)?(?:ball|set|counter)|(?:(?:the|a|an)\s+)?(?:back|front|quick|high|outside|right[- ]side|middle)[- ]set(?:\s+ball)?)\b|\b(?:player|hitter)\s+rolls?\s+(?:the\s+|a\s+)?ball\b/i),
     detector("block", /\bblocking\s+(?:footwork|hands|timing|movement)\b|\bblockers?\s+(?:move|moves|jump|jumps|close|closes|press|presses|land|lands|read|reads|block|blocks)\b|\bblocks?\s+(?:it|the|a|that|this|ball)\b|\bblock[- ]jump\b|\bdouble block\b|\bswing block\b|\bcommit block\b|\bpress(?:es|ed|ing)?\s+(?:the\s+)?hands?\b|\bseal(?:s|ed|ing)?\b/i),
-    detector("defense", /\bdigs?\s+(?:it|the|a|that|this|ball|back|up|to)\b|\bwho\s+digs?\b|\bdigging\b|\bsprawl(?:s|ed|ing)?\b|\bpancake(?:s|d|ing)?\b|\bpursuit\b|\bemergency\s+(?:defense|save)\b|\bcollapse(?:s|d|ing)?\b|\bshoulder roll\b|\broll or sprawl\b|\bdiv(?:e|es|ed|ing)\b|\brun[- ]through\b|\bdeflect(?:s|ed|ing)?\s+(?:it|the|a|each|ball)\b/i),
+    detector("defense", /\bdigs?\s+(?:it|the|a|that|this|ball|back|up|to)\b|\bwho\s+digs?\b|\bdigging\b|\bsprawl(?:s|ed|ing)?\b|\bpancake(?:s|d|ing)?\b|\bpursuit\b|\bemergency\s+(?:defense|save)\b|\bcollapse(?:s|d|ing)?\b|\bshoulder roll\b|\broll or sprawl\b|\bdiv(?:e|es|ed|ing)\b|\brun(?:s|ning)?[- ]through\b|\bdeflect(?:s|ed|ing)?\s+(?:it|the|a|each|ball)\b/i),
     detector("jump", /\bjump(?:s|ed|ing)?\b|\btake[- ]?off\b|\bairborne\b|\bhop(?:s|ped|ping)?\b|\bdepth[- ](?:drop|jump)\b|\bstick(?:s|ing)?\s+(?:the\s+)?landing\b|\bland(?:s|ed|ing)?\s+(?:softly|quietly|balanced|under control|ready|on\s+(?:one|two|both|your)|with\s+(?:balance|bent knees|both feet|two feet))\b|\bland\s+(?:soft|quiet|inside|past)\b|\b(?:every|the|your)\s+landing\s+(?:(?:must|should)\s+be\s+)?(?:soft|quiet|balanced|controlled|under control)\b|\b(?:you|player|athlete|hitter|blocker|server|setter|they|everyone)\s+lands?\b/i),
     detector("run", /\bsprint(?:s|ed|ing)?\b|\bjog(?:s|ged|ging)?\b|\bruns?\s+(?:at|to|toward|back|forward|onto|through|down|across|around|along|after|off|out|up|under|into)\b|\brunning\s+(?:stride|start|takeoff|pace)\b/i),
     detector("footwork", /\bfootwork\b|\bshuffle(?:s|d|ing)?\b|\bcrossover\b|\bdrop[- ]step\b|\bbackpedal(?:s|ed|ing)?\b|\bquick feet\b|\bagility ladder\b|\bcarioca\b|\bgrapevine\b|\bside[- ]steps?\b|\bsplit step\b|\bapproach\s+(?:steps?|footwork|rhythm)\b|\brelease\s+(?:from|to)\b|\bjump rope\b|\bquicksteps?\b|\bmov(?:e|es|ed|ing)\s+(?:(?:the|your|their)\s+)?feet\b|\bmov(?:e|es|ed|ing)\s+(?:forward|back(?:ward)?|left|right)\b|\bwalk(?:s|ed|ing)?\s+(?:the|through)\s+(?:steps?|pattern)\b|\b(?:pulls?|pushes?|crosses?|transitions?)\s+(?:to|toward|back|off|out|across|down|under|into)\b|\bsets?\s+(?:the|your)\s+feet\b/i),
@@ -285,6 +285,12 @@ RR.drillHumanMotion = (function () {
       .test(actorBefore(source, index));
   }
 
+  function incomingDownBallAt(source, index, matchedText) {
+    if (!/\bdown[- ]?balls?\b/i.test(matchedText)) return false;
+    return /\b(?:dig(?:s|ging)?|pass(?:es|ing)?|receiv(?:e|es|ing)|defend(?:s|ing)?|read(?:s|ing)?)\s+(?:(?:a|the|that|this|incoming)\b\s*)?$/i
+      .test(actorBefore(source, index));
+  }
+
   function onlyReferencesSetAsAttackObject(source) {
     var objectPhrase = /\b(?:hit|hits|hitting|attack|attacks|attacking|swing|swings|swinging)\s+(?:(?:a|an|the)\s+)?(?:front|back|quick|shoot|high|outside|right[- ]side|middle)[- ]set(?:\s+ball)?\b/i;
     if (!objectPhrase.test(source)) return false;
@@ -327,6 +333,7 @@ RR.drillHumanMotion = (function () {
       if (item.id === "set" && drill && drill.skill === "Passing" &&
           /\b(?:overhead|emergency|defensive hands?)\b/i.test(source) &&
           !/\b(?:sets?|setting|setter)\b/i.test(source)) return;
+      if (item.id === "attack" && incomingDownBallAt(source, match.index, match[0])) return;
       if (item.id === "attack" && drill && drill.skill === "Serving" &&
           !/\b(?:attack|spik|kill|roll[- ]shot|tip|dump|down[- ]ball)\b/i.test(match[0])) return;
       if (item.id === "recovery" && drill && drill.skill !== "Cooldown" &&
@@ -445,6 +452,14 @@ RR.drillHumanMotion = (function () {
       result = orderedActions(matches);
     }
     if (!result.length) result.push("organize");
+    // "Run through the ball" is one defensive save mechanic: the athlete
+    // keeps forward momentum while presenting a playable platform. Do not
+    // offer generic running/footwork atlases for that phrase. Genuine sprints,
+    // pursuits, and chase-then-dig sequences remain multi-action mechanics.
+    if (result.indexOf("defense") !== -1 &&
+        /\brun(?:s|ning)?[- ]through\s+(?:(?:the|a)\s+)?(?:short\s+)?ball\b/i.test(source)) {
+      result = result.filter(function (id) { return id !== "run" && id !== "footwork"; });
+    }
     if (onlyReferencesSetAsAttackObject(source)) {
       result = result.filter(function (id) { return id !== "set"; });
     }

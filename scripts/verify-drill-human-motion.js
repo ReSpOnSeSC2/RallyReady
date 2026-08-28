@@ -366,6 +366,12 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
   assertStepActions("transition-dig-to-attack", 1, ["set", "footwork", "attack"]);
   assertStepActions("transition-dig-to-attack", 2, ["defense", "attack"]);
   assertStepActions("transition-dig-to-attack", 3, ["defense", "set", "attack"]);
+  assertStepActions("digging-coach-down-balls", 0, ["defense"]);
+  assertStepActions("digging-coach-down-balls", 1, ["organize"]);
+  assertStepActions("digging-coach-down-balls", 2, ["defense"]);
+  assertStepActions("digging-coach-down-balls", 3, ["organize"]);
+  assertStepActions("libero-dig-and-run-through", 1, ["defense"]);
+  assertStepActions("libero-dig-and-run-through", 2, ["defense"]);
   assertStepActions("free-ball-transition", 2, ["pass", "set", "attack"]);
   assertStepActions("jump-set-and-dump", 0, ["set", "jump"]);
   assertStepActions("jump-set-and-dump", 1, ["attack"]);
@@ -424,6 +430,16 @@ if (!motion || !motion.actions || typeof motion.programFor !== "function" ||
     "The coach hits a ball into the court.", ["organize"]);
   assertSyntheticActions("coach feed with learner response", { skill: "Defense" },
     "The coach hits a ball, then the player digs it to target.", ["defense"]);
+  assertSyntheticActions("controlled dig is not running", { skill: "Defense" },
+    "The defender stops, angles the platform, and digs the down-ball high to the middle.",
+    ["defense"]);
+  assertSyntheticActions("run-through is one defensive save", { skill: "Defense" },
+    "The defender runs through the short ball and plays it up while moving forward.",
+    ["defense"]);
+  assertSyntheticActions("pancake is floor defense", { skill: "Defense" },
+    "The defender pancakes the ball, sprawls safely, and recovers.", ["defense"]);
+  assertSyntheticActions("real sprint stays running", { skill: "Warmup" },
+    "The athlete sprints five yards through the finish cone.", ["run"]);
 
   const administrative = motion.classificationFor({ skill: "Team Play" },
     "Track the score, then rotate the teams.");
