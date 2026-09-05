@@ -22,7 +22,7 @@ const files = [
   "js/extras-data-7.js", "js/extras-data-8.js", "js/extras-data-9.js",
   "js/extras-data-10.js", "js/extras-data-11.js", "js/extras-data-12.js",
   "js/drill-human-motion.js", "js/drill-choreography.js",
-  "js/coachcam-library-3d.js", "js/drill-animation.js"
+  "js/coachcam-variants.js", "js/coachcam-library-3d.js", "js/drill-animation.js"
 ];
 files.forEach((file) => vm.runInContext(fs.readFileSync(path.join(ROOT, file), "utf8"), sandbox, { filename: file }));
 
@@ -146,7 +146,7 @@ const sw = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
 ok(!/images\/drill-motion/.test(runtimeSource), "3D runtime does not load static athlete images");
 ok((runtimeSource.match(/new THREE\.WebGLRenderer/g) || []).length === 1,
   "one renderer serves both synchronized camera panes");
-ok(/setScissorTest\(true\)/.test(runtimeSource) && /renderCamera\(player\.courtCamera/.test(runtimeSource) &&
+ok(/setScissorTest\(true\)/.test(runtimeSource) && /renderCamera\(player\.framing === "layout" \? player\.layoutCamera : player\.courtCamera/.test(runtimeSource) &&
   /renderCamera\(player\.mechanicsCamera/.test(runtimeSource), "court and mechanics views use scissor cameras");
 ok(/IntersectionObserver/.test(runtimeSource) && /rootMargin: "320px 0px"/.test(runtimeSource),
   "shared GLB lazy-loads near the viewport");
@@ -167,8 +167,10 @@ ok(fs.existsSync(glbPath), "shared Blender GLB exists");
 if (fs.existsSync(glbPath)) {
   const bytes = fs.readFileSync(glbPath);
   ok(bytes.subarray(0, 4).toString("ascii") === "glTF", "shared asset is a binary glTF");
-  ok(bytes.length > 500000 && bytes.length < 3000000,
-    `shared GLB stays within the 0.5–3 MB production budget (${bytes.length} bytes)`);
+  // The reel now includes the exercise-specific footwork, upper-body and
+  // mobility variants. Keep one bounded shared download for the catalog.
+  ok(bytes.length > 500000 && bytes.length < 8 * 1024 * 1024,
+    `shared GLB stays within the 0.5 MB–8 MiB production budget (${bytes.length} bytes)`);
 }
 
 if (failures.length) {

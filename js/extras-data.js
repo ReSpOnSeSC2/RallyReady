@@ -37,16 +37,49 @@ RR.extras = RR.extras || {};
 
   E["serving-ladder-game"] = {
     format: {
-      grouping: "Pairs, or the whole team at once — every server on the end line with a ball.",
-      flow: "Everyone serves at the same time and climbs the ladder solo: make one from the short line, step back a step, make the next from farther, and so on (the '7-Up' ladder).",
-      tracking: "Each player tracks their own rung. A miss drops you back a step. The coach posts who reaches the top line first.",
-      aim: "First to serve from the full distance (or 7 makes) wins the round; reset and go again."
+      grouping: "Two teams take turns serving from the end line.",
+      flow: "Serve into the far court. A made serve adds one team point; a miss adds nothing. The next teammate takes a turn.",
+      tracking: "Track the two team totals. Optional pressure rule: a miss after a make resets that player's personal streak.",
+      aim: "First team to 7 made serves wins; try 10 in the next round."
     },
     diagram: dk.serveTargets({
       servers: 3,
-      caption: "Each server climbs back one step per make — everyone works their own ladder at the same time."
+      zones: [{ x: 0, y: 0, w: 9, h: 6, tone: "target", label: "In court = 1 point" }],
+      caption: "Two teams take turns serving from the end line. Every made serve adds one team point and a miss adds nothing. First to 7 wins, then reset and try 10."
     })
   };
+  (function () {
+    var entry = E["serving-ladder-game"];
+    var base = { w: 10.4, h: 14.4, net: 6, operation: "rotation", court: [{ x: 0, y: 0, w: 9, h: 12 }],
+      zones: [{ x: .4, y: .4, w: 8.2, h: 5.2, tone: "target", label: "In court = +1 team point" },
+        { x: 9.2, y: 1, w: .8, h: 2, tone: "neutral", label: "Out = 0" }], players: [], paths: [],
+      legend: [{ tone: "a", text: "Team A takes a turn" }, { tone: "b", text: "Team B takes a turn" },
+        { tone: "target", text: "Made serve: +1. Miss: +0. First team to 7; next round try 10." }] };
+    ["a", "b"].forEach(function (team) {
+      var x = team === "a" ? 2.5 : 6.5;
+      for (var i = 0; i < 3; i++) base.players.push({ id: "ladder-" + team + "-" + (i + 1),
+        x: x + (i === 2 ? (team === "a" ? -.8 : .8) : 0), y: i === 0 ? 12.45 : i === 1 ? 13.25 : 13.95,
+        label: team.toUpperCase() + (i + 1), team: team, note: i === 0 ? "current server" : "next teammate" });
+    });
+    function scene(step, caption) {
+      var result = JSON.parse(JSON.stringify(base)); result.stepIndices = [step]; result.caption = caption; return result;
+    }
+    function serve(scene, team, made, order, label) {
+      var x = team === "a" ? 2.5 : 6.5;
+      scene.paths.push({ from: [x, 12.45], to: made ? [x, 2] : [9.6, 2], kind: "serve", motionId: "serve",
+        fromActor: "ladder-" + team + "-1", toEndpoint: { type: "target", label: made ? "In court: +1 point" : "Out: no point" },
+        label: label, stepIndices: scene.stepIndices, sequenceOrder: order });
+    }
+    var turns = scene(0, "Two teams line up behind the end line. Team A takes a serving turn, then Team B takes a turn; the next teammates wait behind them.");
+    serve(turns, "a", true, 0, "Team A takes a turn"); serve(turns, "b", true, 1, "Team B takes a turn");
+    var points = scene(1, "Example: Team A lands a serve in the court for one team point. Team B misses beyond the sideline and adds no point.");
+    serve(points, "a", true, 0, "Made serve: Team A +1"); serve(points, "b", false, 1, "Miss: Team B +0");
+    var win = scene(2, "Example finish: Team A has six points, makes one more serve, and reaches the seven-point goal. Reset the scores and play the next round to ten.");
+    serve(win, "a", true, 0, "Example: Team A 6 → 7, wins the round");
+    var streak = scene(3, "Optional personal-streak example: the same player first makes a serve, then misses. That player's streak resets to zero; team totals still count made serves.");
+    serve(streak, "a", true, 0, "Personal streak: 1 made serve"); serve(streak, "a", false, 1, "Next serve misses: personal streak → 0");
+    entry.diagrams = [turns, points, win, streak]; delete entry.diagram;
+  })();
 
   E["around-the-world-serving"] = {
     format: {
@@ -63,11 +96,11 @@ RR.extras = RR.extras || {};
       ],
       zones: [
         { x: 0.5, y: 0.7, w: 2.4, h: 2.2, tone: "target", label: "1" },
-        { x: 3.3, y: 0.7, w: 2.4, h: 2.2, tone: "target", label: "2" },
-        { x: 6.1, y: 0.7, w: 2.4, h: 2.2, tone: "target", label: "3" },
-        { x: 0.5, y: 3.3, w: 2.4, h: 2.2, tone: "good", label: "4" },
-        { x: 3.3, y: 3.3, w: 2.4, h: 2.2, tone: "good", label: "5" },
-        { x: 6.1, y: 3.3, w: 2.4, h: 2.2, tone: "good", label: "6" }
+        { x: 0.5, y: 3.3, w: 2.4, h: 2.2, tone: "good", label: "2" },
+        { x: 3.3, y: 3.3, w: 2.4, h: 2.2, tone: "good", label: "3" },
+        { x: 6.1, y: 3.3, w: 2.4, h: 2.2, tone: "good", label: "4" },
+        { x: 6.1, y: 0.7, w: 2.4, h: 2.2, tone: "target", label: "5" },
+        { x: 3.3, y: 0.7, w: 2.4, h: 2.2, tone: "target", label: "6" }
       ],
       caption: "One server at a time aims through all six zones, 'travelling around the world'; the group rotates serve → shag → wait after every ball."
     })
@@ -85,20 +118,20 @@ RR.extras = RR.extras || {};
 
   E["dead-fish-serving"] = {
     format: {
-      grouping: "Whole group on the end line, each with a ball.",
-      flow: "Everyone serves together each round. Miss and you become a 'dead fish' — sit down where you are. Make a serve while sitting and you come back to life.",
-      tracking: "Coach calls makes/misses; players self-police sitting and standing. Last fish swimming wins.",
+      grouping: "Two teams on opposite sides of the net, each behind its end line. Every player has a ball, with a refill basket nearby.",
+      flow: "Everyone serves together. After a miss, move to the receiving court and lie down as a dead fish. A teammate rescues you by landing a serve nearby.",
+      tracking: "Track rescues and players still standing. Rescued players return to the serving group.",
       aim: "Keep it light and fast — 6–8 min."
     },
-    diagram: dk.serveTargets({ servers: 6, caption: "All six servers work across the end line each round; a miss = sit down ('dead fish'), a make from sitting brings you back." })
+    diagram: dk.serveTargets({ servers: 6, caption: "All servers serve together. A player who misses moves to the receiving court and lies down; a teammate lands a serve near that player to rescue them. Rescued players return to serve. Play for time or compare players standing." })
   };
 
   E["serving-relay-race"] = {
     format: {
       grouping: "Two or three even teams, each in a line behind the end line with one ball per team.",
-      flow: "Relay style: the front server serves, shags their own ball, hands off to the next teammate, and goes to the back of the line.",
-      tracking: "A team counts a point only for serves that land in. First team to a target number of made serves wins. Each team self-counts; coach settles ties.",
-      aim: "Race to 10–15 made serves per team."
+      flow: "The front server keeps serving until a serve lands in, shags the ball, hands it to the next teammate, and joins the back of the line.",
+      tracking: "Mark each teammate complete only after their made serve. First team with every teammate complete wins.",
+      aim: "Finish every teammate's made serve, then re-rack for the next round."
     },
     diagram: {
       caption: "Two three-player relay teams: each front server serves, follows the sideline to shag, returns the ball, tags the next teammate, and joins the back of the same line.",
@@ -130,20 +163,74 @@ RR.extras = RR.extras || {};
       legend: [{ tone: "a", text: "Team A relay" }, { tone: "b", text: "Team B relay" }, { tone: "move", text: "Serve → shag → tag → back" }]
     }
   };
+  (function () {
+    var entry = E["serving-relay-race"], source = entry.diagram;
+    function scene(step, title) {
+      var result = JSON.parse(JSON.stringify(source));
+      result.stepIndices = [step]; result.title = title; result.paths = [];
+      return result;
+    }
+    function move(target, actor, from, via, to, order, label, carriesBall) {
+      target.paths.push({ from: from, via: via || [], to: to, kind: "move", motionId: "sprint", actor: actor,
+        carriesBall: !!carriesBall, label: label, stepIndices: target.stepIndices, sequenceOrder: order, simultaneousGroup: "relay-stage-" + order });
+    }
+    function ball(target, actor, from, to, order, label, recipient) {
+      target.paths.push({ from: from, to: to, kind: recipient ? "ball" : "serve", motionId: recipient ? "feed" : "serve",
+        fromActor: actor, toActor: recipient, toEndpoint: recipient ? undefined : { type: "target", label: "Made serve" },
+        label: label, stepIndices: target.stepIndices, sequenceOrder: order, simultaneousGroup: "relay-stage-" + order });
+    }
+    var serve = scene(0, "Both front players make a serve");
+    var retrieve = scene(1, "Retrieve the ball, return it, and hand off");
+    var next = scene(2, "The next teammates complete their turns");
+    var reset = scene(3, "Reset both teams for another round");
+    ["a", "b"].forEach(function (team) {
+      var x = team === "a" ? 2.5 : 6.5, side = team === "a" ? -.65 : 9.65;
+      var prefix = "relay-" + team + "-", active = prefix + "server", receiver = prefix + "next", last = prefix + "queue";
+      var back = team === "a" ? 1.65 : 7.35;
+      ball(serve, active, [x, 12.45], [x, 2], 0, "Team " + team.toUpperCase() + " made serve");
+      move(retrieve, active, [x, 12.45], [[side, 12], [side, 2]], [x, 2], 0, "shag the landed ball");
+      move(retrieve, active, [x, 2], [[side, 2], [side, 12]], [x, 12.45], 1, "return with the ball", true);
+      ball(retrieve, active, [x, 12.45], [x, 13.15], 2, "hand ball to next teammate", receiver);
+      move(retrieve, active, [x, 12.45], [[back, 12.7]], [back, 13.95], 3, "join the back of your team");
+      move(retrieve, receiver, [x, 13.15], [], [x, 12.45], 4, "next teammate steps to the end line", true);
+      next.players.forEach(function (player) {
+        if (player.id === active) { player.x = back; player.y = 13.95; player.note = "made serve complete"; }
+        if (player.id === receiver) { player.x = x; player.y = 12.45; player.note = "serves next"; }
+      });
+      ball(next, receiver, [x, 12.45], [x, 2], 0, "second teammate makes a serve");
+      move(next, receiver, [x, 12.45], [[side, 12], [side, 2]], [x, 2], 1, "second teammate shags own ball");
+      move(next, receiver, [x, 2], [[side, 2], [side, 12]], [x, 12.45], 2, "return to the final teammate", true);
+      ball(next, receiver, [x, 12.45], [back, 13.15], 3, "hand ball to final teammate", last);
+      move(next, receiver, [x, 12.45], [[x, 13.4]], [x, 13.95], 4, "second teammate joins the back");
+      move(next, last, [back, 13.15], [], [x, 12.45], 5, "final teammate steps up", true);
+      ball(next, last, [x, 12.45], [x, 2], 6, "final teammate completes the team round");
+    });
+    retrieve.caption = "Both servers run around their sideline to collect the landed ball, return along the sideline, hand the ball to the next teammate, and join the back. The next players step to the end line.";
+    next.caption = "The second teammates make their serves, retrieve and hand off. The final teammates step up and make their serves to complete the team round.";
+    reset.caption = "Both teams return to their original lines with one ball each. Clear the court, reset the completed-player count, and begin another round.";
+    entry.diagrams = [serve, retrieve, next, reset];
+    delete entry.diagram;
+  })();
 
   E["youth-serving-target-game"] = {
     format: {
-      grouping: "Pairs or small groups sharing a couple of balls; everyone serving at once.",
-      flow: "Self-paced serving at big, friendly target zones. Players serve, fetch, and go again — lots of contacts, no waiting.",
-      tracking: "Players score their own points for hitting a zone; a partner can confirm. Celebrate any serve that lands in.",
-      aim: "Keep it positive — total up points as a team to a fun goal."
+      grouping: "Players spread along the serving end line, scoring individually or adding scores as a team.",
+      flow: "Choose a target, serve, and count that target's points. Collect balls between rounds, then reset and try to beat the previous score.",
+      tracking: "Easy targets near the net are worth fewer points; the deep corners are worth more. Agree the values before the round.",
+      aim: "Beat the previous individual or team total."
     },
     diagram: dk.serveTargets({
       servers: 3,
-      zones: [{ x: 0.6, y: 0.6, w: 3.4, h: 3, tone: "target", label: "10" }, { x: 5, y: 0.6, w: 3.4, h: 3, tone: "target", label: "10" }],
-      caption: "Big forgiving target zones; everyone serves at once and scores their own hits."
+      zones: [
+        { x: 0.6, y: 0.6, w: 2.8, h: 2.4, tone: "target", label: "5 pts · deep corner", markerKind: "hoop", diameterMeters: 1 },
+        { x: 5.6, y: 0.6, w: 2.8, h: 2.4, tone: "target", label: "5 pts · deep corner", markerKind: "hoop", diameterMeters: 1 },
+        { x: 3.3, y: 3.7, w: 2.4, h: 1.5, tone: "target", label: "1 pt · easy / near net", markerKind: "hoop", diameterMeters: 1.2 }
+      ],
+      aim: 2,
+      caption: "Example layout: an easy 1-point hoop sits on the far court close to the net; 5-point hoops sit in the two deep corners. Pick a hoop, serve, total the points individually or as a team, then collect and reset for another round. Coaches can change the points and target sizes."
     })
   };
+  E["youth-serving-target-game"].diagram.exampleNote = "Example: 1.2 m easy hoop, 1 m deep-corner hoops, worth 1 and 5 points. The saved drill requires easier near targets and higher-value deep corners without prescribing exact dimensions or scores.";
 
   // ---- COOPERATIVE / BALL-CONTROL GAMES ------------------------------------
 
@@ -169,20 +256,20 @@ RR.extras = RR.extras || {};
 
   E["amoeba-team-game"] = {
     format: {
-      grouping: "Whole group as ONE blob ('amoeba'), spread in an open area.",
-      flow: "Everyone in at once, keeping one ball up together. Each time the group hits a target number of touches, the amoeba 'grows' a new rule or a smaller space.",
-      tracking: "Single team count, out loud. Coach adds the twist at each milestone.",
-      aim: "See how big the amoeba can grow before a drop; 8 min."
+      grouping: "Two teams on opposite sides of a lowered net.",
+      flow: "Agree how many different teammates must touch before the ball goes over. Start with catch-and-pass, then progress to bumps and sets.",
+      tracking: "Score like volleyball, adding the agreed bonus when everyone joins the play cleanly.",
+      aim: "Keep all teammates involved while building controlled rallies."
     },
-    diagram: dk.circlePass({ n: 7, caption: "The whole group keeps one ball alive together; hit the target and the 'amoeba' grows a new rule." })
+    diagram: dk.acrossNet({ teamSize: 4, sequence: "newcomb", caption: "Two teams face each other across a lowered net. In this example, three different teammates catch and pass before throwing over. Agree the required number, then progress to bumps and sets; award the agreed bonus for involving everyone cleanly." })
   };
 
   E["shepherd-and-sheep"] = {
     format: {
-      grouping: "Whole group; one or two 'shepherds', everyone else are 'sheep' (ages 8–10).",
-      flow: "Everyone moves at once in an open area. Shepherds toss/serve balls; sheep pass them back or to a target to be 'herded' safely.",
-      tracking: "Coach runs the story and counts safe passes; it's cooperative, not elimination.",
-      aim: "Lots of laughs and touches — about 6 min."
+      grouping: "Most players are shepherds with balloons; a few sheepdogs begin in the middle of the cone-marked pasture.",
+      flow: "Shepherds cross while keeping their balloons up. Sheepdogs tap balloons away without grabbing; a dropped or tapped-away balloon turns that shepherd into a sheepdog.",
+      tracking: "Track the shepherds remaining after each crossing.",
+      aim: "When only a few shepherds remain, reset and start another round."
     }
   };
 

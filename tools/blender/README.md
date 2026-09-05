@@ -2,7 +2,7 @@
 
 RallyReady's complete drill catalog is rendered through a reusable Blender
 CoachCam library. The shared asset contains the court, a production humanoid
-rig, 52 authored motion clips, two teaching cameras, and 14
+rig, 52 base motion clips with named exercise variants, two teaching cameras, and 14
 equipment families. At runtime each of the 241 real drills is compiled from its
 saved participants, roles, positions, instructions, routes, contacts, and
 equipment. This produces a drill-specific full-court view and synchronized
@@ -40,7 +40,22 @@ floor safety, and exported GLB size:
   --python 'tools\blender\coachcam\validate_library.py'
 node scripts/verify-coachcam-library-3d.js
 node scripts/verify-coachcam-mechanics.js
+node scripts/verify-coachcam-equipment.js
+node scripts/verify-coachcam-presentation.js
+node scripts/verify-coachcam-variants.js
+node scripts/verify-drill-complete-playback.js
+node scripts/audit-drill-completeness.js
 ```
+
+Exercise variations are authored in `coachcam/upperbody_variants.py`,
+`coachcam/locomotion_variants.py`, and `coachcam/mobility_variants.py`.
+`coachcam/context_poses.py` supplies the seated, kneeling and sit-to-stand
+contexts. The shared builder bakes these into named manifest segments alongside
+the base motions. `js/coachcam-variants.js` maps the saved drill and instruction
+to these segments; variant changes must be checked against the delivered GLB.
+The browser equipment module builds fitted wearables and the saved court's
+targets, cones, ladders, carts and balloon props. The presentation test executes
+production code with actual Three.js geometry and the delivered animation.
 
 The catalog verifier exhaustively expands every walkthrough phase and saved
 instruction. It also checks player counts and labels, multi-person positions,

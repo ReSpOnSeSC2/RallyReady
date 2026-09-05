@@ -83,6 +83,21 @@ RR.extras = RR.extras || {};
       movementLanes({ title: "Build-up runs", caption: "Finish with two or three runs at about three-quarter speed down the floor to wake the legs up." })
     )
   };
+  E["dynamic-movement-warmup"].diagrams.forEach(function (scene, sceneIndex) {
+    scene.coordinateSystem = "metric";
+    scene.paths = [];
+    scene.players.forEach(function (player, index) {
+      player.id = "dynamic-lane-" + (index + 1);
+      player.facing = "north";
+      scene.paths.push({ from: [player.x, player.y], to: [player.x, 3.4], kind: "move",
+        actor: player.id, label: ["easy jog down", "high knees down", "lunges / carioca down", "three-quarter run down"][sceneIndex],
+        sequenceOrder: 0, simultaneousGroup: "warmup-outbound", stepIndices: sceneIndex === 2 ? [2, 3] : [sceneIndex === 3 ? 4 : sceneIndex] });
+      if (sceneIndex < 3) scene.paths.push({ from: [player.x, 3.4], to: [player.x, player.y], kind: "move",
+        actor: player.id, label: ["easy jog back", "heel kicks back", "side lunges / carioca back"][sceneIndex],
+        sequenceOrder: 1, simultaneousGroup: "warmup-return", stepIndices: sceneIndex === 2 ? [2, 3] : [sceneIndex] });
+    });
+    scene.exampleNote = "Straight 6 m lane from the end line to the attack line. Outbound and return movements are ordered separately so each uses its prescribed footwork.";
+  });
   E["animal-movement-warmup"] = {
     diagrams: dk.seq(
       movementLanes({ title: "Bear crawl & crab walk", back: true, caption: "Bear crawl (hands and feet, hips low) down to the line, then crab walk (belly up, push through the heels) back the other way." }),
@@ -245,6 +260,56 @@ RR.extras = RR.extras || {};
       legend: [{ tone: "b", text: "Leader" }, { tone: "a", text: "Mirror" }, { tone: "move", text: "Match the move" }]
     }
   };
+  var mirrorBase = E["mirror-defensive-shuffle"].diagram;
+  mirrorBase.coordinateSystem = "metric";
+  mirrorBase.title = "Lead and mirror side to side";
+  mirrorBase.players[0].id = "mirror-leader";
+  mirrorBase.players[0].facing = "south";
+  mirrorBase.players[0].role = "leader";
+  mirrorBase.players[1].id = "mirror-follower";
+  mirrorBase.players[1].facing = "north";
+  mirrorBase.players[1].role = "mirror partner";
+  mirrorBase.paths = [];
+  [0, 1].forEach(function (index) {
+    var y = index ? 5 : 3;
+    mirrorBase.paths.push({ from: [3, y], to: [5.2, y], kind: "move", motionId: "shuffle",
+      label: index ? "mirror to the same side" : "lead to the side", playerIndex: index,
+      sequenceOrder: 0, simultaneousGroup: "mirror-out" });
+    mirrorBase.paths.push({ from: [5.2, y], to: [3, y], kind: "move", motionId: "shuffle",
+      label: "return together", playerIndex: index, sequenceOrder: 1, simultaneousGroup: "mirror-back" });
+  });
+  var mirrorDepth = JSON.parse(JSON.stringify(mirrorBase));
+  mirrorDepth.title = "Forward and back without losing the gap";
+  mirrorDepth.caption = "The leader comes forward while the partner moves backward by the same amount, keeping the original two-metre gap and facing each other. Reverse together and return to the start; neither player turns away.";
+  mirrorDepth.paths = [];
+  [0, 1].forEach(function (index) {
+    var y = index ? 5 : 3;
+    mirrorDepth.paths.push({ from: [3, y], to: [3, y + .8], kind: "move", motionId: "shuffle",
+      label: index ? "mirror backward" : "lead forward", playerIndex: index, sequenceOrder: 0, simultaneousGroup: "mirror-depth-out" });
+    mirrorDepth.paths.push({ from: [3, y + .8], to: [3, y], kind: "move", motionId: "shuffle",
+      label: index ? "mirror forward" : "lead backward", playerIndex: index, sequenceOrder: 1, simultaneousGroup: "mirror-depth-back" });
+  });
+  var mirrorTouch = JSON.parse(JSON.stringify(mirrorBase));
+  mirrorTouch.title = "Both touch the floor and recover";
+  mirrorTouch.caption = "On the clap or whistle, both partners bend through the hips and knees, touch the floor, then rise back to the same low defensive stance, still facing one another.";
+  mirrorTouch.paths = [0, 1].map(function (index) {
+    var y = index ? 5 : 3;
+    return { from: [3, y], to: [3, y], kind: "move", motionId: "warmup", label: "touch floor → ready",
+      playerIndex: index, sequenceOrder: 0, simultaneousGroup: "mirror-touch" };
+  });
+  var mirrorSwitch = JSON.parse(JSON.stringify(mirrorBase));
+  mirrorSwitch.title = "Switch the leader after 20–30 seconds";
+  mirrorSwitch.caption = "Keep the same partners and spacing. After 20–30 seconds, the former mirror becomes the leader; the former leader now copies the movements. Start another side-to-side and forward/back round.";
+  mirrorSwitch.players[0].label = "M";
+  mirrorSwitch.players[0].role = mirrorSwitch.players[0].note = "mirror partner";
+  mirrorSwitch.players[1].label = "L";
+  mirrorSwitch.players[1].role = mirrorSwitch.players[1].note = "leader";
+  E["mirror-defensive-shuffle"].diagrams = [mirrorBase, mirrorDepth, mirrorTouch, mirrorSwitch];
+  E["mirror-defensive-shuffle"].diagrams.forEach(function (scene, step) {
+    scene.stepIndices = [step];
+    scene.paths.forEach(function (path) { path.stepIndices = [step]; });
+  });
+  delete E["mirror-defensive-shuffle"].diagram;
   E["reaction-ball-quickness"] = {
     diagram: {
       caption: "Partners with a lumpy reaction ball (or any ball bounced to go a random way). The feeder bounces it in front of their partner, who stays LOW, moves the feet, and catches it after one bounce. Progress to crazy bounces off a wall. Short, sharp bursts, then switch.",

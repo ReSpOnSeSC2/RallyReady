@@ -206,7 +206,7 @@ if (fs.existsSync(coachCamLibraryGlb)) {
   ok(bytes.readUInt32LE(4) === 2, "shared CoachCam library uses glTF 2.0");
   ok(bytes.readUInt32LE(8) === bytes.length,
     "shared CoachCam library GLB declares its exact file length");
-  ok(bytes.length < 3 * 1024 * 1024, "shared CoachCam library remains below 3 MiB");
+  ok(bytes.length < 8 * 1024 * 1024, "shared CoachCam library and exercise variants remain below 8 MiB");
 }
 
 console.log("──────────────────────────────────────────");

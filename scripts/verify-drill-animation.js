@@ -343,9 +343,9 @@ RR.drills.forEach((drill) => {
     ok(minimum == null || (requiredChoreographyAthletes.length === minimum &&
       requiredChoreographyAthletes.every((actor) => actor.fullBody === true &&
         Number.isFinite(actor.x) && Number.isFinite(actor.y) &&
-        actor.x >= 0 && actor.x <= choreographyPlan.width &&
-        actor.y >= 0 && actor.y <= choreographyPlan.height)),
-      `${drill.id} scene ${index + 1}: every saved-minimum athlete is not a full-body actor inside the scene bounds`);
+        (/^authored-/.test(actor.source) || (actor.x >= 0 && actor.x <= choreographyPlan.width &&
+        actor.y >= 0 && actor.y <= choreographyPlan.height)))),
+      `${drill.id} scene ${index + 1}: every saved-minimum athlete needs a full body at an authored position or inside its staging area`);
     ok(choreographyPlan.routes.filter((route) => route.type === "move")
       .every((route) => route.actorId && choreographyActorIds.has(route.actorId)),
       `${drill.id} scene ${index + 1}: choreography contains an unbound movement route`);
@@ -390,11 +390,11 @@ RR.drills.forEach((drill) => {
   });
 });
 
-ok(authored === 210, `expected 210 authored drill animations, found ${authored}`);
-ok(derived === 31, `expected 31 field-derived bundled animations, found ${derived}`);
-ok(multi === 79, `expected 79 multi-step drills, found ${multi}`);
-ok(sceneCount === 337, `expected 337 resolved scenes (306 authored + 31 derived), found ${sceneCount}`);
-ok(authoredLegendScenes === 260, `expected 260 authored scenes with legends, found ${authoredLegendScenes}`);
+ok(authored === 214, `expected 214 authored drill animations, found ${authored}`);
+ok(derived === 27, `expected 27 field-derived bundled animations, found ${derived}`);
+ok(multi === 87, `expected 87 multi-step drills, found ${multi}`);
+ok(sceneCount === 356, `expected 356 resolved scenes (329 authored + 27 derived), found ${sceneCount}`);
+ok(authoredLegendScenes === 282, `expected 282 authored scenes with legends, found ${authoredLegendScenes}`);
 ok(authoredLegendItems >= 513, `expected at least 513 authored legend items, found ${authoredLegendItems}`);
 ok(reviewedChainCount === 130, `expected 130 reviewed single-ball chains, found ${reviewedChainCount}`);
 
@@ -675,7 +675,9 @@ const miniTournamentScenes = RR.drillAnimation.scenesFor(
 ok(miniTournamentScenes.length === 2 && miniTournamentScenes.every((scene) => scene.players.length === 8),
   "mini-volley-stations-tournament: both minimum-layout scenes must show all eight players");
 ok(miniTournamentScenes[0].court.length === 2 &&
-  miniTournamentScenes[0].paths.filter((route) => (route.kind || "ball") !== "move").length === 2 &&
+  miniTournamentScenes[0].paths.filter((route) => (route.kind || "ball") !== "move").length === 8 &&
+  [0, 5].every((courtStart) => miniTournamentScenes[0].paths.filter((route) =>
+    route.from[0] > courtStart && route.from[0] < courtStart + 5).length === 4) &&
   [0, 5].every((courtStart) =>
     miniTournamentScenes[0].players.filter((player) =>
       player.x > courtStart && player.x < courtStart + 5).length === 4),
@@ -966,7 +968,7 @@ const semanticP0OrderCases = [
     ["set", "attack", "backpedal", "attack", "dig"]],
   ["setting-shuttle-relay", 1, ["set", "sprint", "set", "sprint"]],
   ["setter-release-from-base", 2, ["feed", "set", "sprint"]],
-  ["ladder-to-dig-reaction", 3, ["ladder", "sprint", "feed", "dig", "sprint"]]
+  ["ladder-to-dig-reaction", 3, ["feed", "shuffle", "dig", "sprint"]]
 ];
 const semanticP0OrderFailures = semanticP0OrderCases.filter(([id, sourceStep, expected]) =>
   JSON.stringify(semanticP0Phases(semanticP0Plan(id, sourceStep))) !== JSON.stringify(expected));
@@ -1838,17 +1840,13 @@ const expectedDerivedTitles = {
   "yoga-flow-cooldown": "Slow floor flow",
   "bodyweight-shoulder-activation": "Circle, swing, slide, squeeze",
   "guided-breathing-and-reflection": "Breathe, reflect, close together",
-  "mini-band-lateral-walks": "Side steps, monster walks, squats",
   "calf-and-ankle-recovery": "Calf and ankle reset",
   "dynamic-mobility-flow": "Move through four mobility phases",
   "hamstring-and-hip-stretch": "Hamstrings, hips, and twist",
   "balloon-keep-it-up": "Keep your own balloon overhead",
-  "shepherd-and-sheep": "Cross the pasture with control",
   "band-pull-aparts": "Pull apart, row, pull down",
   "band-arm-speed": "Load high and swing through",
   "mini-band-glute-bridges": "Bridge, hold, then side-step",
-  "mini-band-defensive-shuffle": "Shuffle both ways, then box",
-  "ladder-lateral-quicksteps": "Sideways in-in, out-out",
   "jump-rope-speed-intervals": "Five fast work-rest rounds",
   "jump-rope-single-leg": "Two feet, right, left, alternate",
   "med-ball-overhead-slams": "Snap straight down to the floor",
@@ -1863,7 +1861,7 @@ const expectedDerivedTitles = {
   "mat-mobility-flow": "Four-part mat mobility flow"
 };
 ok(JSON.stringify(derivedIds.slice().sort()) === JSON.stringify(Object.keys(expectedDerivedTitles).sort()),
-  "derived bundled drill ids do not match the 31 reviewed exact mappings");
+  "derived bundled drill ids do not match the 27 reviewed exact mappings");
 derivedIds.forEach((id) => {
   const drill = RR.drills.find((item) => item.id === id);
   const scene = RR.drillAnimation.scenesFor(drill)[0];
@@ -1874,7 +1872,7 @@ derivedIds.forEach((id) => {
 const pasture = RR.drillAnimation.scenesFor(RR.drills.find((drill) => drill.id === "shepherd-and-sheep"))[0];
 ok(pasture.net == null, "shepherd-and-sheep: pasture scene must not invent a volleyball net");
 ok(pasture.cones.length === 4, "shepherd-and-sheep: saved cone boundary is not represented");
-ok(pasture.players.length === 7 && pasture.players.filter((player) => player.label === "D").length === 3,
+ok(pasture.players.length === 7 && pasture.players.filter((player) => player.role === "sheepdog" && player.balloon === false).length === 3,
   "shepherd-and-sheep: reviewed shepherd/sheepdog grouping is not represented");
 ok(pasture.paths.filter((route) => route.object === "balloon").length === 4,
   "shepherd-and-sheep: each shepherd needs a saved balloon route");

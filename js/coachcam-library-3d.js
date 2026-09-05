@@ -75,6 +75,17 @@
   function sampleTime(segment, progress) {
     return segment.startSeconds + clamp(progress, 0, 1) * segment.durationSeconds;
   }
+  function netClearanceArc(from, to, nets, height) {
+    list(nets).forEach(function (net) {
+      var crossing = (net.z - from[2]) / (to[2] - from[2]);
+      if (!(crossing > 0 && crossing < 1)) return;
+      var x = from[0] + (to[0] - from[0]) * crossing;
+      if (Math.abs(x - net.x) > net.width / 2) return;
+      var linearHeight = from[1] + (to[1] - from[1]) * crossing;
+      height = Math.max(height, (net.height + 0.20 - linearHeight) / (4 * crossing * (1 - crossing)));
+    });
+    return height;
+  }
   function travelProgress(progress) {
     var p = clamp(progress, 0, 1);
     return p * p * (3 - 2 * p);
@@ -85,6 +96,37 @@
   function routeFacing(motionId, routeYaw, initialYaw) {
     if (/^(shuffle|mini-band|ladder)$/.test(motionId)) return initialYaw;
     return routeYaw + (motionId === "backpedal" ? Math.PI : 0);
+  }
+  function courtSpace(plan) {
+    var presentation = plan.presentation || {};
+    var bounds = presentation.bounds || { minX: 0, minY: 0, maxX: Number(plan.width) || 9, maxY: Number(plan.height) || 10 };
+    var width = Math.max(1, bounds.maxX - bounds.minX);
+    var height = Math.max(1, bounds.maxY - bounds.minY);
+    var metric = presentation.metric || presentation.coordinateSystem === "metric";
+    var hasNet = finite(presentation.net);
+    var halfDepth = hasNet ? Math.max(presentation.net - bounds.minY, bounds.maxY - presentation.net) : height;
+    return {
+      x: (bounds.minX + bounds.maxX) / 2,
+      y: hasNet ? presentation.net : (bounds.minY + bounds.maxY) / 2,
+      scaleX: metric ? 1 : 9 / width,
+      scaleY: metric ? 1 : hasNet ? 9 / Math.max(1, halfDepth) : presentation.bounds ? 1 : 18 / height
+    };
+  }
+  function mappedPoint(plan, point) {
+    var space = courtSpace(plan);
+    return [((Number(point && point[0]) || 0) - space.x) * space.scaleX,
+      ((Number(point && point[1]) || 0) - space.y) * space.scaleY];
+  }
+  function targetElevation(plan, point) {
+    var presentation = plan.presentation || {};
+    var height = 0.12;
+    list(presentation.zones).forEach(function (zone) {
+      if (point[0] >= zone.x && point[0] <= zone.x + zone.w && point[1] >= zone.y && point[1] <= zone.y + zone.h && zone.elevation > 0) height = zone.elevation;
+    });
+    list(presentation.props).forEach(function (prop) {
+      if (Math.abs(point[0] - prop.x) <= (prop.w || 1) / 2 && Math.abs(point[1] - prop.y) <= (prop.h || 1) / 2 && prop.elevation > 0) height = prop.elevation;
+    });
+    return height;
   }
   function stationMotion(motionId) {
     // These clips already contain their reach, step and weight transfer in
@@ -97,18 +139,26 @@
     // parallel events and ball contacts retain their shared clock.
     var scale = 1;
     list(plan.beats).forEach(function (beat) {
-      if (stationMotion(beat.motionId)) return;
+      if (beat.variantDuration > 0) scale = Math.max(scale, beat.variantDuration * (beat.repetitions || 1) / Math.max(0.001, beat.durationMs / 1000));
+      var actor = list(plan.actors).find(function (item) { return item.id === beat.actorId; });
+      if (actor && actor.authored && actor.authored.posture === "sit-stand" && beat.motionId === "set") {
+        scale = Math.max(scale, 3.5 / Math.max(0.001, beat.durationMs / 1000));
+      }
+      if (stationMotion(beat.motionId) || finite(beat.freezeProgress)) return;
       var route = list(plan.routes).find(function (item) { return item.id === beat.routeId && item.type === "move"; });
       if (!route) return;
       var points = [route.from].concat(list(route.via), [route.to]);
       var distance = 0;
       for (var i = 1; i < points.length; i++) {
-        var dx = (points[i][0] - points[i - 1][0]) * 9 / Math.max(1, Number(plan.width) || 9);
-        var dz = (points[i][1] - points[i - 1][1]) * 18 / Math.max(1, Number(plan.height) || 10);
+        var space = courtSpace(plan);
+        var dx = (points[i][0] - points[i - 1][0]) * space.scaleX;
+        var dz = (points[i][1] - points[i - 1][1]) * space.scaleY;
         distance += Math.sqrt(dx * dx + dz * dz);
       }
-      var speed = /shuffle|mini-band|backpedal/.test(beat.motionId) ? 1.8
+      if (finite(beat.routeStartProgress) && finite(beat.routeEndProgress)) distance *= beat.routeEndProgress - beat.routeStartProgress;
+      var speed = beat.motionId === "mini-band" ? 0.48 : beat.motionId === "shuffle" ? 0.8 : beat.motionId === "backpedal" ? 1.8
         : beat.motionId === "ladder" ? 2 : /sprint|run-through/.test(beat.motionId) ? 5.5 : 3;
+      if (beat.variantStride > 0 && beat.variantDuration > 0) speed = Math.min(speed, 1.5 * beat.variantStride / beat.variantDuration);
       scale = Math.max(scale, 1.5 * distance / Math.max(0.001, beat.durationMs / 1000) / speed);
     });
     return scale;
@@ -193,6 +243,32 @@
         showFullScene: entry.supplementalScene === true
       });
       if (!plan || !plan.valid) return;
+      if (RR.coachCamVariants) {
+        var expanded = [];
+        plan.beats.forEach(function (beat) {
+          var selection = RR.coachCamVariants.select(drill, { stepIndex: stepIndex, instruction: instruction, sceneIndex: sceneIndex, plan: plan }, beat);
+          var choices = selection && selection.sequence || (selection ? [selection] : []);
+          if (!choices.length) { expanded.push(beat); return; }
+          var weight = choices.reduce(function (sum, choice) { return sum + (choice.durationSeconds || 1) * (choice.repetitions || 1); }, 0);
+          var elapsedMs = beat.startMs;
+          choices.forEach(function (choice, variantIndex) {
+            var durationMs = beat.durationMs * (choice.durationSeconds || 1) * (choice.repetitions || 1) / weight;
+            var selected = Object.assign({}, beat, {
+              id: choices.length > 1 ? beat.id + "-variant-" + variantIndex : beat.id,
+              motionId: choice.motionId || beat.motionId, variantId: choice.id || "",
+              variantDuration: choice.durationSeconds || 0, variantStride: choice.strideMeters || 0,
+              variantLabel: choice.label || "", repetitions: choice.repetitions || 1,
+              freezeProgress: finite(choice.freezeProgress) ? choice.freezeProgress : null,
+              routeStartProgress: choices.length > 1 ? (elapsedMs - beat.startMs) / beat.durationMs : 0,
+              routeEndProgress: choices.length > 1 ? (elapsedMs + durationMs - beat.startMs) / beat.durationMs : 1,
+              startMs: elapsedMs, durationMs: durationMs, endMs: elapsedMs + durationMs
+            });
+            expanded.push(selected);
+            elapsedMs += durationMs;
+          });
+        });
+        plan.beats = expanded;
+      }
       var sourceDuration = Math.max(1200, Number(plan.durationMs) || 1200);
       var duration = Math.max(sourceDuration / 1000 * motionTimingScale(plan), 2.6);
       var used = {};
@@ -366,6 +442,19 @@
     header.appendChild(controls);
     root.appendChild(header);
 
+    var framing = node("div", "coachcam__angles coachcam__framing");
+    framing.setAttribute("role", "group");
+    framing.setAttribute("aria-label", translated("Demonstration view"));
+    [["both", "Whole drill"], ["layout", "Court layout"], ["technique", "Technique close-up"]].forEach(function (choice, index) {
+      var button = node("button", "coachcam__control", choice[1]);
+      button.type = "button";
+      button.setAttribute("data-framing", choice[0]);
+      button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+      framing.appendChild(button);
+    });
+    root.appendChild(framing);
+    root.setAttribute("data-framing", "both");
+
     var stage = node("div", "coachcam__stage");
     var canvas = node("canvas", "coachcam__canvas");
     canvas.setAttribute("aria-hidden", "true");
@@ -391,6 +480,18 @@
       first.plan.actors.length + " people · " + (equipmentKeys(first.plan).join(" · ") || "court only"));
     formation.appendChild(formationValue);
     root.appendChild(formation);
+    var setupNote = node("p", "coachcam__setup-note", first.plan.presentation && first.plan.presentation.exampleNote);
+    setupNote.hidden = !setupNote.textContent;
+    root.appendChild(setupNote);
+    var setup = node("details", "coachcam__setup");
+    setup.appendChild(node("summary", "", "Equipment and drill setup"));
+    setup.appendChild(node("p", "", compiled.drill.setup));
+    var equipmentList = node("p", "coachcam__setup-equipment", equipmentKeys(first.plan).join(" · "));
+    setup.appendChild(equipmentList);
+    var fullSteps = node("ol", "");
+    list(compiled.drill.steps).forEach(function (step) { fullSteps.appendChild(node("li", "", step)); });
+    setup.appendChild(fullSteps);
+    root.appendChild(setup);
     var angles = node("div", "coachcam__angles");
     angles.setAttribute("role", "group");
     angles.setAttribute("aria-label", translated("Body mechanics viewing angle"));
@@ -466,12 +567,12 @@
 
     mountPlayer(compiled, {
       root: root, canvas: canvas, stage: stage, courtView: courtView,
-      frameBack: frameBack, frameNext: frameNext, angles: angles,
+      frameBack: frameBack, frameNext: frameNext, angles: angles, framing: framing,
       mechanicsView: mechanicsView, loading: loading, fallbackText: fallbackText,
       pause: pause, replay: replay, speed: speed, scrubber: scrubber,
       phaseRail: phaseRail, phaseStatus: phaseStatus, phaseTitle: phaseTitle,
       time: time, cue: cue, safetyKey: safetyKey, formationValue: formationValue,
-      announcer: announcer
+      announcer: announcer, setupNote: setupNote
     });
     return root;
   }
@@ -508,6 +609,10 @@
       routeVisuals: {},
       ballPool: [],
       equipment: [],
+      wearables: [],
+      courtLabels: [],
+      framing: "both",
+      layoutCamera: null,
       courtCamera: null,
       mechanicsCamera: null,
       netSystem: null,
@@ -570,6 +675,8 @@
       ui.safetyKey.textContent = translated(phase.cue);
       ui.formationValue.textContent = translated(phase.plan.actors.length + " people · " +
         (equipmentKeys(phase.plan).join(" · ") || "court only"));
+      ui.setupNote.textContent = translated(phase.plan.presentation && phase.plan.presentation.exampleNote || "");
+      ui.setupNote.hidden = !ui.setupNote.textContent;
       var courtSmall = ui.courtView.querySelector("small");
       var mechanicsSmall = ui.mechanicsView.querySelector("small");
       if (courtSmall) courtSmall.textContent = translated(phase.plan.actors.length + " people · exact drill positions");
@@ -685,11 +792,8 @@
     }
 
     function mapPoint(plan, point, vertical) {
-      var width = Math.max(1, Number(plan.width) || 9);
-      var height = Math.max(1, Number(plan.height) || 10);
-      var x = ((Number(point && point[0]) || 0) / width - 0.5) * 9;
-      var z = ((Number(point && point[1]) || 0) / height - 0.5) * 18;
-      return new player.runtime.THREE.Vector3(x, vertical || 0, z);
+      var pointOnCourt = mappedPoint(plan, point);
+      return new player.runtime.THREE.Vector3(pointOnCourt[0], vertical || 0, pointOnCourt[1]);
     }
 
     function routePoints(plan, route, vertical) {
@@ -745,7 +849,7 @@
         }
       });
       player.drillGroup.traverse(function (object) {
-        if (object.geometry && object.userData && object.userData.coachCamOwnedGeometry) object.geometry.dispose();
+        if (object.geometry && (object.geometry.userData.coachCamOwnedGeometry || object.userData.coachCamOwnedGeometry)) object.geometry.dispose();
         var materials = object.material ? (Array.isArray(object.material) ? object.material : [object.material]) : [];
         materials.forEach(function (material) {
           if (!material || !material.userData || !material.userData.coachCamOwnedMaterial) return;
@@ -760,6 +864,8 @@
       player.routeVisuals = {};
       player.ballPool = [];
       player.equipment = [];
+      player.wearables = [];
+      player.courtLabels = [];
       player.activeActor = null;
     }
 
@@ -775,6 +881,7 @@
       var home = mapPoint(phase.plan, [actor.x, actor.y], 0);
       root.position.copy(home);
       var label = makeLabelSprite(THREE, actor);
+      label.layers.set(1);
       root.add(label);
 
       var ringGeometry = new THREE.RingGeometry(0.38, 0.47, 32);
@@ -840,6 +947,15 @@
       arrow.renderOrder = 4;
       player.drillGroup.add(arrow);
       player.routeVisuals[route.id] = { route: route, line: line, arrow: arrow, points: points };
+      var stepCount = route.authored && route.authored.stepCount;
+      if (route.type === "move" && stepCount > 0) {
+        var distance = points.reduce(function (sum, point, i) { return sum + (i ? point.distanceTo(points[i - 1]) : 0); }, 0);
+        var stepLabel = makeLabelSprite(THREE, { id: route.id, label: stepCount + " steps · " + distance.toFixed(1) + " m", team: "coach" });
+        pointOnPolyline(points, 0.5, stepLabel.position);
+        stepLabel.position.y = 0.45;
+        stepLabel.layers.set(1);
+        player.drillGroup.add(stepLabel);
+      }
     }
 
     function equipmentAnchor(phase) {
@@ -847,8 +963,8 @@
       return actor ? mapPoint(phase.plan, [actor.x, actor.y], 0) : new player.runtime.THREE.Vector3();
     }
 
-    function placeEquipment(phase, key, prototype, index) {
-      if (!prototype || key === "net" || key === "balls") return null;
+    function placeEquipment(phase, key, prototype, index, placement) {
+      if (!prototype || /^(net|balls|medicine ball|reaction ball)$/.test(key)) return null;
       var root = prototype.clone(true);
       root.name = "DrillEquipment_" + slug(key);
       root.visible = true;
@@ -892,6 +1008,21 @@
       } else {
         root.position.copy(anchor).add(new player.runtime.THREE.Vector3((index % 2 ? 0.62 : -0.62), 0, 0.42));
       }
+      if (placement && key !== "box") {
+        root.position.copy(mapPoint(phase.plan, [placement.x, placement.y], placement.elevation || 0));
+        if (finite(placement.rotation)) root.rotation.y = placement.rotation * Math.PI / 180;
+        // Prototype dimensions are fitted to the authored station footprint.
+        if (placement.w > 0 && placement.h > 0 && /^(mats|agility ladder|wall)$/.test(key)) {
+          var nativeBox = new player.runtime.THREE.Box3().setFromObject(root);
+          var nativeSize = nativeBox.getSize(new player.runtime.THREE.Vector3());
+          var space = courtSpace(phase.plan);
+          if (key === "wall") {
+            root.rotation.y = placement.h > placement.w ? Math.PI / 2 : 0;
+            root.scale.x = Math.max(placement.w * space.scaleX, placement.h * space.scaleY) / 8.2;
+          } else if (nativeSize.x > 0.01) root.scale.x *= placement.w * space.scaleX / nativeSize.x;
+          if (key !== "wall" && nativeSize.z > 0.01) root.scale.z *= placement.h * space.scaleY / nativeSize.z;
+        }
+      }
       root.traverse(function (object) {
         if (object.isMesh) {
           object.castShadow = true;
@@ -904,10 +1035,159 @@
       return entry;
     }
 
+    function createPresentation(phase) {
+      var THREE = player.runtime.THREE;
+      var renderer = RR.coachCamEquipment3D;
+      var presentation = phase.plan.presentation || {};
+      var space = courtSpace(phase.plan);
+      var handled = {};
+      function labelAt(label, position, id) {
+        if (!clean(label)) return;
+        var sprite = makeLabelSprite(THREE, { id: id, label: translated(label), team: "coach" });
+        sprite.name = "CourtLabel_" + id;
+        sprite.position.copy(position).setY(position.y + 0.28);
+        sprite.scale.set(2.8, 0.7, 1);
+        sprite.layers.set(1);
+        player.courtLabels.push(sprite);
+        player.drillGroup.add(sprite);
+      }
+      function target(type, spec, id) {
+        var object = renderer.createCourtTarget(THREE, {
+          type: type, width: (spec.w || 0.8) * space.scaleX,
+          depth: (spec.h || 0.8) * space.scaleY,
+          radius: (spec.r || spec.radius || (type === "cone" ? 0.13 : 0.45)) * Math.min(space.scaleX, space.scaleY),
+          shape: spec.shape,
+          spaces: spec.spaces || spec.rungs,
+          color: spec.tone === "a" ? 0xff7444 : spec.tone === "b" ? 0x689dff : 0xf9d65c,
+          boundaryOnly: spec.boundaryOnly === true
+        });
+        object.name = "CourtProp_" + id;
+        object.position.copy(mapPoint(phase.plan, [spec.x, spec.y], (spec.elevation || 0) + 0.025));
+        if (spec.vertical) object.rotation.x = Math.PI / 2;
+        player.drillGroup.add(object);
+        player.equipment.push({ key: type, root: object, authored: spec });
+        if (!/^(cone|hoop|target)$/i.test(clean(spec.label))) {
+          var labelPosition = object.position.clone();
+          if (type === "hoop" && !spec.vertical) labelPosition.z += (spec.r || 0.45) * Math.min(space.scaleX, space.scaleY) + 0.44;
+          if (type === "ball-cart") labelPosition.z += 0.85;
+          labelAt(spec.label, labelPosition, id);
+        }
+        return object;
+      }
+      list(presentation.zones).forEach(function (zone, index) {
+        target(zone.markerKind === "hoop" ? "hoop" : "zone", Object.assign({}, zone, {
+          x: zone.x + zone.w / 2, y: zone.y + zone.h / 2,
+          r: (zone.diameterMeters || Math.min(zone.w * space.scaleX, zone.h * space.scaleY)) / (2 * Math.min(space.scaleX, space.scaleY))
+        }), zone.id || "zone-" + index);
+        if (zone.markerKind === "hoop") handled.hoops = true;
+      });
+      list(presentation.lines).forEach(function (line, index) {
+        var b = presentation.bounds;
+        if (finite(line.y)) target("zone", { x: finite(line.x) ? line.x + (line.w || 0) / 2 : (b.minX + b.maxX) / 2,
+          y: line.y, w: line.w || b.maxX - b.minX, h: 0.035 / space.scaleY, boundaryOnly: true, tone: "b" }, "line-" + index);
+        else if (finite(line.x)) target("zone", { x: line.x, y: (b.minY + b.maxY) / 2,
+          w: 0.035 / space.scaleX, h: line.h || b.maxY - b.minY, boundaryOnly: true, tone: "b" }, "line-" + index);
+      });
+      list(presentation.labels).forEach(function (label, index) {
+        if (finite(label.x) && finite(label.y)) labelAt(label.text || label.label, mapPoint(phase.plan, [label.x, label.y], 0), "authored-label-" + index);
+      });
+      list(presentation.boundaries).forEach(function (rect, index) {
+        target("zone", { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2, w: rect.w, h: rect.h,
+          tone: "b", boundaryOnly: true }, "boundary-" + index);
+      });
+      list(presentation.props).forEach(function (prop, index) {
+        var aliases = { cone: "cones", hoop: "hoops", mat: "mats", ladder: "agility ladder", "plyo-box": "box", target: "hoops" };
+        var key = aliases[prop.type] || prop.type;
+        if (key === "mini bands" || key === "bands" || key === "jump ropes" || key === "net" || key === "balls") return;
+        if (/^(cones|hoops|zone|target|ball-cart|agility ladder)$/.test(key)) {
+          target(key === "cones" ? "cone" : key === "agility ladder" ? "agility-ladder" : /^(zone|ball-cart)$/.test(key) ? key : "hoop", prop, prop.id || "prop-" + index);
+          handled[key] = true;
+        } else if (player.equipmentPrototypes[key]) {
+          if (!finite(prop.x) || !finite(prop.y)) return;
+          var entry = placeEquipment(phase, key, player.equipmentPrototypes[key], index, prop);
+          if (entry) labelAt(prop.label, entry.root.position, prop.id || "prop-" + index);
+          handled[key] = true;
+        }
+      });
+      // A zone marked out by cones needs physical corner markers at its saved
+      // boundaries, not one unrelated cone pile next to the server.
+      if (!handled.cones && equipmentKeys(phase.plan).indexOf("cones") !== -1 && list(presentation.zones).length) {
+        list(presentation.zones).forEach(function (zone, index) {
+          [[zone.x, zone.y], [zone.x + zone.w, zone.y], [zone.x, zone.y + zone.h], [zone.x + zone.w, zone.y + zone.h]].forEach(function (point, corner) {
+            target("cone", { x: point[0], y: point[1] }, "zone-cone-" + index + "-" + corner);
+          });
+        });
+        handled.cones = true;
+      }
+      list(presentation.nets).forEach(function (net, index) {
+        if (!player.netSystem) return;
+        var object = player.netSystem.clone(true);
+        object.name = "CourtNet_" + index;
+        object.visible = true;
+        object.position.copy(mapPoint(phase.plan, [net.x + net.w / 2, net.y], 0));
+        object.scale.set(net.w * space.scaleX / 9, (net.heightMeters || 2.43) / 2.43, 1);
+        player.drillGroup.add(object);
+        player.equipment.push({ key: "net", root: object, authored: net });
+      });
+      ui.root.setAttribute("data-visible-zones", String(list(presentation.zones).length));
+      return handled;
+    }
+
+    function createWearables(phase, keys) {
+      var text = [compiled.drill.setup].concat(list(compiled.drill.steps)).join(" ");
+      keys.filter(function (key) { return /^(mini bands|bands|jump ropes)$/.test(key); }).forEach(function (key) {
+        var pattern = key === "mini bands" ? /^(mini-band|bridge)$/ : key === "bands" ? /^band/ : /^jump-rope$/;
+        var assigned = list(phase.plan.presentation && phase.plan.presentation.props).filter(function (prop) {
+          var type = prop.type === "mini-band" ? "mini bands" : prop.type;
+          return type === key && prop.actorId;
+        });
+        var eligible = assigned.length ? player.actorList.filter(function (actor) {
+          return assigned.some(function (prop) { return prop.actorId === actor.data.id; });
+        }) : player.actorList.filter(function (actor) {
+          return !actor.data.support && list(phase.plan.beats).some(function (beat) { return beat.actorId === actor.data.id && pattern.test(beat.motionId); });
+        });
+        if (!eligible.length) eligible = player.actorList.filter(function (actor) { return !actor.data.support; });
+        eligible.forEach(function (actor) {
+          var assignedProp = assigned.find(function (prop) { return prop.actorId === actor.data.id; }) || {};
+          var recipes = {};
+          var beats = list(phase.plan.beats).filter(function (beat) { return beat.actorId === actor.data.id; });
+          if (!beats.length) beats = [{ motionId: "ready" }];
+          beats.forEach(function (beat) {
+            var segment = poseSegment(actor, beat.motionId, beat.variantId);
+            var rows = /\brows?\b/i.test(phase.instruction);
+            var anchoredSwing = /band-arm-speed/.test(compiled.drill.id) && /resisted|anchor/i.test(phase.instruction);
+            var options = Object.assign({
+              placement: assignedProp.attachment || (/band.{0,30}(?:around|above|at)\s+(?:the\s+)?ankles/i.test(text) ? "ankles" : "above-knees"),
+              mode: key === "bands" && rows ? "anchored" : anchoredSwing ? "anchored-single" : "handheld"
+            }, key === "bands" ? segment.equipment || {} : {});
+            var identity = JSON.stringify(options);
+            if (!recipes[identity]) recipes[identity] = { options: options, variants: [] };
+            recipes[identity].variants.push(beat.variantId || "");
+          });
+          Object.keys(recipes).forEach(function (identity) {
+            var recipe = recipes[identity];
+            if (recipe.options.anchor) {
+              var at = recipe.options.anchor;
+              recipe.options.anchor = new player.runtime.THREE.Vector3(at[0], at[2], -at[1])
+                .applyQuaternion(actor.root.quaternion).add(actor.home);
+            }
+            var wearable = RR.coachCamEquipment3D.createWearable(player.runtime.THREE, key, recipe.options);
+            wearable.actor = actor;
+            wearable.key = key;
+            wearable.variantIds = recipe.variants;
+            player.wearables.push(wearable);
+            player.drillGroup.add(wearable.root);
+            wearable.update(actor);
+          });
+        });
+      });
+    }
+
     function ensureBall(index) {
       var ball = player.ballPool[index];
       if (ball) return ball;
-      ball = player.ballPrototype.clone(true);
+      var prototype = player.equipmentPrototypes[player.ballKind] || player.ballPrototype;
+      ball = player.ballKind === "balloon" ? RR.coachCamEquipment3D.createCourtTarget(player.runtime.THREE, { type: "balloon" }) : prototype.clone(true);
       ball.name = "AnimatedBall_" + (index + 1);
       ball.visible = false;
       ball.position.set(0, 0, 0);
@@ -931,7 +1211,7 @@
       // Skill alone does not imply a net: pancakes, open-area passing, and
       // fitness defense work are still volleyball drills. Show it only when
       // the saved equipment/copy actually calls for one.
-      player.netSystem.visible = !usesWall &&
+      player.netSystem.visible = !usesWall && !list(phase.plan.presentation && phase.plan.presentation.nets).length &&
         (keys.indexOf("net") !== -1 || /\bnet\b/.test(savedCopy));
     }
 
@@ -942,28 +1222,43 @@
       player.scene.add(player.drillGroup);
       list(phase.plan.actors).forEach(function (actor, index) { createActor(phase, actor, index); });
       list(phase.plan.routes).forEach(function (route) { createRouteVisual(phase, route); });
-      equipmentKeys(phase.plan).forEach(function (key, index) {
-        placeEquipment(phase, key, player.equipmentPrototypes[key], index);
+      var handled = createPresentation(phase);
+      var keys = equipmentKeys(phase.plan);
+      player.ballKind = keys.indexOf("medicine ball") !== -1 ? "medicine ball" : keys.indexOf("reaction ball") !== -1 ? "reaction ball" : "balls";
+      if (/^(balloon-keep-it-up|shepherd-and-sheep)$/.test(compiled.drill.id)) player.ballKind = "balloon";
+      ui.root.setAttribute("data-ball-kind", player.ballKind);
+      keys.forEach(function (key, index) {
+        if (!handled[key] && !/^(mini bands|bands|jump ropes)$/.test(key)) placeEquipment(phase, key, player.equipmentPrototypes[key], index);
       });
+      createWearables(phase, keys);
       ensureBall(0);
       configureNet(phase);
       player.phaseIndex = phase.index;
       ui.root.setAttribute("data-visible-actors", String(player.actorList.length));
-      ui.root.setAttribute("data-visible-equipment", String(player.equipment.length));
+      ui.root.setAttribute("data-visible-equipment", String(player.equipment.length + player.wearables.length));
+      ui.root.setAttribute("data-visible-wearables", String(player.wearables.length));
     }
 
     function routeFor(phase, beat) {
       return list(phase.plan.routes).find(function (route) { return route.id === beat.routeId; }) || null;
     }
 
-    function motionSample(entry, motionId, progress) {
+    function poseSegment(entry, motionId, variantId) {
       var segment = player.motionManifest[motionId] || player.motionManifest.ready;
+      if (variantId && segment.variants && segment.variants[variantId]) return segment.variants[variantId];
+      var posture = clean(entry.data.authored && entry.data.authored.posture);
+      return segment.postures && segment.postures[posture] || segment;
+    }
+
+    function motionSample(entry, motionId, progress, variant) {
+      var segment = variant || poseSegment(entry, motionId);
       var sample = sampleTime(segment, progress);
       entry.action.paused = false;
       entry.mixer.setTime(sample);
       entry.action.paused = true;
       entry.currentMotion = motionId;
       entry.currentProgress = progress;
+      entry.currentSegment = segment;
     }
 
     function activeBeats(phase, planTimeMs) {
@@ -993,7 +1288,7 @@
       var beats = list(phase.plan.beats).filter(function (beat) { return beat.actorId === entry.data.id; });
       var movement = beats.filter(function (beat) {
         var route = routeFor(phase, beat);
-        return beat.startMs <= planTimeMs && route && route.type === "move" && !stationMotion(beat.motionId);
+        return beat.startMs <= planTimeMs && route && route.type === "move" && !stationMotion(beat.motionId) && !finite(beat.freezeProgress);
       }).pop();
       entry.root.position.copy(entry.home);
       var initialYaw = facingYaw(entry.data);
@@ -1014,10 +1309,18 @@
         var points = routePoints(phase.plan, route, 0);
         var progress = clamp((planTimeMs - movement.startMs) / movement.durationMs, 0, 1);
         var travel = travelProgress(progress);
+        if (finite(movement.routeStartProgress) && finite(movement.routeEndProgress)) {
+          travel = movement.routeStartProgress + travel * (movement.routeEndProgress - movement.routeStartProgress);
+        }
         pointOnPolyline(points, travel, entry.root.position);
         var direction = routeDirection(points, travel, new THREE.Vector3());
         if (direction.lengthSq() > 0.001) {
           var yaw = routeFacing(movement.motionId, Math.atan2(-direction.x, -direction.z), initialYaw);
+          var movementSegment = poseSegment(entry, movement.motionId, movement.variantId);
+          var travelAxis = clean(movementSegment.travelAxis).toLowerCase();
+          if (movement.motionId !== "shuffle" && movement.motionId !== "mini-band" && travelAxis) {
+            yaw = Math.atan2(-direction.x, -direction.z) + (travelAxis === "x" ? Math.PI / 2 : 0);
+          }
           entry.root.rotation.y = blendYaw(initialYaw, yaw, travelProgress(progress / 0.16));
         }
         entry.currentRoute = route.id;
@@ -1029,11 +1332,13 @@
       var THREE = player.runtime.THREE;
       var activeByActor = {};
       active.forEach(function (beat) {
-        if (beat.actorId && !activeByActor[beat.actorId]) activeByActor[beat.actorId] = beat;
+        var route = routeFor(phase, beat);
+        if (beat.actorId && (!activeByActor[beat.actorId] || player.ballKind === "balloon" && route && route.type === "move")) activeByActor[beat.actorId] = beat;
       });
       player.activeActor = null;
       player.actorList.forEach(function (entry, index) {
         var beat = activeByActor[entry.data.id];
+        entry.currentBeat = beat || null;
         var completed = list(phase.plan.beats).filter(function (item) {
           return item.actorId === entry.data.id && item.endMs <= planTimeMs;
         }).pop();
@@ -1043,17 +1348,39 @@
         var progress = beat ? clamp((planTimeMs - beat.startMs) / Math.max(1, beat.durationMs), 0, 1)
           : completed ? 1 : ((player.authoredTime * (0.55 + index * 0.015)) % player.motionManifest.ready.durationSeconds) /
             player.motionManifest.ready.durationSeconds;
-        var segment = player.motionManifest[motionId];
-        var route = beat && routeFor(phase, beat);
+        var chosenBeat = beat || completed;
+        entry.currentVariantId = chosenBeat && chosenBeat.variantId || "";
+        var segment = poseSegment(entry, motionId, chosenBeat && chosenBeat.variantId);
+        var route = (beat || completed) && routeFor(phase, beat || completed);
+        actorTransform(entry, phase, planTimeMs);
+        entry.root.scale.x = Math.abs(entry.root.scale.x);
+        if (route && route.type === "move" && clean(segment.travelAxis).toLowerCase() === "x") {
+          var directionPoints = routePoints(phase.plan, route, 0);
+          var directionProgress = travelProgress(progress);
+          if (finite(chosenBeat.routeStartProgress) && finite(chosenBeat.routeEndProgress)) directionProgress = chosenBeat.routeStartProgress + directionProgress * (chosenBeat.routeEndProgress - chosenBeat.routeStartProgress);
+          var localDirection = routeDirection(directionPoints, directionProgress, new THREE.Vector3())
+            .applyQuaternion(entry.root.quaternion.clone().invert());
+          if (Math.abs(localDirection.z) > Math.abs(localDirection.x) && segment.directionalVariants) {
+            segment = segment.directionalVariants[localDirection.z < 0 ? "forward" : "backward"] || segment;
+          } else if (localDirection.x < 0 && segment.mirrorForReverse) {
+            entry.root.scale.x = -Math.abs(entry.root.scale.x);
+          }
+        }
         if (route && route.type === "move" && segment.cyclic && segment.strideMeters > 0) {
           var points = routePoints(phase.plan, route, 0);
           var distance = points.reduce(function (sum, point, i) {
             return sum + (i ? point.distanceTo(points[i - 1]) : 0);
           }, 0);
+          if (finite(chosenBeat.routeStartProgress) && finite(chosenBeat.routeEndProgress)) distance *= chosenBeat.routeEndProgress - chosenBeat.routeStartProgress;
           progress = (travelProgress(progress) * distance / segment.strideMeters) % 1;
+        } else if (chosenBeat && chosenBeat.repetitions > 1 && progress < 1) {
+          progress = (progress * chosenBeat.repetitions) % 1;
         }
-        motionSample(entry, motionId, progress);
-        actorTransform(entry, phase, planTimeMs);
+        if (chosenBeat && finite(chosenBeat.freezeProgress)) progress = clamp(chosenBeat.freezeProgress, 0, 1);
+        var posture = clean(entry.data.authored && entry.data.authored.posture);
+        var restingPose = player.motionManifest.ready.postures && player.motionManifest.ready.postures[posture];
+        if (restingPose && (!route || route.type !== "move") && segment === player.motionManifest[motionId]) { segment = restingPose; progress = 0; }
+        motionSample(entry, motionId, progress, segment);
         entry.root.updateMatrixWorld(true);
         var head = entry.root.getObjectByName("ATH_JOINT_NECK");
         if (head) {
@@ -1108,17 +1435,18 @@
       }
       var cacheKey = beat.id + (atProgress == null ? "" : "-" + atProgress + "-" + hand);
       if (entry.contactPoints[cacheKey]) return entry.contactPoints[cacheKey].clone();
-      var position = entry.root.position.clone(), rotation = entry.root.quaternion.clone();
-      var motion = entry.currentMotion, progress = entry.currentProgress;
-      var segment = player.motionManifest[beat.motionId];
+      var position = entry.root.position.clone(), rotation = entry.root.quaternion.clone(), scale = entry.root.scale.clone();
+      var motion = entry.currentMotion, progress = entry.currentProgress, priorSegment = entry.currentSegment;
+      var segment = poseSegment(entry, beat.motionId, beat.variantId);
       var poseProgress = atProgress == null ? contactProgress(segment) : atProgress;
       actorTransform(entry, phase, beat.startMs + beat.durationMs * poseProgress);
-      motionSample(entry, beat.motionId, poseProgress);
+      motionSample(entry, beat.motionId, poseProgress, segment);
       var point = bodyContact(entry, beat.motionId, hand);
       entry.contactPoints[cacheKey] = point.clone();
-      motionSample(entry, motion, progress);
+      motionSample(entry, motion, progress, priorSegment);
       entry.root.position.copy(position);
       entry.root.quaternion.copy(rotation);
+      entry.root.scale.copy(scale);
       entry.root.updateMatrixWorld(true);
       return point;
     }
@@ -1142,13 +1470,77 @@
     function updateBalls(phase, active) {
       var THREE = player.runtime.THREE;
       var now = phaseProgress(phase, player.authoredTime) * phase.sourceDurationMs;
+      if (player.ballKind === "balloon") {
+        var balloonCount = 0;
+        player.actorList.forEach(function (actor) {
+          var authored = actor.data.authored || {};
+          if (actor.data.support || actor.data.team === "b" || authored.balloon === false) return;
+          var balloon = ensureBall(balloonCount++);
+          balloon.userData.actorId = actor.data.id;
+          balloon.userData.contactActorId = null;
+          var segment = actor.currentSegment || player.motionManifest.ready;
+          var progress = actor.currentProgress;
+          var motion = actor.currentMotion;
+          var tapping = /^(set|pass|shuffle|warmup)$/.test(motion);
+          // Sample the actual tap pose at the moving athlete's current world
+          // position. Each cycle floats away and returns to that hand height.
+          // Balloon drills do not send a volleyball to a floor-zone endpoint.
+          if (tapping) motionSample(actor, motion, contactProgress(segment), segment);
+          var anchor = bodyContact(actor, /^(set|pass)$/.test(motion) ? motion : "set");
+          anchor.y += 0.13;
+          if (tapping) motionSample(actor, motion, progress, segment);
+          var cycle = ((progress - contactProgress(segment)) % 1 + 1) % 1;
+          balloon.position.copy(anchor);
+          balloon.position.y += tapping ? 0.72 * Math.sin(Math.PI * cycle) : 0.22;
+          if (!tapping) balloon.position.y = Math.max(balloon.position.y, actor.root.position.y + 2.05);
+          if (authored.balloon === "lost") {
+            var tap = list(phase.plan.beats).find(function (item) {
+              var dog = player.actors[item.actorId];
+              return item.motionId === "set" && dog && dog.data.team === "b";
+            });
+            if (tap) {
+              balloon.userData.contactActorId = tap.actorId;
+              var tapSegment = poseSegment(player.actors[tap.actorId], tap.motionId, tap.variantId);
+              var release = contactTime(tap, tapSegment);
+              var tapPoint = contactAnchor(phase, tap).add(new THREE.Vector3(0, 0.13, 0));
+              if (now < release) balloon.position.lerp(tapPoint, Math.pow(clamp((now - tap.startMs) / Math.max(1, release - tap.startMs), 0, 1), 3));
+              else {
+                var loss = travelProgress(clamp((now - release) / Math.max(1, phase.sourceDurationMs - release), 0, 1));
+                flight(tapPoint, tapPoint.clone().add(new THREE.Vector3(-1.7, 0, 0)).setY(0.32), loss, 0.2, balloon.position);
+              }
+            }
+          }
+          balloon.rotation.set(0, 0, Math.sin(cycle * Math.PI * 2) * 0.09);
+          balloon.visible = true;
+          actor.root.updateMatrixWorld(true);
+        });
+        for (var balloonIndex = balloonCount; balloonIndex < player.ballPool.length; balloonIndex++) player.ballPool[balloonIndex].visible = false;
+        updateTrainingEquipment();
+        return;
+      }
       var wall = player.equipment.find(function (entry) { return entry.key === "wall"; });
       var chains = {};
+      var carried = {};
+      var carriers = active.filter(function (beat) {
+        var route = routeFor(phase, beat);
+        return route && route.type === "move" && route.authored && route.authored.carriesBall;
+      });
+      function segmentFor(beat) {
+        return player.actors[beat.actorId] ? poseSegment(player.actors[beat.actorId], beat.motionId, beat.variantId) : player.motionManifest[beat.motionId];
+      }
       list(phase.plan.beats).forEach(function (beat) {
         var route = routeFor(phase, beat);
-        if (!route || route.type === "move") return;
+        if (!route || route.type === "move" || finite(beat.freezeProgress)) return;
         var key = beat.trackId || (contactFor(phase, beat) || {}).chainId || beat.id;
-        (chains[key] = chains[key] || []).push(beat);
+        var repetitions = beat.repetitions || 1;
+        for (var repeat = 0; repeat < repetitions; repeat++) {
+          (chains[key] = chains[key] || []).push(repetitions === 1 ? beat : Object.assign({}, beat, {
+            id: beat.id + "-contact-" + repeat,
+            startMs: beat.startMs + beat.durationMs * repeat / repetitions,
+            endMs: beat.startMs + beat.durationMs * (repeat + 1) / repetitions,
+            durationMs: beat.durationMs / repetitions, repetitions: 1
+          }));
+        }
       });
       // A saved self-toss may have no diagram route. Attach it to the next
       // contact by the same athlete so release, flight and set are continuous.
@@ -1163,18 +1555,28 @@
       var used = 0;
       Object.keys(chains).forEach(function (key) {
         var beats = chains[key].sort(function (a, b) {
-          return contactTime(a, player.motionManifest[a.motionId]) - contactTime(b, player.motionManifest[b.motionId]);
+          return contactTime(a, segmentFor(a)) - contactTime(b, segmentFor(b));
         });
         var first = beats[0];
         if (now < first.startMs) return;
+        var carrier = carriers.find(function (item) { return beats.some(function (beat) { return beat.actorId === item.actorId; }); });
+        if (carrier && player.actors[carrier.actorId]) {
+          if (!carried[carrier.actorId]) {
+            var carryBall = ensureBall(used++);
+            carryBall.position.copy(bodyContact(player.actors[carrier.actorId], "feed", "left-hand"));
+            carryBall.visible = true;
+            carried[carrier.actorId] = true;
+          }
+          return;
+        }
         var lastIndex = -1;
         beats.forEach(function (beat, i) {
-          if (now >= contactTime(beat, player.motionManifest[beat.motionId])) lastIndex = i;
+          if (now >= contactTime(beat, segmentFor(beat))) lastIndex = i;
         });
         var ball = ensureBall(used++);
         var beat = beats[Math.max(0, lastIndex)];
         var entry = player.actors[beat.actorId];
-        var segment = player.motionManifest[beat.motionId];
+        var segment = segmentFor(beat);
         var release = contactTime(beat, segment);
         var anchor = contactAnchor(phase, beat);
         if (lastIndex < 0) {
@@ -1201,126 +1603,102 @@
           var next = beats[lastIndex + 1];
           var route = routeFor(phase, beat) || { to: [entry.data.x, entry.data.y] };
           var contact = contactFor(phase, beat);
-          var arrival = next ? contactTime(next, player.motionManifest[next.motionId]) : beat.endMs + 450;
+          var arrival = next ? contactTime(next, segmentFor(next)) : beat.endMs + 450;
           var destination;
           if (next) destination = contactAnchor(phase, next);
           else if (contact && contact.recipientActorId && player.actors[contact.recipientActorId]) {
             destination = bodyContact(player.actors[contact.recipientActorId], "feed");
-          } else destination = mapPoint(phase.plan, (contact || route).to, 0.12);
+          } else destination = mapPoint(phase.plan, (contact || route).to, targetElevation(phase.plan, (contact || route).to));
           var progress = clamp((now - release) / Math.max(1, arrival - release), 0, 1);
           if (wall) {
-            var impact = wall.root.position.clone();
-            impact.x = anchor.x;
+            var normal = new THREE.Vector3(0, 0, 1).applyQuaternion(wall.root.quaternion);
+            var impact = anchor.clone().addScaledVector(normal, wall.root.position.clone().sub(anchor).dot(normal));
             impact.y = Math.max(anchor.y + 0.30, 1.4);
-            impact.z += 0.20;
+            impact.addScaledVector(normal, 0.20 * Math.sign(anchor.clone().sub(wall.root.position).dot(normal) || 1));
             // One continuous outbound/rebound path, with exact hand endpoints.
             if (progress < 0.5) flight(anchor, impact, progress * 2, 0.18, ball.position);
             else flight(impact, destination, (progress - 0.5) * 2, 0.18, ball.position);
-          } else flight(anchor, destination, progress, ballArcHeight(beat.motionId, route), ball.position);
+          } else {
+            var nets = player.equipment.filter(function (item) { return item.key === "net"; }).map(function (item) {
+              return { x: item.root.position.x, z: item.root.position.z, width: item.root.scale.x * 9, height: item.root.scale.y * 2.43 };
+            });
+            if (player.netSystem && player.netSystem.visible) nets.push({ x: 0, z: 0, width: 9, height: 2.43 });
+            var height = netClearanceArc(anchor.toArray(), destination.toArray(), nets, ballArcHeight(beat.motionId, route));
+            flight(anchor, destination, progress, height, ball.position);
+          }
         }
         ball.rotation.set(player.authoredTime * 2.1, player.authoredTime * 2.9, player.authoredTime * 1.7);
         ball.visible = true;
+      });
+      carriers.forEach(function (beat) {
+        if (carried[beat.actorId] || !player.actors[beat.actorId]) return;
+        var carryBall = ensureBall(used++);
+        carryBall.position.copy(bodyContact(player.actors[beat.actorId], "feed", "left-hand"));
+        carryBall.visible = true;
+        carried[beat.actorId] = true;
       });
       for (var i = used; i < player.ballPool.length; i++) player.ballPool[i].visible = false;
 
       // Only show a held ball when this step actually calls for handling one.
       // Floor recovery, waiting, and footwork no longer conjure a bouncing ball.
-      if (!used && player.activeActor && equipmentKeys(phase.plan).indexOf("balls") !== -1 &&
+      if (!used && player.activeActor && equipmentKeys(phase.plan).some(function (key) { return /^(balls|medicine ball|reaction ball)$/.test(key); }) &&
           /^(feed|low-toss|admin)$/.test(player.activeActor.currentMotion)) {
         var held = ensureBall(0);
         held.visible = true;
         held.position.copy(bodyContact(player.activeActor, "feed"));
       }
-      player.equipment.forEach(function (equipment) {
-        if (equipment.key !== "medicine ball" || !player.activeActor) return;
+      if (!used && player.ballKind === "medicine ball" && player.activeActor) {
         var actor = player.activeActor;
         var powerBeat = active.find(function (beat) { return beat.actorId === actor.data.id && /^medicine/.test(beat.motionId); });
-        if (!powerBeat) return;
-        var release = contactTime(powerBeat, player.motionManifest[powerBeat.motionId]);
-        if (now <= release) equipment.root.position.copy(bodyContact(actor, powerBeat.motionId));
+        var medicine = ensureBall(0);
+        medicine.visible = true;
+        var release = powerBeat && contactTime(powerBeat, player.motionManifest[powerBeat.motionId]);
+        if (!powerBeat || now <= release) medicine.position.copy(bodyContact(actor, powerBeat ? powerBeat.motionId : "feed"));
         else {
           var start = contactAnchor(phase, powerBeat);
           var end = start.clone().add(new THREE.Vector3(0, 0, -1.4).applyQuaternion(actor.root.quaternion));
           if (/slam/.test(powerBeat.motionId)) end.y = 0.18;
           flight(start, end, (now - release) / Math.max(1, powerBeat.endMs - release),
-            /slam/.test(powerBeat.motionId) ? 0 : 0.22, equipment.root.position);
+            /slam/.test(powerBeat.motionId) ? 0 : 0.22, medicine.position);
         }
-      });
+      }
       updateTrainingEquipment();
     }
 
     function updateTrainingEquipment() {
+      var attached = 0;
+      player.wearables.forEach(function (wearable) {
+        var segment = wearable.actor.currentSegment || {};
+        var applicable = !wearable.variantIds || wearable.variantIds.indexOf(wearable.actor.currentVariantId || "") !== -1;
+        if (!applicable || segment.equipmentHidden) { wearable.root.visible = false; return; }
+        if (wearable.update(wearable.actor)) attached++;
+      });
+      ui.root.setAttribute("data-attached-wearables", String(attached));
       if (!player.activeActor) return;
-      var THREE = player.runtime.THREE;
       var actor = player.activeActor;
-      actor.root.updateMatrixWorld(true);
-      function joint(name) {
-        var bone = actor.root.getObjectByName("ATH_JOINT_" + name);
-        return bone ? bone.getWorldPosition(new THREE.Vector3()) : actor.root.position.clone();
-      }
+      var THREE = player.runtime.THREE;
       player.equipment.forEach(function (equipment) {
-        var id = actor.currentMotion;
-        // Boxes are placed once in activatePhase. Only wearable or handled
-        // equipment follows the active athlete during playback.
-        if (equipment.key === "box") return;
-        if (equipment.key === "foam roller" && id === "foam") {
-          equipment.root.position.copy(new THREE.Vector3(0, 0, -0.56)
+        if (equipment.key === "wall" && /^(standing-calf|bent-knee-calf)/.test(actor.currentVariantId || "")) {
+          equipment.root.position.copy(new THREE.Vector3(0, 0, -0.60)
             .applyQuaternion(actor.root.quaternion).add(actor.root.position));
           equipment.root.quaternion.copy(actor.root.quaternion);
-          return;
         }
-        var rope = equipment.key === "jump ropes" && id === "jump-rope";
-        var band = equipment.key === "bands" && /^band/.test(id);
-        var mini = equipment.key === "mini bands" && /mini-band|bridge/.test(id);
-        if (!rope && !band && !mini) {
-          equipment.root.visible = true;
-          if (equipment.dynamicLine) equipment.dynamicLine.visible = false;
-          return;
-        }
-        equipment.root.visible = false;
-        var left = joint(mini ? "KNEE_L" : "WRIST_L");
-        var right = joint(mini ? "KNEE_R" : "WRIST_R");
-        if (mini) {
-          left.lerp(joint("HIP_L"), 0.24);
-          right.lerp(joint("HIP_R"), 0.24);
-        }
-        var points = [];
-        var center = left.clone().add(right).multiplyScalar(0.5);
-        var across = right.clone().sub(left).normalize();
-        var forward = new THREE.Vector3(0, 0, -1).applyQuaternion(actor.root.quaternion);
-        var theta = 4 * Math.PI * (actor.currentProgress - 0.125);
-        for (var i = 0; i <= 48; i++) {
-          var p = i / 48, angle = p * Math.PI * 2;
-          var point;
-          if (mini) {
-            point = center.clone().addScaledVector(across, Math.cos(angle) * (left.distanceTo(right) / 2 + 0.055))
-              .addScaledVector(forward, Math.sin(angle) * 0.105);
-          } else if (rope) {
-            point = left.clone().lerp(right, p);
-            var radius = Math.sin(Math.PI * p) * Math.max(0.65, center.y - actor.root.position.y - 0.02);
-            point.y -= radius * Math.cos(theta);
-            point.addScaledVector(forward, radius * Math.sin(theta));
+        if (equipment.key === "foam roller" && actor.currentMotion === "foam") {
+          var segment = actor.currentSegment || {};
+          var contact = segment.rollerContact;
+          var first = contact && actor.root.getObjectByName("ATH_JOINT_" + contact.bones[0]);
+          var second = contact && actor.root.getObjectByName("ATH_JOINT_" + contact.bones[1]);
+          if (first && second) {
+            equipment.root.position.copy(first.getWorldPosition(new THREE.Vector3()))
+              .lerp(second.getWorldPosition(new THREE.Vector3()), contact.fraction == null ? 0.5 : contact.fraction);
+            equipment.root.position.y = actor.root.position.y;
           } else {
-            point = center.clone().addScaledVector(across, Math.cos(angle) * left.distanceTo(right) / 2)
-              .addScaledVector(forward, Math.sin(angle) * 0.055);
+            var offset = segment.equipmentAnchor || [0, 0.56, 0];
+            equipment.root.position.copy(new THREE.Vector3(offset[0], offset[2], -offset[1])
+              .applyQuaternion(actor.root.quaternion).add(actor.root.position));
           }
-          points.push(point);
+          equipment.root.quaternion.copy(actor.root.quaternion);
         }
-        if (!equipment.dynamicLine) {
-          var geometry = new THREE.BufferGeometry().setFromPoints(points);
-          geometry.userData.coachCamOwnedGeometry = true;
-          var material = new THREE.LineBasicMaterial({ color: mini ? 0xff7444 : 0x2de0c4 });
-          material.userData.coachCamOwnedMaterial = true;
-          equipment.dynamicLine = new THREE.Line(geometry, material);
-          equipment.dynamicLine.name = "WorkingEquipment_" + slug(equipment.key);
-          player.drillGroup.add(equipment.dynamicLine);
-        } else {
-          var attribute = equipment.dynamicLine.geometry.getAttribute("position");
-          points.forEach(function (point, index) { attribute.setXYZ(index, point.x, point.y, point.z); });
-          attribute.needsUpdate = true;
-          equipment.dynamicLine.geometry.computeBoundingSphere();
-        }
-        equipment.dynamicLine.visible = true;
       });
     }
 
@@ -1328,22 +1706,23 @@
       if (!player.mechanicsCamera || !player.activeActor) return;
       var THREE = player.runtime.THREE;
       var target = player.activeActor.root.position.clone();
-      var floorAction = /sprawl|roll|floor|mat-defense|bridge|foam/.test(player.activeActor.currentMotion);
+      var floorAction = !!(player.activeActor.currentSegment || {}).floor || /sprawl|roll|floor|mat-defense|bridge|foam/.test(player.activeActor.currentMotion);
       var airAction = /jump|attack|block|serve|box/.test(player.activeActor.currentMotion);
-      target.y += floorAction ? 0.62 : airAction ? 1.18 : 0.94;
+      var balloonAction = player.ballKind === "balloon";
+      target.y += balloonAction ? 1.45 : floorAction ? 0.62 : airAction ? 1.18 : 0.94;
       if (!player.mechanicsTarget) player.mechanicsTarget = target.clone();
       var blend = delta ? clamp(1 - Math.pow(0.002, delta), 0.06, 1) : 1;
       player.mechanicsTarget.lerp(target, blend);
       // The view is relative to the athlete, so hands stay visible when a
       // partner on the other side of the court becomes the demonstrator.
-      var radius = floorAction ? 4.5 : airAction ? 5.0 : 4.1;
+      var radius = balloonAction ? 5.4 : floorAction ? 4.5 : airAction ? 5.0 : 4.1;
       var azimuth = player.cameraAngle === "front" ? 0 : player.cameraAngle === "side" ? Math.PI / 2 : Math.PI / 4;
       var offset = new THREE.Vector3(Math.sin(azimuth) * radius,
         floorAction ? 1.30 : 1.05, -Math.cos(azimuth) * radius);
       offset.applyQuaternion(player.activeActor.root.quaternion);
       var desired = player.mechanicsTarget.clone().add(offset);
       player.mechanicsCamera.position.lerp(desired, blend);
-      player.mechanicsCamera.fov = floorAction ? 44 : airAction ? 42 : 39;
+      player.mechanicsCamera.fov = balloonAction ? 45 : floorAction ? 44 : airAction ? 42 : 39;
       player.mechanicsCamera.userData.coachCamBaseFov = player.mechanicsCamera.fov;
       player.mechanicsCamera.userData.coachCamBaseAspect = 1;
       player.mechanicsCamera.near = 0.04;
@@ -1363,12 +1742,23 @@
       updateActors(phase, planTimeMs, active);
       updateBalls(phase, active);
       if (force || !player.mechanicsTarget) updateMechanicsCamera(0, phase);
-      var activeBeat = active[0];
+      var activeBeat = player.activeActor && player.activeActor.currentBeat || active[0];
       if (activeBeat) {
-        ui.phaseTitle.textContent = translated(motionLabel(activeBeat.motionId));
+        var label = translated(activeBeat.variantLabel || motionLabel(activeBeat.motionId));
+        if (activeBeat.repetitions > 1) {
+          var repetition = Math.min(activeBeat.repetitions, Math.floor((planTimeMs - activeBeat.startMs) / activeBeat.durationMs * activeBeat.repetitions) + 1);
+          label += " · " + translated("Repetition") + " " + repetition + "/" + activeBeat.repetitions;
+          ui.root.setAttribute("data-repetition", String(repetition));
+        }
+        ui.phaseTitle.textContent = label;
+        ui.phaseStatus.textContent = translated(phase.label) + " · " + label;
+        var mechanicsSmall = ui.mechanicsView.querySelector("small");
+        if (mechanicsSmall) mechanicsSmall.textContent = label;
         ui.root.setAttribute("data-active-motion", activeBeat.motionId);
+        ui.root.setAttribute("data-active-variant", activeBeat.variantId || "");
       } else {
         ui.root.setAttribute("data-active-motion", "ready");
+        ui.root.setAttribute("data-active-variant", "");
       }
     }
 
@@ -1399,6 +1789,7 @@
         throw new Error("CoachCam shared prototypes are incomplete");
       }
       var equipment = {};
+      if (!RR.coachCamEquipment3D) throw new Error("CoachCam equipment renderer is missing");
       Object.keys(EQUIPMENT_MODELS).forEach(function (key) {
         if (key === "balls" || key === "net") return;
         var prototype = detachNamed(model, EQUIPMENT_MODELS[key]);
@@ -1451,10 +1842,17 @@
       player.courtCamera = findNamed(model, CONTRACT.courtCamera, /camera.*(?:court|wide)/i, true);
       player.mechanicsCamera = findNamed(model, CONTRACT.mechanicsCamera, /camera.*mechanics/i, true);
       player.netSystem = model.getObjectByName("NetSystem");
+      player.layoutCamera = new THREE.OrthographicCamera(-6, 6, 11, -11, 0.1, 100);
+      player.layoutCamera.position.set(0, 40, 0);
+      player.layoutCamera.up.set(0, 0, -1);
+      player.layoutCamera.lookAt(0, 0, 0);
+      scene.add(player.layoutCamera);
       if (!player.courtCamera) player.courtCamera = new THREE.PerspectiveCamera(48, 16 / 9, 0.04, 120);
       if (!player.mechanicsCamera) player.mechanicsCamera = new THREE.PerspectiveCamera(42, 16 / 9, 0.04, 80);
       if (!player.courtCamera.parent) scene.add(player.courtCamera);
       if (!player.mechanicsCamera.parent) scene.add(player.mechanicsCamera);
+      player.courtCamera.layers.enable(1);
+      player.layoutCamera.layers.enable(1);
       if (!model.getObjectByName(CONTRACT.courtCamera)) {
         player.courtCamera.position.set(12.8, 13.2, 17.5);
         player.courtCamera.lookAt(0, 0.6, 0);
@@ -1487,6 +1885,34 @@
         camera.fov = aspect < baseAspect ? THREE.MathUtils.radToDeg(2 * Math.atan(
           Math.tan(THREE.MathUtils.degToRad(baseFov) / 2) * baseAspect / aspect)) : baseFov;
       }
+      if (camera.isOrthographicCamera) {
+        var bounds = { minX: -5.1, maxX: 5.1, minZ: -9.7, maxZ: 9.7 };
+        compiled.phases.forEach(function (phase) {
+          function includePoint(at) {
+            var point = mappedPoint(phase.plan, at);
+            bounds.minX = Math.min(bounds.minX, point[0] - 1.15);
+            bounds.maxX = Math.max(bounds.maxX, point[0] + 1.15);
+            bounds.minZ = Math.min(bounds.minZ, point[1] - 1.15);
+            bounds.maxZ = Math.max(bounds.maxZ, point[1] + 1.15);
+          }
+          list(phase.plan.actors).forEach(function (actor) { includePoint([actor.x, actor.y]); });
+          list(phase.plan.routes).forEach(function (route) {
+            [route.from].concat(list(route.via), [route.to]).forEach(includePoint);
+          });
+          list((phase.plan.presentation || {}).props).forEach(function (prop) {
+            if (!finite(prop.x) || !finite(prop.y)) return;
+            includePoint([prop.x - (prop.w || 0) / 2, prop.y - (prop.h || 0) / 2]);
+            includePoint([prop.x + (prop.w || 0) / 2, prop.y + (prop.h || 0) / 2]);
+          });
+        });
+        var halfWidth = (bounds.maxX - bounds.minX) / 2;
+        var halfHeight = (bounds.maxZ - bounds.minZ) / 2;
+        halfHeight = Math.max(halfHeight, halfWidth / aspect);
+        halfWidth = Math.max(halfWidth, halfHeight * aspect);
+        camera.left = -halfWidth; camera.right = halfWidth;
+        camera.top = halfHeight; camera.bottom = -halfHeight;
+        camera.position.set((bounds.maxX + bounds.minX) / 2, 40, (bounds.maxZ + bounds.minZ) / 2);
+      }
       camera.aspect = aspect;
       camera.updateProjectionMatrix();
       player.renderer.setViewport(box.x, box.y, box.width, box.height);
@@ -1507,7 +1933,14 @@
       player.renderer.setScissorTest(true);
       player.renderer.autoClear = false;
       player.renderer.shadowMap.needsUpdate = true;
-      renderCamera(player.courtCamera, viewBox(ui.courtView), 0x071724);
+      if (player.framing !== "technique") {
+        var fog = player.scene.fog;
+        if (player.framing === "layout") player.scene.fog = null;
+        try {
+          renderCamera(player.framing === "layout" ? player.layoutCamera : player.courtCamera, viewBox(ui.courtView), 0x071724);
+        } finally { player.scene.fog = fog; }
+      }
+      if (player.framing === "layout") return;
 
       // The court camera is the formation source of truth and always shows every
       // participant.  The mechanics camera is deliberately a clean coaching
@@ -1521,12 +1954,20 @@
           state.entry.root.visible = state.entry === player.activeActor;
         });
       }
+      var wearableVisibility = player.wearables.map(function (wearable) { return wearable.root.visible; });
+      player.wearables.forEach(function (wearable) { wearable.root.visible = wearable.root.visible && wearable.actor === player.activeActor; });
+      var ballVisibility = player.ballPool.map(function (ball) { return ball.visible; });
+      if (player.ballKind === "balloon" && player.activeActor) player.ballPool.forEach(function (ball) {
+        ball.visible = ball.visible && (ball.userData.actorId === player.activeActor.data.id || ball.userData.contactActorId === player.activeActor.data.id);
+      });
       try {
         renderCamera(player.mechanicsCamera, viewBox(ui.mechanicsView), 0x0b1b2b);
       } finally {
         actorVisibility.forEach(function (state) {
           state.entry.root.visible = state.visible;
         });
+        player.wearables.forEach(function (wearable, index) { wearable.root.visible = wearableVisibility[index]; });
+        player.ballPool.forEach(function (ball, index) { ball.visible = ballVisibility[index]; });
       }
     }
 
@@ -1669,6 +2110,16 @@
       syncTransport();
       announce("Playback speed " + player.speed + " times.");
     });
+    ui.framing.addEventListener("click", function (event) {
+      var button = event.target.closest("button[data-framing]");
+      if (!button) return;
+      player.framing = button.getAttribute("data-framing");
+      ui.root.setAttribute("data-framing", player.framing);
+      Array.prototype.forEach.call(ui.framing.querySelectorAll("button"), function (choice) {
+        choice.setAttribute("aria-pressed", choice === button ? "true" : "false");
+      });
+      renderNow();
+    });
     ui.phaseRail.addEventListener("click", function (event) {
       var button = event.target.closest("button[data-phase-start]");
       if (button) seek(Number(button.getAttribute("data-phase-start")), true);
@@ -1753,7 +2204,7 @@
     motionIds: MOTION_IDS,
     equipmentModels: EQUIPMENT_MODELS,
     mechanics: Object.freeze({ contactProgress: contactProgress, contactTime: contactTime,
-      sampleTime: sampleTime, travelProgress: travelProgress, blendYaw: blendYaw, routeFacing: routeFacing,
-      motionTimingScale: motionTimingScale, stationMotion: stationMotion })
+      sampleTime: sampleTime, netClearanceArc: netClearanceArc, travelProgress: travelProgress, blendYaw: blendYaw, routeFacing: routeFacing,
+      motionTimingScale: motionTimingScale, stationMotion: stationMotion, courtSpace: courtSpace, mappedPoint: mappedPoint, targetElevation: targetElevation })
   });
 })();

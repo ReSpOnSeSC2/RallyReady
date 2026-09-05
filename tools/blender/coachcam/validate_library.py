@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import math
 import struct
+import sys
 from pathlib import Path
 
 import bpy
@@ -23,6 +24,9 @@ from mathutils import Vector
 
 FPS = 24
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+import upperbody_variants, locomotion_variants, mobility_variants  # noqa: E402
+VARIANT_MODULES=(upperbody_variants,locomotion_variants,mobility_variants)
 GLB_PATH = ROOT / "models" / "coachcam" / "coachcam-library.glb"
 CLIP_NAME = "CoachCam_MotionLibrary"
 RIG_NAME = "RR_Humanoid_v1"
@@ -60,6 +64,7 @@ EXPECTED_EQUIPMENT_ROOTS = {
 SEGMENT_BONES = (
     "TORSO", "HEAD", "UARM_L", "FARM_L", "HAND_L", "UARM_R", "FARM_R", "HAND_R",
     "THIGH_L", "SHIN_L", "FOOT_L", "THIGH_R", "SHIN_R", "FOOT_R",
+    "SPINE_LOW", "SPINE_MID", "SPINE_UPPER",
 )
 POINT_BONES = (
     "PELVIS", "NECK", "SHOULDER_L", "SHOULDER_R", "ELBOW_L", "ELBOW_R",
@@ -71,7 +76,10 @@ EXPECTED_BONES = {
     *{f"ATH_JOINT_{name}" for name in POINT_BONES},
 }
 
-MAX_GLB_BYTES = 3 * 1024 * 1024
+# The shared asset now contains the complete drill-specific variant reel and a
+# three-segment trunk in addition to the original public action vocabulary.
+# Geometry/material budgets remain unchanged; this bounds the larger reel.
+MAX_GLB_BYTES = 8 * 1024 * 1024
 MAX_ATHLETE_TRIANGLES = 18_000
 MAX_TOTAL_TRIANGLES = 80_000
 MAX_MESH_NODES = 100
@@ -176,6 +184,8 @@ def landmarks(rig):
     }
     for name in POINT_BONES:
         result[name] = pose_head(rig, f"ATH_JOINT_{name}")
+    for name in ("LOW","MID","UPPER"):
+        result["SPINE_"+name]=pose_head(rig,"ATH_SPINE_"+name)
     return result
 
 
@@ -194,6 +204,17 @@ def contact_fraction(manifest, motion, fallback=0.5):
     return float(manifest[motion].get("contactProgress", fallback))
 
 
+def animation_segments(manifest):
+    for motion, segment in manifest.items():
+        yield motion, segment
+        for direction, variant in segment.get("directionalVariants", {}).items():
+            yield f"{motion}/{direction}", variant
+        for posture, variant in segment.get("postures", {}).items():
+            yield f"{motion}/{posture}", variant
+        for variant_id, variant in segment.get("variants", {}).items():
+            yield f"{motion}/{variant_id}", variant
+
+
 def validate_anatomy(scene, rig, manifest):
     """Catch stretching, collapsed joints and frame pops in the shipped GLB.
 
@@ -202,13 +223,14 @@ def validate_anatomy(scene, rig, manifest):
     """
     failures = []
     maximum_error = 0.0
+    maximum_spine_error = 0.0
     maximum_speed = 0.0
     samples = 0
     worst_length = None
     worst_speed = None
     minimum_flexion = 180.0
     maximum_flexion = 0.0
-    for motion, segment in manifest.items():
+    for motion, segment in animation_segments(manifest):
         previous = None
         previous_time = None
         # Half frames exercise glTF interpolation as well as authored keys.
@@ -220,6 +242,14 @@ def validate_anatomy(scene, rig, manifest):
             for name, point in pose.items():
                 if not all(math.isfinite(component) for component in point):
                     raise AssertionError(f"{motion}@{frame:g} {name} has a non-finite position")
+            spine=[pose["SPINE_LOW"],pose["SPINE_MID"],pose["SPINE_UPPER"],pose["neck"]]
+            for first,last in zip(spine,spine[1:]):
+                spine_error=abs((last-first).length-.20)
+                maximum_spine_error=max(maximum_spine_error,spine_error)
+                if spine_error>.003:
+                    raise AssertionError(f"{motion}@{frame:g} changes an authored spine segment length")
+            if not motion.endswith("/cat-camel") and abs((spine[-1]-spine[0]).length-.60)>.002:
+                raise AssertionError(f"{motion}@{frame:g} unexpectedly curves the ordinary trunk")
             for name, (start, end, expected) in LIMB_CHAINS.items():
                 for side in ("L", "R"):
                     actual = (pose[f"{end}_{side}"] - pose[f"{start}_{side}"]).length
@@ -264,6 +294,7 @@ def validate_anatomy(scene, rig, manifest):
         "samples": samples,
         "lengthToleranceM": LANDMARK_LENGTH_TOLERANCE_M,
         "maxLengthErrorM": round(maximum_error, 6),
+        "maxSpineLengthErrorM": round(maximum_spine_error, 7),
         "worstLength": worst_length,
         "maxLandmarkSpeedMps": round(maximum_speed, 4),
         "worstSpeed": worst_speed,
@@ -348,8 +379,46 @@ def validate_manifest(document, scene_extras, action):
                 raise AssertionError(f"Missing authored contact surface for {motion}")
         previous_end = end
 
+    variants = manifest["mini-band"].get("directionalVariants", {})
+    if set(variants) != {"forward", "backward"}:
+        raise AssertionError("Mini-band is missing its low forward/backward gait variants")
     expected_final_frame = manifest[ordered[-1]]["endFrame"] + 2
+    for direction in ("forward", "backward"):
+        variant = variants[direction]
+        if variant["startFrame"] != expected_final_frame or variant["endFrame"] <= variant["startFrame"]:
+            raise AssertionError(f"Invalid mini-band/{direction} placement in the reel")
+        if not math.isclose(variant["startSeconds"], variant["startFrame"]/FPS, abs_tol=1e-7):
+            raise AssertionError(f"Invalid mini-band/{direction} start time")
+        if not math.isclose(variant["durationSeconds"], (variant["endFrame"]-variant["startFrame"])/FPS, abs_tol=1e-7):
+            raise AssertionError(f"Invalid mini-band/{direction} duration")
+        expected_final_frame = variant["endFrame"] + 2
+    postures = {f"{motion}/{posture}": variant for motion,segment in manifest.items()
+                for posture,variant in segment.get("postures",{}).items()}
+    if set(postures) != {"ready/supine","ready/seated","ready/kneeling","pass/seated","set/kneeling","set/sit-stand"}:
+        raise AssertionError("Missing seated, kneeling, supine, or sit/stand drill context variants")
+    for posture, variant in sorted(postures.items(),key=lambda item:item[1]["startFrame"]):
+        if variant["startFrame"] != expected_final_frame or variant["endFrame"] <= variant["startFrame"]:
+            raise AssertionError(f"Invalid context pose {posture} placement")
+        if not math.isclose(variant["startSeconds"], variant["startFrame"]/FPS, abs_tol=1e-7):
+            raise AssertionError(f"Invalid context pose {posture} start time")
+        if not math.isclose(variant["durationSeconds"], (variant["endFrame"]-variant["startFrame"])/FPS, abs_tol=1e-7):
+            raise AssertionError(f"Invalid context pose {posture} duration")
+        expected_final_frame = variant["endFrame"] + 2
     action_range = tuple(round(value, 3) for value in action.frame_range)
+    specialized={f"{motion}/{variant_id}":variant for motion,segment in manifest.items()
+                 for variant_id,variant in segment.get("variants",{}).items()}
+    expected_specialized={f"{motion}/{name}" for module in VARIANT_MODULES for motion,name in module.VARIANTS}
+    if set(specialized)!=expected_specialized:
+        raise AssertionError("Specialized motion inventory differs from the authored module contracts: "+
+                             str(sorted(set(specialized)^expected_specialized)))
+    for name,variant in sorted(specialized.items(),key=lambda item:item[1]["startFrame"]):
+        if variant["startFrame"]!=expected_final_frame or variant["endFrame"]<=variant["startFrame"]:
+            raise AssertionError(f"Invalid specialized variant {name} placement")
+        if not math.isclose(variant["startSeconds"],variant["startFrame"]/FPS,abs_tol=1e-7):
+            raise AssertionError(f"Invalid specialized variant {name} start time")
+        if not math.isclose(variant["durationSeconds"],(variant["endFrame"]-variant["startFrame"])/FPS,abs_tol=1e-7):
+            raise AssertionError(f"Invalid specialized variant {name} duration")
+        expected_final_frame=variant["endFrame"]+2
     if action_range != (0.0, float(expected_final_frame)):
         raise AssertionError(f"Action range {action_range} does not cover manifest through {expected_final_frame}")
 
@@ -362,6 +431,191 @@ def validate_manifest(document, scene_extras, action):
             f"Raw glTF animation ends at frame {seconds_end * FPS:.3f}, expected {expected_final_frame}"
         )
     return manifest, ordered, expected_final_frame, action_range
+
+
+def validate_shuffle(scene, rig, manifest):
+    """Reconstruct court-space planted feet from the actual exported tracks.
+
+    This detects the old in-place sway even if the metadata says it is a gait.
+    Runtime must advance the sample by route distance / authored stride.
+    """
+    results = {}
+    segments = {name: segment for name, segment in animation_segments(manifest)
+                if name in ("shuffle","shuffle/forward","shuffle/backward","mini-band","mini-band/forward","mini-band/backward")}
+    for name, segment in segments.items():
+        lateral = "/" not in name
+        stride = .55 if name == "shuffle" else .40
+        axis = 0 if lateral else 1
+        sign = -1 if name.endswith("backward") else 1
+        if not math.isclose(segment.get("strideMeters", 0), stride, abs_tol=1e-8):
+            raise AssertionError(f"{name} missing its distance-to-step contract")
+        if segment.get("travelAxis") != ("x" if lateral else "y") or segment.get("travelSign") != sign:
+            raise AssertionError(f"{name} does not declare its authored travel direction")
+        if lateral and segment.get("mirrorForReverse") is not True:
+            raise AssertionError(f"{name} must support mirrored leftward travel")
+        duration_frames = segment["endFrame"]-segment["startFrame"]
+        samples = []
+        for quarter in range(duration_frames*4+1):
+            fraction = quarter/(duration_frames*4)
+            frame = segment["startFrame"]+quarter/4
+            scene.frame_set(int(frame), subframe=frame % 1)
+            pose = landmarks(rig)
+            samples.append((fraction, pose))
+            width = pose["ANKLE_R"].x-pose["ANKLE_L"].x
+            if not .50 <= width <= 1.14:
+                raise AssertionError(f"{name}@{fraction:g} crosses or overextends the stance: {width:.3f}m")
+            if min(pose["ANKLE_L"].z,pose["ANKLE_R"].z) > .161:
+                raise AssertionError(f"{name}@{fraction:g} has no planted support foot")
+            if not .68 <= pose["pelvis"].z <= .76:
+                raise AssertionError(f"{name}@{fraction:g} loses the low defensive stance")
+        drift = 0
+        support_samples = 0
+        for side, intervals in segment["stancePhases"].items():
+            for start, end in intervals:
+                planted = [(p, pose[f"ANKLE_{side}"]) for p,pose in samples
+                           if start+.015 <= p <= end-.015]
+                if len(planted) < 2:
+                    continue
+                court_positions = [foot[axis]+sign*stride*p for p,foot in planted]
+                drift = max(drift,max(court_positions)-min(court_positions))
+                support_samples += len(planted)
+                if max(foot.z for _,foot in planted) > .157:
+                    raise AssertionError(f"{name} lifts a loaded {side} foot")
+        if drift > .004:
+            raise AssertionError(f"{name} slides a planted foot by {drift:.4f}m in court space")
+        first,last=samples[0][1],samples[-1][1]
+        seam=max((first[key]-last[key]).length for key in first)
+        if seam > .003:
+            raise AssertionError(f"{name} loop resets by {seam:.4f}m")
+        widths=[pose["ANKLE_R"].x-pose["ANKLE_L"].x for _,pose in samples]
+        if lateral:
+            lead=min(samples,key=lambda sample: abs(sample[0]-.235))[1]
+            follow=min(samples,key=lambda sample: abs(sample[0]-.735))[1]
+            if lead["ANKLE_R"].z-lead["ANKLE_L"].z < .04 or follow["ANKLE_L"].z-follow["ANKLE_R"].z < .04:
+                raise AssertionError(f"{name} omits distinct lead and follow foot lifts")
+            if max(widths)-min(widths) < stride-.02:
+                raise AssertionError(f"{name} does not open then restore its stance")
+        results[name]={"samples":len(samples),"strideMeters":stride,
+                       "supportSamples":support_samples,"maxPlantedDriftM":round(drift,6),
+                       "seamM":round(seam,6),"stanceWidthM":[round(min(widths),3),round(max(widths),3)]}
+    return results
+
+
+def validate_context_postures(scene, rig, manifest):
+    segment = manifest["ready"]["postures"]["supine"]
+    scene.frame_set(segment["startFrame"])
+    pose = landmarks(rig)
+    if not .17 <= pose["pelvis"].z <= .25 or abs(pose["neck"].z-pose["pelvis"].z) > .05:
+        raise AssertionError("Supine game target must lie horizontally at court level")
+    if pose["neck"].y >= pose["pelvis"].y-.5:
+        raise AssertionError("Supine target torso is not aligned along the court")
+    if min(pose["neck"].z,pose["headTop"].z)-HEAD_RADIUS_M < .04:
+        raise AssertionError("Supine target head intersects the court")
+    for side in ("L","R"):
+        if pose["ANKLE_"+side].y < pose["pelvis"].y+.75 or pose["KNEE_"+side].z < .14:
+            raise AssertionError("Supine target must extend both legs clear of the court")
+    result={"supine":{"pelvisHeightM":round(pose["pelvis"].z,4),
+                       "headSurfaceM":round(min(pose["neck"].z,pose["headTop"].z)-HEAD_RADIUS_M,4)}}
+    for motion,segment in manifest.items():
+        for posture,variant in segment.get("postures",{}).items():
+            if posture=="supine":
+                continue
+            samples=[]
+            for quarter in range((variant["endFrame"]-variant["startFrame"])*4+1):
+                frame=variant["startFrame"]+quarter/4
+                scene.frame_set(int(frame),subframe=frame % 1)
+                current=landmarks(rig)
+                samples.append(current)
+                if min(current["KNEE_L"].z,current["KNEE_R"].z)<.139:
+                    raise AssertionError(f"{motion}/{posture} knee penetrates the floor")
+            first=samples[0]
+            drift=max((pose[f"ANKLE_{side}"]-first[f"ANKLE_{side}"]).length
+                      for pose in samples for side in ("L","R"))
+            if drift>.004:
+                raise AssertionError(f"{motion}/{posture} moves a planted foot by {drift:.4f}m")
+            heights=[pose["pelvis"].z for pose in samples]
+            if posture=="seated" and not all(.14<=height<=.18 for height in heights):
+                raise AssertionError(f"{motion}/{posture} rises out of the seated posture")
+            if posture=="kneeling":
+                knee_drift=max((pose["KNEE_L"]-first["KNEE_L"]).length for pose in samples)
+                if knee_drift>.004 or not all(.139<=pose["KNEE_L"].z<=.15 for pose in samples):
+                    raise AssertionError(f"{motion}/{posture} shifts or lifts its supporting knee")
+            if posture=="sit-stand" and not (min(heights)<.18 and heights[0]>.90 and heights[-1]>.90):
+                raise AssertionError("Set and Sit must lower fully to the floor and return to standing")
+            if motion in ("pass","set"):
+                if not math.isclose(variant.get("contactProgress",0),.50 if motion=="pass" else .56,abs_tol=1e-8):
+                    raise AssertionError(f"{motion}/{posture} contact time disagrees with the ball route")
+                frame=variant["startFrame"]+(variant["endFrame"]-variant["startFrame"])*variant["contactProgress"]
+                scene.frame_set(int(frame),subframe=frame % 1)
+                contact=landmarks(rig)
+                if motion=="pass" and (contact["WRIST_R"]-contact["WRIST_L"]).length>.13:
+                    raise AssertionError("Seated pass does not join a forearm platform")
+                if motion=="set" and min(contact["WRIST_L"].z,contact["WRIST_R"].z)<contact["neck"].z+.20:
+                    raise AssertionError(f"{motion}/{posture} loses the setting window above the forehead")
+            result[f"{motion}/{posture}"]={"samples":len(samples),"maxFootDriftM":round(drift,6),
+                                           "pelvisRangeM":[round(min(heights),4),round(max(heights),4)]}
+    return result
+
+
+def validate_specialized_motion(scene,rig,manifest):
+    results={}
+    for motion,base_segment in manifest.items():
+        for name,segment in base_segment.get("variants",{}).items():
+            poses=[]
+            frame_count=segment["endFrame"]-segment["startFrame"]
+            for quarter in range(frame_count*4+1):
+                frame=segment["startFrame"]+quarter/4
+                scene.frame_set(int(frame),subframe=frame % 1)
+                poses.append((quarter/(frame_count*4),landmarks(rig)))
+            first,last=poses[0][1],poses[-1][1]
+            seam=max((first[joint]-last[joint]).length for joint in first)
+            if segment.get("cyclic") and seam>.009:
+                raise AssertionError(f"{motion}/{name} loop resets by {seam:.4f}m")
+            plant_drift=0
+            if segment.get("strideMeters",0)>0:
+                axis=0 if segment.get("travelAxis")=="x" else 1
+                stride=segment["strideMeters"]*segment.get("travelSign",1)
+                for side in ("L","R"):
+                    run=[]
+                    for progress,pose in poses+[(1.1,{"ANKLE_"+side:Vector((0,0,99))})]:
+                        foot=pose["ANKLE_"+side]
+                        if abs(foot.z-.155)<.00005:
+                            run.append(foot[axis]+stride*progress)
+                        elif run:
+                            if len(run)>2:
+                                plant_drift=max(plant_drift,max(run)-min(run))
+                            run=[]
+                if plant_drift>.008:
+                    raise AssertionError(f"{motion}/{name} slides a planted foot {plant_drift:.4f}m at its declared stride")
+            if "band-external-" in name or "band-internal-" in name:
+                side="L" if name.endswith("left") else "R"
+                elbow_drift=max((pose["ELBOW_"+side]-first["ELBOW_"+side]).length for _,pose in poses)
+                wrist_travel=max((pose["WRIST_"+side]-first["WRIST_"+side]).length for _,pose in poses)
+                if elbow_drift>.004 or wrist_travel<.20:
+                    raise AssertionError(f"{name} must rotate the forearm while the tucked elbow stays still")
+            if name.startswith("arm-circles"):
+                heights=[pose["WRIST_R"].z for _,pose in poses]
+                if max(heights)-min(heights)<1.0:
+                    raise AssertionError(f"{name} omits its full overhead circle")
+            if name=="slide-one-foot":
+                drive=min(poses,key=lambda item:abs(item[0]-.32))[1]
+                peak=min(poses,key=lambda item:abs(item[0]-.55))[1]
+                if abs(drive["ANKLE_L"].z-.155)>.005 or drive["ANKLE_R"].z<.40:
+                    raise AssertionError("Slide attack must take off from the left foot while driving the right knee")
+                if min(peak["ANKLE_L"].z,peak["ANKLE_R"].z)<.40 or peak["WRIST_R"].z<2.10:
+                    raise AssertionError("Slide attack contact must visibly occur above a one-foot takeoff")
+            if name=="cat-camel":
+                bends=[]
+                for _,pose in poses:
+                    chord=pose["neck"]-pose["pelvis"]
+                    relative=pose["SPINE_MID"]-pose["pelvis"]
+                    bend=relative-chord*relative.dot(chord)/chord.length_squared
+                    bends.append(bend.z)
+                if min(bends)>-.025 or max(bends)<.025:
+                    raise AssertionError("Cat/camel must reverse the actual spine curve, not merely tilt the torso")
+            results[f"{motion}/{name}"]={"samples":len(poses),"loopSeamM":round(seam,6),
+                                         "maxPlantedDriftM":round(plant_drift,6)}
+    return results
 
 
 def validate_sprint(scene, rig, manifest):
@@ -824,6 +1078,9 @@ def main():
 
     anatomy_checks = run_semantic_check("anatomy", lambda: validate_anatomy(scene, rig, manifest))
     sprint_checks = run_semantic_check("sprint", lambda: validate_sprint(scene, rig, manifest))
+    shuffle_checks = run_semantic_check("shuffle", lambda: validate_shuffle(scene, rig, manifest))
+    posture_checks = run_semantic_check("contextPostures", lambda: validate_context_postures(scene, rig, manifest))
+    specialized_checks = run_semantic_check("specializedMotion", lambda: validate_specialized_motion(scene, rig, manifest))
     set_checks = run_semantic_check("set", lambda: validate_set(scene, rig, manifest))
     pass_checks = run_semantic_check("pass", lambda: validate_pass(scene, rig, manifest))
     jump_checks = run_semantic_check("jumpReach", lambda: validate_jump_reach(scene, rig, manifest))
@@ -858,6 +1115,9 @@ def main():
         },
         "anatomy": anatomy_checks,
         "sprint": sprint_checks,
+        "shuffle": shuffle_checks,
+        "contextPostures": posture_checks,
+        "specializedMotion": specialized_checks,
         "set": set_checks,
         "pass": pass_checks,
         "jumpReach": jump_checks,

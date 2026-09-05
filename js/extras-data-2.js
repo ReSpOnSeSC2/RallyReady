@@ -200,12 +200,12 @@ RR.extras = RR.extras || {};
   E["sideout-percentage-gauntlet"] = {
     format: {
       grouping: "One receiving group of ~6 (3 passers + setter + hitters) vs. a line of servers (ages 15–18).",
-      flow: "The receiving group must side out a target number of times IN A ROW against a gauntlet of tough serves; one fail resets the streak.",
-      tracking: "Coach tracks the consecutive-sideout count; servers rotate so the serves stay tough.",
-      aim: "Hit the streak target (e.g. 5 in a row), then rotate a new group through."
+      flow: "Serve a fixed block of balls into each rotation. Count sideouts across the whole block; repeat a rotation if its percentage misses the target.",
+      tracking: "For a 10-serve example, 6–7 sideouts reaches a 60–70% target. Misses remain in the denominator rather than resetting a streak.",
+      aim: "Meet the chosen percentage in all six rotations and total the results."
     },
     diagram: {
-      caption: "Servers fire a gauntlet from across the net; the receiving group must side out several times in a row.",
+      caption: "Servers send a fixed block, for example 10 serves, into each rotation. Count sideouts across the full block; meet the chosen 60–70% target to advance, otherwise repeat. Work all six rotations.",
       w: 9, h: 12, net: 6, lines: [{ y: 3 }, { y: 9 }],
       court: [{ x: 0, y: 0.8, w: 9, h: 10.4 }],
       players: [
@@ -275,6 +275,35 @@ RR.extras = RR.extras || {};
       }
     )
   };
+  (function () {
+    var scenes = E["mini-volley-stations-tournament"].diagrams;
+    scenes[0].stepIndices = [0, 1, 2];
+    scenes[1].stepIndices = [3, 4];
+    scenes.forEach(function (scene) {
+      scene.operation = "parallel";
+      scene.players.forEach(function (player, index) { player.id = "mini-player-" + (index + 1); });
+    });
+    scenes[0].paths = [];
+    [0, 4].forEach(function (offset, courtIndex) {
+      // Two touches on each side make an actual continuous four-contact rally.
+      var chain = [offset + 2, offset + 3, offset, offset + 1, offset + 2];
+      for (var index = 0; index < chain.length - 1; index++) {
+        var from = scenes[0].players[chain[index]], to = scenes[0].players[chain[index + 1]];
+        scenes[0].paths.push({ from: [from.x, from.y], to: [to.x, to.y], kind: "ball", motionId: index % 2 ? "set" : "pass",
+          fromActor: from.id, toActor: to.id, label: "Court " + (courtIndex + 1) + (index % 2 ? " set over the net" : " teammate pass"),
+          stepIndices: [2], sequenceOrder: index, simultaneousGroup: "mini-rally-touch-" + index });
+      }
+    });
+    scenes[1].paths.forEach(function (path) {
+      path.motionId = "sprint"; path.actor = scenes[1].players[path.playerIndex].id;
+      path.stepIndices = [3]; path.sequenceOrder = 0; path.simultaneousGroup = "mini-court-rotation";
+      // Actual 3D movement follows via points, not the decorative SVG curve.
+      // Separate passing lanes keep the swapping teams from running through
+      // each other while both teammates move at the same time.
+      var lane = path.to[0] > path.from[0] ? 4.7 : 6.65;
+      path.via = [[path.from[0], lane], [path.to[0], lane]];
+    });
+  })();
 
   E["camp-skills-circuit"] = {
     format: {
@@ -294,8 +323,8 @@ RR.extras = RR.extras || {};
     format: {
       grouping: "One circle of 4–6 with a target player (or coach) in the middle (ages 9–12).",
       flow: "Everyone in at once: pass around or to the middle, counting toward 21. The middle player feeds and judges good passes.",
-      tracking: "Single group count to 21; a bad pass might cost points. The middle player calls it.",
-      aim: "Reach 21 as a group, then rotate the middle player."
+      tracking: "A clean pass straight from the air scores 3; a pass after a bounce scores 1. A ball dropping untouched keeps the score and restarts with a toss.",
+      aim: "Count aloud together and race to 21."
     },
     diagram: dk.circlePass({ n: 5, center: true, centerLabel: "T", caption: "Pass around the circle and to the middle target (T), counting together toward 21." })
   };
@@ -303,18 +332,18 @@ RR.extras = RR.extras || {};
   E["four-square-volleyball"] = {
     format: {
       grouping: "Four players, one in each square (the rest wait to rotate in), ages 9–12.",
-      flow: "Like playground four-square: the ball is volleyed (one bounce allowed) from square to square. Miss or fault and you move to the lowest square; everyone shifts up.",
+      flow: "Start from square one with a soft underhand pass, then bump or set to another square without catching. An error sends that player to square four; the others move up.",
       tracking: "Players self-officiate; a waiting player rotates into the lowest square.",
       aim: "Work your way up to (and hold) the 'king' square."
     },
     diagram: {
-      caption: "One player per square; volley the ball between squares (one bounce ok). Fault and you drop to square 1, others move up.",
+      caption: "One player per square. Square 1 starts with a soft underhand pass; bump or set to another square without catching. An error sends that player to square 4, everyone else moves up, and the waiting line rotates in.",
       w: 8, h: 8,
       zones: [
-        { x: 0.4, y: 0.4, w: 3.4, h: 3.4, tone: "neutral", label: "4 (king)" },
-        { x: 4.2, y: 0.4, w: 3.4, h: 3.4, tone: "neutral", label: "3" },
-        { x: 0.4, y: 4.2, w: 3.4, h: 3.4, tone: "neutral", label: "1" },
-        { x: 4.2, y: 4.2, w: 3.4, h: 3.4, tone: "neutral", label: "2" }
+        { x: 0.4, y: 0.4, w: 3.4, h: 3.4, tone: "neutral", label: "1 · starts" },
+        { x: 4.2, y: 0.4, w: 3.4, h: 3.4, tone: "neutral", label: "2" },
+        { x: 0.4, y: 4.2, w: 3.4, h: 3.4, tone: "neutral", label: "4 · entry" },
+        { x: 4.2, y: 4.2, w: 3.4, h: 3.4, tone: "neutral", label: "3" }
       ],
       players: [
         { x: 2.1, y: 2.1, label: "", team: "a" }, { x: 5.9, y: 2.1, label: "", team: "a" },
@@ -334,6 +363,7 @@ RR.extras = RR.extras || {};
     diagram: {
       caption: "Two facing lines: set across to the front player, then follow your set to the back of that line.",
       w: 9, h: 8,
+      cones: [{ x: 1.3, y: 2 }, { x: 1.3, y: 4.7 }, { x: 7.7, y: 2 }, { x: 7.7, y: 4.7 }],
       players: [
         { x: 2, y: 2, label: "", team: "b" }, { x: 2, y: 3, label: "", team: "b" }, { x: 2, y: 4, label: "", team: "b" },
         { x: 7, y: 2, label: "", team: "a" }, { x: 7, y: 3, label: "", team: "a" }, { x: 7, y: 4, label: "", team: "a" }

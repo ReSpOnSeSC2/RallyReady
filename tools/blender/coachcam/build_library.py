@@ -36,6 +36,10 @@ import build_rolls_and_sprawls as base  # noqa: E402
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 import kinematics as motion  # noqa: E402
+import context_poses  # noqa: E402
+import upperbody_variants  # noqa: E402
+import locomotion_variants  # noqa: E402
+import mobility_variants  # noqa: E402
 
 
 FPS = 48
@@ -307,9 +311,10 @@ def build_athlete(mats):
     root["prototype"] = True
     root["prototype_role"] = "athlete"
     root["rig_contract"] = "RR_Humanoid_v1"
-    segment_bones = [f"ATH_{segment}" for segment in dict.fromkeys([*base.SEGMENTS, "HAND_L", "HAND_R"])]
+    segment_bones = [f"ATH_{segment}" for segment in dict.fromkeys([*base.SEGMENTS, "HAND_L", "HAND_R", "SPINE_LOW", "SPINE_MID", "SPINE_UPPER"])]
     joint_bones = [f"ATH_JOINT_{joint}" for joint in base.POINT_JOINTS]
     rig = base.create_rig(segment_bones + joint_bones)
+    configure_spine(rig)
     rig.name = "RR_Humanoid_v1"
     rig.data.name = "RR_Humanoid_v1_Data"
     rig["rig_contract"] = "RR_Humanoid_v1"
@@ -342,8 +347,25 @@ def add_instructional_athlete_mesh(rig, palette):
             vert.co += Vector(offset)
         return obj
 
-    part("AthleteTemplate_Torso", "TORSO", (.45,.29,1.09), .48, "jersey", segments=28, rings=14)
-    part("ATH_JerseyPanel", "TORSO", (.15,.025,.24), .68, "jersey_alt", (0,0,-.143))
+    torso=part("AthleteTemplate_Torso", "TORSO", (.45,.29,1.09), .48, "jersey", segments=28, rings=14)
+    panel=part("ATH_JerseyPanel", "TORSO", (.15,.025,.24), .68, "jersey_alt", (0,0,-.143))
+    # The original surface and normals stay intact. Rest spine segments divide
+    # its normalized length into thirds; smooth neighboring weights bend the
+    # jersey without remapping or folding its rest vertices.
+    for obj in (torso,panel):
+        obj.vertex_groups.remove(obj.vertex_groups["ATH_TORSO"])
+        groups=[obj.vertex_groups.new(name="ATH_"+name) for name in ("SPINE_LOW","SPINE_MID","SPINE_UPPER")]
+        for vertex in obj.data.vertices:
+            # Uniform .6 spine transforms preserve glTF TRS hierarchy without
+            # shear. Restore the intended body width/depth in rest geometry.
+            vertex.co.x/=.6
+            vertex.co.z/=.6
+            location=max(0.,min(2.,vertex.co.y*3-.5))
+            section=int(location)
+            weight=location-section
+            groups[section].add([vertex.index],1.-weight,"REPLACE")
+            if weight>0 and section<2:
+                groups[section+1].add([vertex.index],weight,"REPLACE")
     part("ATH_Shorts", "TORSO", (.39,.30,.30), .08, "shorts")
     part("ATH_Head", "HEAD", (.23,.23,1.02), .50, "skin", segments=24,rings=12)
     part("ATH_Hair", "HEAD", (.235,.236,.36), .84, "hair")
@@ -375,10 +397,35 @@ def add_instructional_athlete_mesh(rig, palette):
         part("ATH_Joint_"+joint,"JOINT_"+joint,dims,0,color)
 
 
-def key_pose(rig, frame, pose, controls, previous):
+def configure_spine(rig):
+    """Keep adjacent vertebral sections attached between baked samples."""
+    bpy.context.view_layer.objects.active=rig
+    rig.select_set(True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    parent=None
+    for index,name in enumerate(("SPINE_LOW","SPINE_MID","SPINE_UPPER")):
+        bone=rig.data.edit_bones["ATH_"+name]
+        bone.head=(0,index/3,0)
+        bone.tail=(0,(index+1)/3,0)
+        bone.inherit_scale="FULL"
+        if parent is not None:
+            bone.parent=parent
+            bone.use_connect=True
+        parent=bone
+    bpy.ops.object.mode_set(mode="OBJECT")
+    rig.select_set(False)
+
+
+def key_pose(rig, frame, pose, controls, previous, only_spine=False):
     segments = {**base.SEGMENTS, "HAND_L":("wrist_L","hand_tip_L"),
-                "HAND_R":("wrist_R","hand_tip_R")}
+                "HAND_R":("wrist_R","hand_tip_R"),
+                "SPINE_LOW":("spine_0","spine_1"),
+                "SPINE_MID":("spine_1","spine_2"),
+                "SPINE_UPPER":("spine_2","spine_3")}
+    spine_matrices={}
     for segment,(a,b) in segments.items():
+        if only_spine and not segment.startswith("SPINE_"):
+            continue
         bone = rig.pose.bones["ATH_"+segment]
         direction = (pose[b]-pose[a]).normalized()
         reference = controls["head"] if segment=="HEAD" else controls["body"]
@@ -388,16 +435,32 @@ def key_pose(rig, frame, pose, controls, previous):
             right=Vector((0,0,1)).cross(direction)
         right.normalize()
         rotation=Matrix((right,direction,right.cross(direction))).transposed().to_quaternion()
+        rest=rig.data.bones[bone.name]
+        bone.rotation_mode="QUATERNION"
+        if segment.startswith("SPINE_"):
+            spine_scale=(pose[b]-pose[a]).length/rest.length
+            desired=Matrix.LocRotScale(pose[a],rotation,
+                                      Vector((spine_scale,spine_scale,spine_scale)))
+            parent_args={} if rest.parent is None else {
+                "parent_matrix":spine_matrices[rest.parent.name],
+                "parent_matrix_local":rest.parent.matrix_local}
+            bone.matrix_basis=rest.convert_local_to_pose(desired,rest.matrix_local,
+                                                         invert=True,**parent_args)
+            if rest.parent is not None:
+                bone.location=(0,0,0)
+            spine_matrices[bone.name]=desired
+        else:
+            bone.location=pose[a]-rest.head_local
+            bone.rotation_quaternion=rotation
+            bone.scale=(1,(pose[b]-pose[a]).length/rest.length,1)
+        rotation=bone.rotation_quaternion.copy()
         if segment in previous and rotation.dot(previous[segment])<0:
             rotation.negate()
         previous[segment]=rotation.copy()
-        bone.location=pose[a]
-        bone.rotation_mode="QUATERNION"
         bone.rotation_quaternion=rotation
-        bone.scale=(1,(pose[b]-pose[a]).length,1)
         for path in ("location","rotation_quaternion","scale"):
             bone.keyframe_insert(data_path=path,frame=frame,group=bone.name)
-    for suffix,joint in base.POINT_JOINTS.items():
+    for suffix,joint in ({} if only_spine else base.POINT_JOINTS).items():
         # Library frames already use source_fps. The dedicated scene's point
         # helper applies its own supersampling rate and must not retime these.
         bone=rig.pose.bones["ATH_JOINT_"+suffix]
@@ -434,9 +497,65 @@ def build_motion_reel(rig):
             manifest[motion_id].update(contactProgress=contact,contactType=kind)
         if motion_id in ("sprint","backpedal","ladder"):
             manifest[motion_id]["strideMeters"] = .8 if motion_id=="ladder" else 1.0666666667
+        if motion_id in motion.SHUFFLE_STRIDES:
+            manifest[motion_id].update(
+                strideMeters=motion.SHUFFLE_STRIDES[motion_id], travelAxis="x",
+                travelSign=1, mirrorForReverse=True,
+                stancePhases={side: [[0, start], [end, 1]]
+                              for side, (start, end) in motion.SHUFFLE_SWINGS.items()})
         if motion_id in ("box","box-hit","box-block","depth-drop"):
             manifest[motion_id].update(equipmentAnchor=[0,.62,0],boxHeight=.32)
         cursor=end+2
+    # Variants are authored after the public 52-action reel. This preserves
+    # semantic action IDs while allowing a band box walk to keep facing the
+    # court during forward/back travel instead of using upright running poses.
+    variants={}
+    for name,direction in (("forward",1),("backward",-1)):
+        duration_frames=round(1.25*FPS)
+        start,end=cursor,cursor+duration_frames
+        for offset in range(duration_frames+1):
+            controls=motion.band_walk(offset/duration_frames,direction)
+            key_pose(rig,start+offset,motion.solve(controls),controls,previous)
+        variants[name]={"startFrame":start,"endFrame":end,
+                        "startSeconds":start/FPS,"durationSeconds":duration_frames/FPS,
+                        "cyclic":True,"strideMeters":.40,"travelAxis":"y",
+                        "travelSign":direction,
+                        "stancePhases":{"L":[[0,.60]],"R":[[0,.10],[.50,1]]}}
+        cursor=end+2
+    manifest["mini-band"]["directionalVariants"]=variants
+    manifest["shuffle"]["directionalVariants"]=variants
+    manifest["shuffle"]["directionalVariantSource"]="mini-band"
+    # Context poses represent people who are present without performing the
+    # main ball skill: for example the face-up targets in the Dead Fish game.
+    start,end=cursor,cursor+8
+    for frame in range(start,end+1):
+        controls=motion.supine_rest()
+        key_pose(rig,frame,motion.solve(controls),controls,previous)
+    manifest["ready"]["postures"]={"supine":{
+        "startFrame":start,"endFrame":end,"startSeconds":start/FPS,
+        "durationSeconds":(end-start)/FPS,"cyclic":False,"static":True}}
+    cursor=end+2
+    for (motion_id,posture),settings in context_poses.CONTEXT_MOTIONS.items():
+        duration_frames=max(8,round(settings["durationSeconds"]*FPS))
+        start,end=cursor,cursor+duration_frames
+        for offset in range(duration_frames+1):
+            controls=context_poses.build_context_pose(motion_id,posture,offset/duration_frames)
+            key_pose(rig,start+offset,motion.solve(controls),controls,previous)
+        variant=dict(settings,startFrame=start,endFrame=end,startSeconds=start/FPS,
+                     durationSeconds=duration_frames/FPS)
+        manifest[motion_id].setdefault("postures",{})[posture]=variant
+        cursor=end+2
+    for library in (upperbody_variants,locomotion_variants,mobility_variants):
+        for (motion_id,variant_id),settings in library.VARIANTS.items():
+            duration_frames=max(8,round(settings["durationSeconds"]*FPS))
+            start,end=cursor,cursor+duration_frames
+            for offset in range(duration_frames+1):
+                controls=library.build_variant(motion_id,variant_id,offset/duration_frames)
+                key_pose(rig,start+offset,motion.solve(controls),controls,previous)
+            variant=dict(settings,startFrame=start,endFrame=end,startSeconds=start/FPS,
+                         durationSeconds=duration_frames/FPS)
+            manifest[motion_id].setdefault("variants",{})[variant_id]=variant
+            cursor=end+2
     controls=motion.standing()
     key_pose(rig,cursor,motion.solve(controls),controls,previous)
     # Blender's default Bezier overshoots between baked samples. Linear curves
@@ -512,7 +631,7 @@ def main():
     scene.frame_end = final_frame
 
     scene["asset"] = "RallyReady CoachCam Shared Production Library"
-    scene["asset_version"] = 2
+    scene["asset_version"] = 3
     scene["source_fps"] = FPS
     scene["rig_contract"] = "RR_Humanoid_v1"
     scene["animation"] = CLIP_NAME
@@ -525,6 +644,7 @@ def main():
     scene["production_note"] = "Shared geometry; drill facts are supplied by RR.drillChoreography."
     scene["anatomy_note"] = "Fixed adult segment lengths; per-frame two-bone IK; 3-145 degree knee and 3-150 degree elbow flexion. Instructional visualization requires coach review."
     scene["segment_lengths_json"] = json.dumps(motion.LENGTHS,sort_keys=True)
+    scene["spine_segment_lengths_json"] = json.dumps([.20,.20,.20])
     rig["motion_manifest_json"] = scene["motion_manifest_json"]
     athlete_mesh["triangle_budget_target"] = 18000
 

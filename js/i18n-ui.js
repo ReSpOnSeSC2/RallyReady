@@ -15,6 +15,12 @@
   if (!RR.i18n) return;
 
   RR.i18n.add({
+    "Demonstration view": "Vizualizarea demonstrației",
+    "Repetition": "Repetare",
+    "Whole drill": "Exercițiul complet",
+    "Court layout": "Amplasarea pe teren",
+    "Technique close-up": "Tehnica în detaliu",
+    "Equipment and drill setup": "Echipamentul și organizarea exercițiului",
     "Back one frame": "Un cadru înapoi",
     "Forward one frame": "Un cadru înainte",
     "Body mechanics viewing angle": "Unghiul de vizualizare a tehnicii",

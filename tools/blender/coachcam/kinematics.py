@@ -34,6 +34,7 @@ def control(height=.85, lean=.18, width=.30, **kwargs):
         "body": orientation((0, lean, 1)),
         "head": orientation((0, .025, 1)),
         "hips": Quaternion(),
+        "spineBow": Vector((0, 0, 0)),
     }
     for side, sign in (("L", -1), ("R", 1)):
         result["wrist_" + side] = Vector((sign * .25, .37, height + .25))
@@ -151,10 +152,19 @@ def two_bone(root, target, pole, a, b, max_flex, minimum_joint_z=None):
 
 def solve(c):
     pelvis, body, hips = c["pelvis"], c["body"], c["hips"]
-    result = {"pelvis": pelvis.copy(), "neck": pelvis + body @ Vector((0, 0, .60))}
+    # Three fixed-length segments articulate the trunk only when explicitly
+    # authored (cat/camel). All other clips remain exactly collinear. A bowed
+    # spine shortens its endpoint chord instead of stretching the torso.
+    bow=max(-.075,min(.075,c.get("spineBow",Vector()).y))
+    angle=math.asin(bow/.20)
+    spine=[pelvis.copy()]
+    for turn in (angle,0,-angle):
+        spine.append(spine[-1]+body@Vector((0,.20*math.sin(turn),.20*math.cos(turn))))
+    result = {"pelvis": pelvis.copy(), "neck": spine[-1],
+              **{f"spine_{index}":point for index,point in enumerate(spine)}}
     result["head_top"] = result["neck"] + c["head"] @ Vector((0, 0, .27))
     for side, sign in (("L", -1), ("R", 1)):
-        shoulder = pelvis + body @ Vector((sign * .22, 0, .50))
+        shoulder = spine[2].lerp(spine[3],.5)+body@Vector((sign*.22,0,0))
         hip = pelvis + hips @ Vector((sign * .15, 0, 0))
         elbow, wrist = two_bone(shoulder, c["wrist_" + side], c["arm_pole_" + side], .31, .27, 150)
         knee, ankle = two_bone(hip, c["ankle_" + side], c["knee_pole_" + side], .43, .43, 145, .14)
@@ -375,20 +385,72 @@ def gait(t, kind):
     return c
 
 
+SHUFFLE_STRIDES = {"shuffle": .55, "mini-band": .40}
+SHUFFLE_SWINGS = {"R": (.05, .42), "L": (.55, .92)}
+
+
 def shuffle(t, band=False):
-    c = ready(.25 if not band else .36)
-    # Step out then bring the trail foot in; neither crosses the midline.
-    keys = [(0, -.28, .28), (.25, -.47, .28), (.5, -.47, .47),
-            (.75, -.28, .47), (1, -.28, .28)]
-    for (at, al, ar), (bt, bl, br) in zip(keys, keys[1:]):
-        if t <= bt:
-            u = smooth((t-at)/(bt-at))
-            for side, start, end in (("L", al, bl), ("R", ar, br)):
-                c["ankle_"+side].x = start+(end-start)*u
-                c["ankle_"+side].z = ANKLE_Z + (.035 if abs(end-start)>.01 else 0)*math.sin(math.pi*u)
-            break
-    c["pelvis"].x = (c["ankle_L"].x+c["ankle_R"].x)*.5
+    """One right-lead / left-follow lateral step, authored in local +X.
+
+    The browser translates the actor by stride*t and samples from actual route
+    distance, mirroring local X when going left. Subtracting that translation
+    here keeps a loaded foot stationary in court space. This is a traveling
+    shuffle cycle, not the previous stationary out-and-in sway.
+    """
+    stride = SHUFFLE_STRIDES["mini-band" if band else "shuffle"]
+    width = .26 if band else .28
+    steps = {side: smooth((t-start)/(end-start))
+             for side, (start, end) in SHUFFLE_SWINGS.items()}
+    # Transfer the body between two distinct low steps. The smaller band step
+    # maintains tension and stance width rather than forcing a maximal split.
+    pelvis_x = .5 * stride * (steps["L"] + steps["R"]) - stride*t
+    height = (.70 if band else .73) + .014*math.sin(2*math.pi*t)**2
+    c = control(height, .34 if band else .30, width,
+                pelvis=Vector((pelvis_x, 0, height)))
+    for side, sign in (("L", -1), ("R", 1)):
+        start, end = SHUFFLE_SWINGS[side]
+        swing = max(0., min(1., (t-start)/(end-start)))
+        lift = (.055 if band else .080) * math.sin(math.pi*swing)**2
+        x = sign*width + stride*steps[side] - stride*t
+        c["ankle_"+side] = Vector((x, 0, ANKLE_Z+lift))
+        c["knee_pole_"+side] = Vector((x, .95, .55))
+        c["wrist_"+side] += Vector((pelvis_x, 0, 0))
+        c["arm_pole_"+side] += Vector((pelvis_x, 0, 0))
     return c
+
+
+def band_walk(t, direction=1):
+    """Low forward/back band steps; chest stays toward the net in both cases.
+
+    One alternating pair advances .4m. A 60% stance phase gives a brief double
+    support interval, with a small foot lift and continuous band-width stance.
+    """
+    c = control(.70 + .008*math.sin(4*math.pi*t)**2, .34, .26)
+    stride = .40
+    for side, sign in (("L", -1), ("R", 1)):
+        p = (t + (0 if side == "L" else .5)) % 1
+        if p < .60:
+            y = stride*(.30-p)
+            lift = 0
+        else:
+            swing = (p-.60)/.40
+            y = stride*(-.30+.60*smooth(swing))
+            lift = .055*math.sin(math.pi*swing)**2
+        c["ankle_"+side] = Vector((sign*.26, direction*y, ANKLE_Z+lift))
+    return c
+
+
+def supine_rest():
+    """Passive face-up target position, with heels down and clear breathing space."""
+    c = control(.205, 0, .20,
+                body=orientation((0, -.999, .025), (0, 0, 1)),
+                head=orientation((0, -1, 0), (0, 0, 1)))
+    for side, sign in (("L", -1), ("R", 1)):
+        c["ankle_"+side] = Vector((sign*.20, .83, ANKLE_Z))
+        c["knee_pole_"+side] = Vector((sign*.20, .4, .7))
+        c["foot_"+side] = Vector((0, .075, .249))
+    return hands(c, (-.43, .02, .16), (.43, .02, .16),
+                 ((-.55, -.24, .35), (.55, -.24, .35)))
 
 
 CYCLIC = {"ready", "defensive-ready", "admin", "sprint", "shuffle", "backpedal",

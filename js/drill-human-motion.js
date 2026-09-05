@@ -613,6 +613,13 @@ RR.drillHumanMotion = (function () {
 
   function bestSceneIndex(drill, instruction, stepIndex, stepCount, specs) {
     if (!specs.length) return -1;
+    // Reviewed multi-stage games may share words across every caption. Exact
+    // scene ownership outranks that fuzzy match, just as route step ownership
+    // controls the actions inside a scene.
+    var authoredSceneIndex = specs.findIndex(function (spec) {
+      return Array.isArray(spec.stepIndices) && spec.stepIndices.indexOf(stepIndex) !== -1;
+    });
+    if (authoredSceneIndex >= 0) return authoredSceneIndex;
     var reviewedStepScenes = {
       // Four exact hitting locations are authored as four court scenes. The
       // combined prose step names middle then right; the right-side scene is

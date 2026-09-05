@@ -17,7 +17,7 @@ const files = [
   "js/extras-build.js", "js/format.js", "js/extras-data.js",
   ...Array.from({ length: 11 }, (_, i) => `js/extras-data-${i + 2}.js`),
   "js/drill-human-motion.js", "js/drill-choreography.js",
-  "js/coachcam-library-3d.js", "js/drill-animation.js"
+  "js/coachcam-variants.js", "js/coachcam-library-3d.js", "js/drill-animation.js"
 ];
 for (const file of files) vm.runInContext(fs.readFileSync(path.join(ROOT, file), "utf8"), sandbox, { filename: file });
 const RR = sandbox.RR;
@@ -42,6 +42,24 @@ close(mechanics.sampleTime(segment, -0.2), 3, "seeking before motion clamps to f
 close(mechanics.sampleTime(segment, 1), 4.2, "last pose is sampled exactly without a .999 offset");
 close(mechanics.sampleTime(segment, 1.5), 4.2, "seeking after motion cannot leak into the next reel clip");
 close(mechanics.sampleTime(segment, mechanics.contactProgress(segment)), 3.72, "ball and body contact share a clock");
+
+// An easy target just beyond the net needs more arc than a deep target.
+// Verify both directions and a miniature net using the actual flight equation.
+for (const targetZ of [-1.5, -7.5]) {
+  for (const side of [-1, 1]) {
+    const start = [0, 2.3, 10 * side], end = [2, 0.12, targetZ * side];
+    const net = { x: 0, z: 0, width: 9, height: 2.43 };
+    const height = mechanics.netClearanceArc(start, end, [net], 1.5);
+    const p = (net.z - start[2]) / (end[2] - start[2]);
+    const y = start[1] + (end[1] - start[1]) * p + 4 * height * p * (1 - p);
+    assert(y >= 2.63 - 1e-8, "Serves to near and deep targets visibly clear the net with ball-radius margin");
+    checks++;
+  }
+}
+close(mechanics.netClearanceArc([0, 1, 5], [0, 1, 2], [{ x: 0, z: 0, width: 9, height: 2.43 }], 0.7), 0.7,
+  "Same-side exchanges retain their authored arc");
+close(mechanics.netClearanceArc([7, 1, 5], [7, 1, -2], [{ x: 0, z: 0, width: 9, height: 2.43 }], 0.7), 0.7,
+  "A sideline retrieval does not jump over an imaginary net extension");
 
 // A scrub back and forth must yield the same sample; it cannot depend on the
 // previous render delta, camera frequency or accumulated mixer time.
@@ -82,8 +100,8 @@ const longShuffle = {
   beats: [{ routeId: "across", motionId: "shuffle", durationMs: 1000 }]
 };
 const unchangedPlan = JSON.stringify(longShuffle);
-close(mechanics.motionTimingScale(longShuffle), 7.5,
-  "a one-second court-width shuffle must slow enough to peak at 1.8 m/s");
+close(mechanics.motionTimingScale(longShuffle), 16.875,
+  "a one-second court-width shuffle must slow enough to peak at 0.8 m/s");
 assert.strictEqual(JSON.stringify(longShuffle), unchangedPlan, "timing correction must preserve authored beats and routes");
 close(mechanics.motionTimingScale({ width: 9, height: 18, routes: [], beats: [] }), 1,
   "stationary phases retain their instructional timing");
@@ -91,7 +109,7 @@ close(mechanics.motionTimingScale({ ...longShuffle,
   routes: [{ id: "across", type: "ball", from: [0, 0], to: [9, 0] }] }), 1,
   "ball-only flights do not change human movement speed");
 close(mechanics.motionTimingScale({ ...longShuffle,
-  beats: [longShuffle.beats[0], { ...longShuffle.beats[0] }] }), 7.5,
+  beats: [longShuffle.beats[0], { ...longShuffle.beats[0] }] }), 16.875,
   "parallel movements share one timeline scale instead of adding their durations");
 for (const motionId of ["box", "box-hit", "box-block", "depth-drop", "bridge", "foam", "band", "band-upper", "band-arm-swing", "medicine", "medicine-slam", "medicine-rotate", "medicine-scoop", "jump-rope"]) {
   assert(mechanics.stationMotion(motionId), `${motionId}: local exercise motion must remain at its station`);
@@ -109,21 +127,23 @@ for (const drill of RR.drills.filter(api.isEligible)) {
   for (const phase of compiled.phases) {
     for (const beat of phase.plan.beats) {
       const route = phase.plan.routes.find(item => item.id === beat.routeId && item.type === "move");
-      if (!route || mechanics.stationMotion(beat.motionId)) continue;
+      if (!route || mechanics.stationMotion(beat.motionId) || Number.isFinite(beat.freezeProgress)) continue;
       const points = [route.from, ...(route.via || []), route.to];
       let meters = 0;
+      const space = mechanics.courtSpace(phase.plan);
       for (let i = 1; i < points.length; i++) {
         meters += Math.hypot(
-          (points[i][0] - points[i - 1][0]) / Math.max(1, phase.plan.width || 9) * 9,
-          (points[i][1] - points[i - 1][1]) / Math.max(1, phase.plan.height || 10) * 18
+          (points[i][0] - points[i - 1][0]) * space.scaleX,
+          (points[i][1] - points[i - 1][1]) * space.scaleY
         );
       }
+      if (Number.isFinite(beat.routeStartProgress) && Number.isFinite(beat.routeEndProgress)) meters *= beat.routeEndProgress - beat.routeStartProgress;
       // Smoothstep reaches its maximum speed at the middle. Measure the
       // compiled screen duration, so a correct helper that is not actually
       // applied by the player would still fail this catalog integration test.
       const seconds = phase.duration * beat.durationMs / phase.sourceDurationMs;
       const peakSpeed = 1.5 * meters / seconds;
-      const limit = ["shuffle", "mini-band", "backpedal"].includes(beat.motionId) ? 1.8
+      const limit = beat.motionId === "mini-band" ? 0.48 : beat.motionId === "shuffle" ? 0.8 : beat.motionId === "backpedal" ? 1.8
         : beat.motionId === "ladder" ? 2 : ["sprint", "run-through"].includes(beat.motionId) ? 5.5 : 3;
       assert(Number.isFinite(peakSpeed) && peakSpeed <= limit + 1e-7,
         `${drill.id}/${phase.id}/${beat.motionId}: ${peakSpeed.toFixed(3)} m/s exceeds ${limit} m/s`);
@@ -203,16 +223,18 @@ function verifyStationEquipment(THREE) {
   };
   const player = {
     runtime: { THREE }, actors: { demonstrator: actor, other },
-    activeActor: actor, motionManifest: manifest, equipment: [], drillGroup: new THREE.Group()
+    activeActor: actor, motionManifest: manifest, equipment: [], wearables: [], drillGroup: new THREE.Group()
   };
   const context = {
-    player, Math, Number,
+    player, Math, Number, ui: { root: { setAttribute: () => {} } },
     clean: value => value == null ? "" : String(value).trim(),
     list: value => Array.isArray(value) ? value : [],
     clamp: (n, low, high) => Math.max(low, Math.min(high, n)),
     slug: value => value.replace(/ /g, "-"),
     equipmentKeys: plan => plan.equipment || [],
     stationMotion: mechanics.stationMotion,
+    mappedPoint: mechanics.mappedPoint,
+    courtSpace: mechanics.courtSpace,
     travelProgress: mechanics.travelProgress,
     routeFacing: mechanics.routeFacing,
     blendYaw: mechanics.blendYaw

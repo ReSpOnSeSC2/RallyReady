@@ -436,6 +436,7 @@ RR.drillChoreography = (function () {
     // targets, equipment, or an opponent's action; they are not mechanics the
     // demonstrated athlete performs.
     if (id === "platform-angle-passing") return ["pass"];
+    if (id === "shepherd-and-sheep") return /reset|go again/.test(source) ? ["sprint"] : ["set"];
     if (id === "digging-coach-down-balls" &&
         /\bcoach\s+hits?\s+(?:a|the)\s+ball\b|\bcontrolled down[- ]ball attack\b/.test(source)) {
       return ["down-ball-hit"];
@@ -606,6 +607,7 @@ RR.drillChoreography = (function () {
     if (id === "ladder-to-dig-reaction" && /tosser puts a ball just left or right/.test(source)) {
       return ["feed"];
     }
+    if (id === "mirror-defensive-shuffle" && /both players touch the floor/.test(source)) return ["warmup"];
     if (id === "pass-to-the-hoop-target" && /tosser or server sends a ball to the passer/.test(source)) {
       return ["feed"];
     }
@@ -747,7 +749,7 @@ RR.drillChoreography = (function () {
       return ["set", "sprint"];
     }
     if (id === "ladder-to-dig-reaction" && /breaks? to it|jogs? back/.test(source)) {
-      return ["ladder", "sprint", "feed", "dig", "sprint"];
+      return ["feed", "shuffle", "dig", "sprint"];
     }
     if (id === "spike-approach-footwork") {
       return /land(?:s|ed|ing)?\s+soft|balanced,?\s+ready/.test(source)
@@ -839,7 +841,7 @@ RR.drillChoreography = (function () {
       return ["shuffle"];
     }
     if (id === "amoeba-team-game" && /players? touch the ball|before it goes over/.test(source)) {
-      return ["pass"];
+      return ["feed"];
     }
     if (id === "balloon-keep-it-up" && /move your feet|stay under/.test(source)) return ["shuffle"];
     if (id === "setter-release-from-base") {
@@ -1047,7 +1049,6 @@ RR.drillChoreography = (function () {
       if (id === "roll-the-ball-dig") return ["dig"];
       if (/^(?:mini-court-cooperative-rally|team-circle-recovery)$/.test(id)) return ["pass"];
       if (id === "bonus-ball-scramble") return ["defensive-ready"];
-      if (id === "shepherd-and-sheep") return ["warmup"];
     }
 
     if (id === "pre-serve-routine" &&
@@ -1236,7 +1237,11 @@ RR.drillChoreography = (function () {
   function isSupport(player) {
     var team = clean(player && player.team).toLowerCase();
     var note = clean(player && player.note);
-    return team === "coach" || /\bcoach\b|\btrainer\b|\bmanager\b/i.test(note);
+    var role = clean(player && player.role);
+    // A defender can face the coach, pass to the coach or read a coach's cue.
+    // Those object references do not turn that athlete into the support coach.
+    return team === "coach" || /^(?:the\s+)?(?:coach|trainer|manager)(?:\s|$)/i.test(role) ||
+      /^(?:the\s+)?(?:coach|trainer|manager)(?:\s|$)/i.test(note);
   }
 
   function validMinimum(drill) {
@@ -1425,12 +1430,11 @@ RR.drillChoreography = (function () {
         for (var groupIndex = 0; groupIndex < count; groupIndex++) {
           var offset = groupOffset(groupIndex, count, width, height);
           actors.push(makeActor(drill, spec, player, playerIndex, groupIndex,
-            clamp(baseX + offset[0], 0.2, width - 0.2),
-            clamp(baseY + offset[1], 0.2, height - 0.2), "authored-group"));
+            baseX + offset[0], baseY + offset[1], "authored-group"));
         }
       } else {
         actors.push(makeActor(drill, spec, player, playerIndex, null,
-          clamp(baseX, 0.2, width - 0.2), clamp(baseY, 0.2, height - 0.2),
+          baseX, baseY,
           "authored-player"));
       }
     });
@@ -1600,6 +1604,10 @@ RR.drillChoreography = (function () {
   }
 
   function contactMotionIds(drill, route, instruction) {
+    var authoredMotion = clean(route.authored && route.authored.motionId);
+    if (MOTIONS[authoredMotion] && authoredMotion !== "admin") {
+      return { ids: [authoredMotion], source: "authored-path-motion" };
+    }
     var context = { drill: drill };
     var labelIds = routeLabelMotionIds(route.label, drill).filter(function (id) {
       return id !== "ready" && id !== "defensive-ready" && id !== "admin" && id !== "recovery";
@@ -1811,7 +1819,7 @@ RR.drillChoreography = (function () {
   function refineContactClassification(drill, route, instruction, sourceActor,
       recipientActor, classification, authoredContact) {
     if (authoredContact && clean(authoredContact.action)) return classification;
-    if (classification.source === "path-label" || classification.source === "path-label-alias" ||
+    if (classification.source === "authored-path-motion" || classification.source === "path-label" || classification.source === "path-label-alias" ||
         classification.source === "reviewed-contact-alias" ||
         classification.source === "reviewed-contact-action" ||
         classification.source === "serving-path-kind") return classification;
@@ -2281,6 +2289,10 @@ RR.drillChoreography = (function () {
 
   function equipmentType(value) {
     var source = clean(value).toLowerCase();
+    // Specific balls must resolve before the generic plural-ball matcher.
+    if (/medicine|med ball/.test(source)) return "medicine-ball";
+    if (/reaction ball/.test(source)) return "reaction-ball";
+    if (/balloon/.test(source)) return "balloon";
     if (/volleyball|\bballs?\b/.test(source)) return "volleyball";
     if (/net/.test(source)) return "net";
     if (/cone/.test(source)) return "cones";
@@ -2289,9 +2301,6 @@ RR.drillChoreography = (function () {
     if (/jump[- ]?rope/.test(source)) return "jump-rope";
     if (/ladder/.test(source)) return "ladder";
     if (/band/.test(source)) return "band";
-    if (/medicine|med ball/.test(source)) return "medicine-ball";
-    if (/reaction ball/.test(source)) return "reaction-ball";
-    if (/balloon/.test(source)) return "balloon";
     if (/foam/.test(source)) return "foam-roller";
     if (/box/.test(source)) return "box";
     if (/mat/.test(source)) return "mat";
@@ -2316,6 +2325,171 @@ RR.drillChoreography = (function () {
       });
     });
     return equipment;
+  }
+
+  // Presentation is the factual room/court inventory, separate from motion.
+  // Rectangles use their authored top-left; physical prop x/y are centres.
+  // Text-only phase cards are annotations, never painted as imaginary hoops.
+  function presentationFor(drill, spec, actorModel) {
+    var width = finite(spec.w) ? spec.w : 9;
+    var height = finite(spec.h) ? spec.h : 10;
+    var boundaries = (spec.court || []).filter(function (rect) {
+      return finite(rect.x) && finite(rect.y) && finite(rect.w) && finite(rect.h);
+    }).map(function (rect) { return Object.assign({}, rect); });
+    var bounds = boundaries.length ? {
+      minX: Math.min.apply(Math, boundaries.map(function (rect) { return rect.x; })),
+      minY: Math.min.apply(Math, boundaries.map(function (rect) { return rect.y; })),
+      maxX: Math.max.apply(Math, boundaries.map(function (rect) { return rect.x + rect.w; })),
+      maxY: Math.max.apply(Math, boundaries.map(function (rect) { return rect.y + rect.h; }))
+    } : { minX: 0, minY: 0, maxX: width, maxY: height };
+    var props = [], zones = [], annotations = [];
+    var equipment = equipmentFor(drill);
+    var keys = equipment.map(function (item) { return item.label.toLowerCase(); });
+    var actors = actorModel.actors || [];
+    var explicit = Array.isArray(spec.props) ? spec.props : [];
+    var represented = {};
+    var diagramCards = !(spec.players || []).length && !(spec.paths || []).length;
+    function prop(type, data, source) {
+      var result = Object.assign({}, data, {
+        id: clean(data.id) || "prop-" + (props.length + 1), type: type, source: source
+      });
+      props.push(result);
+      represented[type] = true;
+      return result;
+    }
+    explicit.forEach(function (item) {
+      var copy = Object.assign({}, item);
+      if (clean(item.actor)) {
+        var matches = actorsMatchingReference(actors, item.actor);
+        if (matches.length === 1) copy.actorId = matches[0].id;
+      }
+      prop(clean(item.type) || "target", copy, "authored-prop");
+    });
+    (spec.cones || []).forEach(function (item) {
+      prop("cone", { x: item.x, y: item.y, label: clean(item.label) || "Cone", w: 0.22, h: 0.22 }, "authored-cone");
+    });
+    var ladderRects = keys.indexOf("agility ladder") !== -1 ? (spec.zones || []).filter(function (item) {
+      return !clean(item.label) && item.w > 0 && item.h > 0;
+    }) : [];
+    if (ladderRects.length > 2 && !represented.ladder) {
+      var lx = Math.min.apply(Math, ladderRects.map(function (item) { return item.x; }));
+      var ly = Math.min.apply(Math, ladderRects.map(function (item) { return item.y; }));
+      var rx = Math.max.apply(Math, ladderRects.map(function (item) { return item.x + item.w; }));
+      var ry = Math.max.apply(Math, ladderRects.map(function (item) { return item.y + item.h; }));
+      prop("ladder", { x: (lx + rx) / 2, y: (ly + ry) / 2,
+        w: rx - lx, h: ry - ly, rungs: ladderRects.length,
+        sourceZoneIndices: ladderRects.map(function (item) { return spec.zones.indexOf(item); }), label: "Agility ladder" }, "authored-ladder-rungs");
+    }
+    (spec.zones || []).forEach(function (item, index) {
+      if (ladderRects.indexOf(item) !== -1) return;
+      var label = clean(item.label);
+      if (diagramCards) {
+        annotations.push({ id: "annotation-" + (index + 1), label: label, source: "authored-instruction-panel" });
+        return;
+      }
+      var type = /\bwall\b/i.test(label) ? "wall" : /^(?:low )?box$|^step$/i.test(label) ? "box" : /^mat$/i.test(label) ? "mat" : "";
+      // Some authored side-wall scenes leave the tall narrow wall unlabelled.
+      if (!type && !label && keys.indexOf("wall") !== -1 &&
+          Math.max(item.w, item.h) / Math.max(0.01, Math.min(item.w, item.h)) > 5) type = "wall";
+      if (type && !represented[type]) {
+        prop(type, { x: item.x + item.w / 2, y: item.y + item.h / 2,
+          w: item.w, h: item.h, sourceZoneIndex: index, label: label || type }, "authored-apparatus-zone");
+        return;
+      }
+      if (type) {
+        annotations.push({ id: "annotation-" + (index + 1), label: label, source: "duplicate-apparatus-label" });
+        return;
+      }
+      var isPanel = /^(?:ARMS|WRISTS|LEGS|FLOOR \+ TWIST|QUADS|CALVES|HIP \+ THIGH|3 UP|ROLL$|PAUSE \+|SHOULDERS|DEEP BREATH|TABLETOP|LUNGE \+|CHILD|INCHWORM|GLUTE BRIDGE|SIDE STEPS|LOW BAND POSITION|SHOULDER BAND|UPPER-BACK BAND|BAND ANCHORED|NO EQUIPMENT|IN 4|OUT 6|REFLECT|SHARE \+|30s|×5|2 FEET|RIGHT ×|LEFT ×|ALTERNATE|FAST$|1 LEG$|RALLY [12]|FRONT ROW|BACK ROW|CHEST PASS|PULL APART|OVERHEAD Y|FREE SWING|RESISTED)/i.test(label);
+      if (isPanel || item.presentationOnly === true) {
+        annotations.push({ id: "annotation-" + (index + 1), label: label, source: "authored-instruction-panel" });
+        return;
+      }
+      zones.push(Object.assign({}, item, { id: "zone-" + (index + 1),
+        source: "authored-zone", kind: item.tone === "target" || /target|pts?|corner|seam|line|cross|outside|back-set|^\d$/i.test(label) ? "target" : "area",
+        markerKind: clean(item.markerKind) || (keys.indexOf("hoops") !== -1 ? "hoop" : "floor-zone") }));
+    });
+    (spec.rings || []).forEach(function (item, index) {
+      if (item.tone === "calm" || item.tone === "rope") return;
+      var markerKind = keys.indexOf("hoops") !== -1 || clean(item.object) === "hoop" ? "hoop" : "target";
+      prop(markerKind, { x: item.x, y: item.y, w: item.r * 2, h: item.r * 2,
+        r: item.r, elevation: finite(item.elevation) ? item.elevation : 0,
+        label: clean(item.label) || "Target " + (index + 1) }, "authored-target-ring");
+    });
+    (actorModel.markers || []).forEach(function (marker) {
+      if (!/target|cone|hoop/i.test(marker.note)) return;
+      prop(/cone/.test(marker.note) ? "cone" : "target", { x: marker.x, y: marker.y,
+        w: 0.65, h: 0.65, label: marker.note, markerId: marker.id }, "authored-reference-marker");
+    });
+    actors.forEach(function (actor) {
+      if (!/\bon (?:a |the )?box\b/i.test(actor.note + " " + actor.role)) return;
+      var box = props.filter(function (item) { return item.type === "box"; }).sort(function (a, b) {
+        return distance([a.x, a.y], [actor.x, actor.y]) - distance([b.x, b.y], [actor.x, actor.y]);
+      })[0];
+      if (box) box.actorId = actor.id;
+      else prop("box", { x: actor.x, y: actor.y, w: 0.8, h: 0.8,
+        elevation: 0.32, actorId: actor.id, label: "Stable box for " + actor.role }, "authored-actor-apparatus");
+    });
+    // A saved cone target is a marked area, not a spare cone beside the scene.
+    if (keys.indexOf("cones") !== -1 && !(spec.cones || []).length) {
+      zones.forEach(function (zone) {
+        [[zone.x, zone.y], [zone.x + zone.w, zone.y], [zone.x, zone.y + zone.h],
+          [zone.x + zone.w, zone.y + zone.h]].forEach(function (position) {
+          prop("cone", { x: position[0], y: position[1], w: 0.22, h: 0.22,
+            label: zone.label + " boundary" }, "saved-cones-at-authored-target");
+        });
+      });
+    }
+    if (keys.indexOf("mats") !== -1 && !represented.mat) {
+      actors.filter(function (actor) { return !actor.support; }).forEach(function (actor) {
+        prop("mat", { x: actor.x, y: actor.y, w: 1, h: 2.1,
+          actorId: actor.id, attachment: "floor-station", label: "Mat" }, "saved-mat-at-athlete-station");
+      });
+    }
+    if (keys.indexOf("cones") !== -1 && !represented.cone && boundaries.length) {
+      boundaries.forEach(function (rect) {
+        [[rect.x, rect.y], [rect.x + rect.w, rect.y], [rect.x, rect.y + rect.h],
+          [rect.x + rect.w, rect.y + rect.h]].forEach(function (position) {
+          prop("cone", { x: position[0], y: position[1], w: 0.22, h: 0.22,
+            label: "Court boundary cone" }, "saved-cones-at-authored-boundary");
+        });
+      });
+    }
+    var exampleNote = clean(spec.exampleNote);
+    var defaultHoopDiameter = false;
+    zones.forEach(function (zone) {
+      if (zone.markerKind === "hoop" && !finite(zone.diameterMeters)) {
+        zone.diameterMeters = 1;
+        defaultHoopDiameter = true;
+      }
+    });
+    props.forEach(function (item) {
+      if (item.type === "hoop" && !finite(item.diameterMeters)) {
+        item.diameterMeters = finite(item.r) ? item.r * 2 : 1;
+        if (!finite(item.r)) defaultHoopDiameter = true;
+      }
+    });
+    if (defaultHoopDiameter && exampleNote.indexOf("Unspecified hoop diameters") === -1) {
+      exampleNote += (exampleNote ? " " : "") + "Unspecified hoop diameters are shown as 1 m examples.";
+    }
+    return {
+      setup: clean(drill.setup), steps: list(drill.steps),
+      coordinateSystem: spec.coordinateSystem || (finite(spec.net) ? "court-schematic" : "metric"),
+      bounds: bounds, boundaries: boundaries,
+      lines: (spec.lines || []).map(function (item) { return Object.assign({}, item); }),
+      net: finite(spec.net) ? spec.net : null,
+      nets: (spec.nets || []).map(function (item) { return Object.assign({}, item); }),
+      props: props, zones: zones, annotations: annotations,
+      labels: (spec.labels || []).map(function (item) { return Object.assign({}, item); }),
+      equipment: equipment,
+      source: "saved-drill-and-authored-scene",
+      exampleNote: exampleNote,
+      sequence: list(drill.steps).map(function (instruction, index) {
+        return { stepIndex: index, instruction: instruction,
+          stage: /rotate|switch|retrieve|fetch|shag|reset|repeat|rest|score|point|wins?|play to/i.test(instruction)
+            ? "procedure" : "action" };
+      })
+    };
   }
 
   function eventMotionForMove(drill, route, actor) {
@@ -2766,7 +2940,7 @@ RR.drillChoreography = (function () {
       return { ids: ["feed", "set", "sprint"] };
     }
     if (id === "ladder-to-dig-reaction" && /player breaks to it[^.]*jogs back/.test(source)) {
-      return { ids: ["ladder", "sprint", "feed", "dig", "sprint"] };
+      return { ids: ["feed", "shuffle", "dig", "sprint"] };
     }
     return null;
   }
@@ -2863,6 +3037,8 @@ RR.drillChoreography = (function () {
       // stationary ladder feet teaches the exact opposite of the saved step.
       events.forEach(function (event) {
         if (event.motionId !== "sprint" || !event.routeId) return;
+        var authoredRoute = routes.filter(function (route) { return route.id === event.routeId; })[0];
+        if (authoredRoute && authoredRoute.authored && authoredRoute.authored.motionId) return;
         event.motionId = "ladder";
         event.label = MOTIONS.ladder.label;
       });
@@ -2874,6 +3050,7 @@ RR.drillChoreography = (function () {
       return motionId === "admin";
     });
     var ordered = events.filter(function (event) {
+      if (event.stepScoped) return true;
       if (administrativeOnly) return false;
       return showFullScene || event.stepScoped ||
         relatedStepMechanic(event.motionId, instructionIds);
@@ -2935,7 +3112,7 @@ RR.drillChoreography = (function () {
       var group = clean(event.simultaneousGroup);
       var authoredParallel = !!(group && Object.prototype.hasOwnProperty.call(
         simultaneousStarts, group));
-      var inferredParallel = operation === "parallel" && previous &&
+      var inferredParallel = !group && operation === "parallel" && previous && !previous.simultaneousGroup &&
         previous.motionId === event.motionId && previous.routeId !== event.routeId &&
         previous.actorId && event.actorId && previous.actorId !== event.actorId;
       var parallel = authoredParallel || inferredParallel;
@@ -3079,6 +3256,7 @@ RR.drillChoreography = (function () {
       contacts: contacts,
       beats: timed.beats,
       equipment: equipmentFor(drill),
+      presentation: presentationFor(drill, spec, actorModel),
       stagingLane: actorModel.stagingLane,
       participantSummary: {
         authoredAthletes: actorModel.authoredAthletes,

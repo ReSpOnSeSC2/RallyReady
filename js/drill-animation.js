@@ -115,7 +115,7 @@ RR.drillAnimation = (function () {
     "hitting-from-all-positions": ["1,2", "1,2", "1,2", "1,2"],
     "attack-and-transition-to-defense": ["1,2", "0,1", "0,1|3,4"],
     "collapse-dig-and-recover": ["0,1"],
-    "amoeba-team-game": ["0,1,2,3,4,5,6"],
+    "amoeba-team-game": ["0,1,2,3,4,5,6,7"],
     "passing-21-circle": ["0,1,2,3,4"],
     "serve-and-pass-crossover": ["0,1"],
     "pass-set-hit-triangle": ["0,1,2"],
