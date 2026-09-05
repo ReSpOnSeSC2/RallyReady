@@ -2258,6 +2258,23 @@ RR.drillChoreography = (function () {
     contacts.forEach(function (contact, index) {
       contact.id = "contact-" + (index + 1);
       contact.order = index;
+      // A reciprocal partner exchange establishes who plays each outgoing
+      // ball. A permanent "setter" label must not take the return set away
+      // from the partner standing at its source. Explicit contacts still win.
+      if (contact.authoredAction || contact.performerBindingSource === "authored-contact-performer" ||
+          !/^(?:set|pass)$/.test(contact.motionId) ||
+          !contact.sourceActorId || !contact.recipientActorId ||
+          contact.sourceActorId === contact.recipientActorId) return;
+      var reciprocal = contacts.some(function (other) {
+        return other !== contact && other.motionId === contact.motionId &&
+          other.sourceActorId === contact.recipientActorId &&
+          other.recipientActorId === contact.sourceActorId;
+      });
+      if (reciprocal) {
+        contact.performerActorId = contact.sourceActorId;
+        contact.partnerActorId = contact.recipientActorId;
+        contact.performerBindingSource = "reciprocal-contact-source";
+      }
     });
     return contacts;
   }
@@ -2404,6 +2421,20 @@ RR.drillChoreography = (function () {
     var source = sanitizedMotionText(instruction).toLowerCase();
     var available = actors.filter(function (actor) { return !actor.staged; });
     if (!available.length) available = actors.slice();
+
+    // Saved instructions may name the person directly ("Player A tosses...").
+    // Resolve that subject before generic role/partner preferences. Stop the
+    // clause at the next named player so that a receiver does not inherit the
+    // previous subject's action.
+    var namedClause = /\bplayer\s+([a-z0-9]+)\s+(.+?)(?=\bplayer\s+[a-z0-9]+\b|[.!?;]|$)/g;
+    var namedMatch;
+    while ((namedMatch = namedClause.exec(source))) {
+      if (exactMotionIds(namedMatch[2], { drill: drill }).indexOf(motionId) === -1) continue;
+      var namedActors = available.filter(function (actor) {
+        return clean(actor.label).toLowerCase() === namedMatch[1];
+      });
+      if (namedActors.length === 1) return namedActors[0];
+    }
 
     if (/^(?:feed|signal|down-ball-hit|low-toss)$/.test(motionId) ||
         (motionId === "attack" && /\bcoach\s+(?:hits?|attacks?|drives?|tips?)\b/.test(source))) {

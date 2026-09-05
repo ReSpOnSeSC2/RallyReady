@@ -76,7 +76,13 @@
   white-space: nowrap;
 }
 
-.coachcam__controls { flex: none; gap: 6px; }
+.coachcam__controls { flex: none; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.coachcam__control--frame-back span,
+.coachcam__control--frame-next span { display: none; }
+.coachcam__angles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
+.coachcam__angles [aria-pressed="true"] { color: var(--text); border-color: var(--cc-coral); background: color-mix(in srgb, var(--cc-coral) 12%, var(--surface)); }
+.coachcam__angles .coachcam__control { width: auto; flex: 0 0 auto; white-space: nowrap; padding: 0 12px; }
+.coachcam__angles .coachcam__formation-label { flex-basis: 100%; }
 .coachcam__control,
 .coachcam__speed-button {
   min-height: 44px;

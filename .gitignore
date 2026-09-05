@@ -11,6 +11,7 @@ desktop.ini
 
 # Logs / scratch
 *.log
+__pycache__/
 
 # Full-resolution AI image sources (~45MB). Kept locally for regenerating the
 # shipped images/diagrams/*.png, but never committed or deployed with the app.

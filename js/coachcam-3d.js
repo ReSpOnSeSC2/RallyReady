@@ -64,8 +64,8 @@
     phase("read-short", "Read · short toss", 8.2, 9.2,
       "Recognize the ball dying short. Drop the center of mass and accelerate forward under control.",
       "Forward, not upward"),
-    phase("one-hand-save", "One-hand save", 9.2, 10.2,
-      "Reach the heel of the hand or a firm one-arm platform under the ball. Play the ball before committing the torso to the floor.",
+    phase("platform-save", "Platform save", 9.2, 10.2,
+      "Join the hands and reach a firm forearm platform under the ball. Play the ball before committing the torso to the floor.",
       "Ball first"),
     phase("sprawl", "Chest + hips sprawl", 10.2, 11.6,
       "Lengthen forward and absorb the floor with chest and hips together. Keep the chin lifted, elbows free, and knees from striking first.",
@@ -233,10 +233,14 @@
       "<path d='M4 11a8 8 0 1 0 2.3-5.7L4 7.6'/><path d='M4 3v4.6h4.6'/>");
     controls.appendChild(pause);
     controls.appendChild(replay);
+    var frameBack = controlButton("coachcam__control--frame-back", "Back one frame", "<path d='M6 5v14M18 5 8 12l10 7z'/>");
+    var frameNext = controlButton("coachcam__control--frame-next", "Forward one frame", "<path d='M18 5v14M6 5l10 7-10 7z'/>");
+    controls.appendChild(frameBack);
+    controls.appendChild(frameNext);
     var speed = node("div", "coachcam__speed");
     speed.setAttribute("role", "group");
     speed.setAttribute("aria-label", translated("Playback speed"));
-    [0.5, 1].forEach(function (value) {
+    [0.25, 0.5, 1].forEach(function (value) {
       var button = node("button", "coachcam__speed-button" + (value === 1 ? " is-active" : ""), value + "×");
       button.type = "button";
       button.setAttribute("aria-pressed", value === 1 ? "true" : "false");
@@ -335,6 +339,8 @@
       loading: loading,
       fallbackText: fallbackText,
       pause: pause,
+      frameBack: frameBack,
+      frameNext: frameNext,
       replay: replay,
       speed: speed,
       scrubber: scrubber,
@@ -463,7 +469,7 @@
       player.optionalOverlays.forEach(function (entry) {
         var name = entry.name.toLowerCase();
         var show = false;
-        if (/ball.?first|platform|contact/.test(name)) show = /reach|one-hand/.test(phaseId);
+        if (/ball.?first|platform|contact/.test(name)) show = /reach|platform-save/.test(phaseId);
         else if (/shoulder|roll.?(?:path|arc)|diagonal/.test(name)) show = /roll-/.test(phaseId);
         else if (/sprawl|landing|chest|hips/.test(name)) show = phaseId === "sprawl";
         else if (/head|chin|safe/.test(name)) show = /roll-|sprawl/.test(phaseId);
@@ -472,14 +478,18 @@
     }
 
     function seek(authoredTime, shouldAnnounce) {
+      authoredTime = clamp(authoredTime, 0, CONTRACT.durationSeconds - 0.001);
       var nextClipTime = clipSeconds(authoredTime, player.clipDuration);
       if (player.mixer && player.action) {
         // AnimationMixer.setTime respects AnimationAction.paused. Temporarily
         // release that clock so a paused scrub still evaluates every bone at
         // the requested pose, then restore the exact transport state.
         var wasActionPaused = player.action.paused;
+        var priorScale = player.action.timeScale;
         player.action.paused = false;
+        player.action.setEffectiveTimeScale(1);
         player.mixer.setTime(nextClipTime);
+        player.action.setEffectiveTimeScale(priorScale);
         player.action.paused = wasActionPaused;
       }
       updatePhase(nextClipTime, true);
@@ -494,7 +504,7 @@
     }
 
     function shouldAnimate() {
-      return player.initialized && !player.destroyed && !player.userPaused &&
+      return player.initialized && !player.destroyed && !player.userPaused && !player.scrubbing &&
         !player.autoPaused && !document.hidden;
     }
 
@@ -720,6 +730,8 @@
       var key = new THREE.DirectionalLight(0xfff1dc, 2.2);
       key.position.set(-7, 13, 9);
       key.castShadow = true;
+      key.shadow.bias = -0.00025;
+      key.shadow.normalBias = 0.025;
       key.shadow.mapSize.set(1024, 1024);
       scene.add(key);
       var rim = new THREE.DirectionalLight(0xff6b35, 1.15);
@@ -862,6 +874,14 @@
     ui.pause.addEventListener("click", function () {
       setUserPaused(!player.userPaused, true);
     });
+    function stepFrame(direction) {
+      var time = player.action ? player.action.time / player.clipDuration * CONTRACT.durationSeconds
+        : Number(ui.scrubber.value) / 1400 * CONTRACT.durationSeconds;
+      setUserPaused(true, false);
+      seek(time + direction / 30, true);
+    }
+    ui.frameBack.addEventListener("click", function () { stepFrame(-1); });
+    ui.frameNext.addEventListener("click", function () { stepFrame(1); });
     ui.replay.addEventListener("click", function () {
       player.userPaused = false;
       updatePlayButton();
@@ -872,7 +892,8 @@
     ui.speed.addEventListener("click", function (event) {
       var button = event.target.closest("button[data-speed]");
       if (!button) return;
-      player.speed = Number(button.getAttribute("data-speed")) === 0.5 ? 0.5 : 1;
+      var speed = Number(button.getAttribute("data-speed"));
+      player.speed = [0.25, 0.5, 1].indexOf(speed) !== -1 ? speed : 1;
       updateSpeedButtons();
       syncActionState();
       announce("Playback speed " + player.speed + " times.");
@@ -888,6 +909,7 @@
       if (player.action) player.action.paused = true;
     });
     ui.scrubber.addEventListener("input", function () {
+      if (!player.scrubbing) player.resumeAfterScrub = !player.userPaused;
       player.scrubbing = true;
       seek((Number(ui.scrubber.value) / 1400) * CONTRACT.durationSeconds, false);
     });

@@ -15,6 +15,13 @@
   if (!RR.i18n) return;
 
   RR.i18n.add({
+    "Back one frame": "Un cadru înapoi",
+    "Forward one frame": "Un cadru înainte",
+    "Body mechanics viewing angle": "Unghiul de vizualizare a tehnicii",
+    "View technique": "Vezi tehnica",
+    "Three-quarter": "Oblic",
+    "Front": "Din față",
+    "Side": "Din lateral",
     // ---- brand + tabs + screen titles ----
     "Today": "Azi",
     "Season": "Sezon",
@@ -137,6 +144,7 @@
     "Left shoulder roll": "Rostogolire pe umărul stâng",
     "Read · short toss": "Citește · minge scurtă",
     "One-hand save": "Salvare cu o mână",
+    "Platform save": "Salvare cu platforma",
     "Chest + hips sprawl": "Plonjon pe piept + șolduri",
     "Ready again": "Din nou în poziție",
 
@@ -163,6 +171,8 @@
       "Recunoaște mingea care cade scurt. Coboară centrul de greutate și accelerează controlat înainte.",
     "Reach the heel of the hand or a firm one-arm platform under the ball. Play the ball before committing the torso to the floor.":
       "Bagă podul palmei sau o platformă fermă cu un braț sub minge. Joacă mingea înainte să lași trunchiul să coboare la sol.",
+    "Join the hands and reach a firm forearm platform under the ball. Play the ball before committing the torso to the floor.":
+      "Unește mâinile și întinde o platformă fermă din antebrațe sub minge. Joacă mingea înainte să lași trunchiul să coboare la sol.",
     "Lengthen forward and absorb the floor with chest and hips together. Keep the chin lifted, elbows free, and knees from striking first.":
       "Întinde-te înainte și amortizează contactul cu solul simultan pe piept și șolduri. Ține bărbia ridicată, coatele libere, iar genunchii să nu lovească primii.",
     "Press the hands under the shoulders, draw one knee through, and rise without turning away from the court.":
@@ -198,6 +208,7 @@
     "Recover · Feet under hips": "Revino · Tălpile sub șolduri",
     "Read · short toss · Forward, not upward": "Citește · minge scurtă · Înainte, nu în sus",
     "One-hand save · Ball first": "Salvare cu o mână · Întâi mingea",
+    "Platform save · Ball first": "Salvare cu platforma · Întâi mingea",
     "Chest + hips sprawl · Chest + hips together": "Plonjon pe piept + șolduri · Pieptul + șoldurile împreună",
     "Recover · Face the next play": "Revino · Cu fața spre faza următoare",
     "Ready again · Reset · breathe · repeat": "Din nou în poziție · Revino · respiră · repetă",

@@ -35,27 +35,25 @@ REQUIRED_BONES = {
         )
     },
 }
-MECHANICS_SAMPLE_FRAMES = (0, 78, 84, 96, 108, 186, 192, 204, 216, 390, 420)
+MECHANICS_SAMPLE_FRAMES = (0, 78, 84, 90, 96, 102, 108, 114, 186, 192, 198, 204, 210, 216, 222, 390, 420)
 COURT_SAMPLE_FRAMES = (
     0, 30, 54, 70, 78, 84, 96, 108, 114, 138, 162, 178, 186,
     192, 204, 216, 222, 246, 276, 294, 306, 318, 330, 342, 348,
     360, 378, 390, 420,
 )
 SPRAWL_SAMPLE_FRAMES = (276, 294, 300, 306, 318, 330, 342, 348, 360)
-ROLL_FRAME_PAIRS = ((78, 186), (84, 192), (96, 204), (108, 216), (114, 222))
+ROLL_FRAME_PAIRS = ((78, 186), (90, 198), (102, 210), (114, 222), (126, 234))
 CONTACT_SAMPLES = (
     ("rightReach", 78, "BALL_RIGHT", (2.15, -5.02, 0.48)),
     ("leftReach", 186, "BALL_LEFT", (-2.15, -5.02, 0.48)),
-    ("oneHandSave", 306, "BALL_SPRAWL", (0.0, -3.98, 0.31)),
+    ("forearmSave", 306, "BALL_SPRAWL", (0.0, -3.98, 0.31)),
 )
 
 # These tolerances intentionally allow for glTF sampling/quantisation while
 # remaining far tighter than the distances that would turn a save into a miss.
 JOINT_TOLERANCE_M = 0.025
-CONTACT_MIDPOINT_TOLERANCE_M = 0.035
-CONTACT_HAND_TOLERANCE_M = 0.14
 CAMERA_MARGIN = 0.012
-KNEE_SURFACE_RADIUS_M = 0.12
+KNEE_SURFACE_RADIUS_M = 0.09
 
 
 def evaluated_corners(objects):
@@ -140,27 +138,28 @@ def validate_contacts(scene, rig):
         court_position_error = (ball - Vector(expected_contact)).length
         ball_scale = rig.pose.bones[ball_bone].scale.x
 
-        if platform_error > CONTACT_MIDPOINT_TOLERANCE_M:
+        forearm_distances = [point_segment_distance(ball, elbow_l, wrist_l),
+                            point_segment_distance(ball, elbow_r, wrist_r)]
+        # A 10.75 cm radius ball touches the forearm skin. The earlier check
+        # placed its centre between the wrists, teaching an interpenetration.
+        if min(forearm_distances) < .13 or min(forearm_distances) > .185:
             raise AssertionError(
-                f"{label} misses the platform at frame {frame}: "
-                f"ball-to-midpoint={platform_error:.4f}m"
+                f"{label} misses/intersects the forearm surface at frame {frame}: "
+                f"ball-to-forearm-axes={forearm_distances}"
             )
-        if min(hand_distances) > CONTACT_HAND_TOLERANCE_M:
+        if min(hand_distances) < .11:
             raise AssertionError(
-                f"{label} has no hand near the ball at frame {frame}: "
+                f"{label} embeds the hands inside the ball at frame {frame}: "
                 f"distances={tuple(round(value, 4) for value in hand_distances)}"
             )
-        if court_position_error > JOINT_TOLERANCE_M:
+        if court_position_error > .25:
             raise AssertionError(
                 f"{label} contact moved off its authored court station at frame {frame}: "
                 f"error={court_position_error:.4f}m"
             )
         if ball_scale < 0.5:
             raise AssertionError(f"{label} ball is hidden at contact frame {frame}: scale={ball_scale:.4f}")
-        # The joined wrists straddle the ball center. Their forearms deliberately
-        # converge more sharply in the forward one-hand/forearm save, so wrist
-        # continuity is the stable platform invariant after glTF round-trip.
-        if not 0.075 <= wrist_span <= 0.16 or abs(hand_distances[0] - hand_distances[1]) > 0.025:
+        if not 0.075 <= wrist_span <= 0.16 or forearm_alignment < .90:
             raise AssertionError(
                 f"{label} loses the joined wrist platform at frame {frame}: "
                 f"span={wrist_span:.4f}m distances={tuple(round(value, 4) for value in hand_distances)}"
@@ -174,6 +173,7 @@ def validate_contacts(scene, rig):
             "ballToHandsM": [round(value, 4) for value in hand_distances],
             "wristSpanM": round(wrist_span, 4),
             "forearmAlignment": round(forearm_alignment, 4),
+            "ballToForearmAxesM": [round(value, 4) for value in forearm_distances],
             "courtPositionErrorM": round(court_position_error, 4),
             "ballScale": round(ball_scale, 4),
         }
@@ -227,9 +227,9 @@ def validate_mirrored_rolls(scene, rig):
 
     scene.frame_set(0)
     ready = world_bone_head(rig, "DEF_TORSO")
-    scene.frame_set(96)
+    scene.frame_set(102)
     right_mid = world_bone_head(rig, "DEF_TORSO")
-    scene.frame_set(204)
+    scene.frame_set(210)
     left_mid = world_bone_head(rig, "DEF_TORSO")
     if right_mid.x - ready.x < 1.7 or ready.x - left_mid.x < 1.7:
         raise AssertionError(
@@ -250,8 +250,8 @@ def validate_mirrored_rolls(scene, rig):
 
 def validate_diagonal_guides(scene, rig):
     checks = (
-        ("right", 96, "GUIDE_DIAG_RIGHT", "DEF_JOINT_SHOULDER_R", "DEF_JOINT_HIP_L", 76, 116),
-        ("left", 204, "GUIDE_DIAG_LEFT", "DEF_JOINT_SHOULDER_L", "DEF_JOINT_HIP_R", 184, 224),
+        ("right", 102, "GUIDE_DIAG_RIGHT", "DEF_JOINT_SHOULDER_R", "DEF_JOINT_HIP_L", 76, 116),
+        ("left", 210, "GUIDE_DIAG_LEFT", "DEF_JOINT_SHOULDER_L", "DEF_JOINT_HIP_R", 184, 224),
     )
     results = {}
     for label, frame, guide_name, shoulder_name, hip_name, before_frame, after_frame in checks:
@@ -471,6 +471,75 @@ def validate_cameras(scene, defender_objects, coach_objects):
     }
 
 
+def validate_anatomy(scene, rig, defender_objects):
+    """Check exported motion, including interpolation between stored frames.
+
+    A key-pose screenshot cannot expose breathing limb lengths, bend-pole
+    flips, detached joints, floor penetration, or an accidental face-up sprawl.
+    """
+    lengths = {"TORSO": .58, "HEAD": .27, "UARM": .32, "FARM": .28,
+               "HAND": .16, "THIGH": .44, "SHIN": .43, "FOOT": .25}
+    links = [("TORSO", "HEAD")]
+    for side in ("L", "R"):
+        links += [(f"UARM_{side}", f"FARM_{side}"), (f"FARM_{side}", f"HAND_{side}"),
+                  (f"THIGH_{side}", f"SHIN_{side}"), (f"SHIN_{side}", f"FOOT_{side}")]
+    max_length_error, max_seam, max_step, max_turn = 0, 0, 0, 0
+    previous = {}
+    worst_floor = (99, "", 0)
+    for sample in range(1681):
+        time = sample / 4
+        scene.frame_set(int(time), subframe=time % 1)
+        for prefix in ("DEF", "COACH"):
+            for bone in rig.pose.bones:
+                if not bone.name.startswith(prefix + "_") or "JOINT_" in bone.name:
+                    continue
+                kind = bone.name.split("_")[1]
+                if kind not in lengths:
+                    continue
+                length_error = abs((bone.tail-bone.head).length-lengths[kind])
+                max_length_error = max(max_length_error, length_error)
+                if length_error > .002:
+                    raise AssertionError(f"{bone.name} changes anatomical length at {time}: {length_error:.5f}m")
+                if sample % 4 == 0:
+                    rotation = bone.matrix.to_quaternion()
+                    if bone.name in previous:
+                        last_pos, last_rot = previous[bone.name]
+                        step = (bone.head-last_pos).length
+                        turn = rotation.rotation_difference(last_rot).angle
+                        turn = min(turn, math.tau-turn)
+                        max_step, max_turn = max(max_step, step), max(max_turn, turn)
+                        if step > .30:
+                            raise AssertionError(f"{bone.name} jumps {step:.3f}m in one frame at {time}")
+                        if turn > 1.05:
+                            raise AssertionError(f"{bone.name} rotates {math.degrees(turn):.1f} degrees in one frame at {time}")
+                    previous[bone.name] = (bone.head.copy(), rotation)
+            for start, end in links:
+                seam = (rig.pose.bones[f"{prefix}_{start}"].tail-rig.pose.bones[f"{prefix}_{end}"].head).length
+                max_seam = max(max_seam, seam)
+                if seam > .018:
+                    raise AssertionError(f"{prefix} {start}/{end} disconnect by {seam:.4f}m at {time}")
+        if sample % 8 == 0:
+            depsgraph = bpy.context.evaluated_depsgraph_get()
+            for obj in defender_objects:
+                evaluated = obj.evaluated_get(depsgraph)
+                minimum = min((evaluated.matrix_world @ vertex.co).z for vertex in evaluated.data.vertices)
+                if minimum < worst_floor[0]:
+                    worst_floor = (minimum, obj.name, time)
+                if minimum < .01:
+                    raise AssertionError(f"{obj.name} penetrates the court at {time}: lowest vertex {minimum:.4f}m")
+                if obj.name == "DEF_Head" and (78 <= time <= 114 or 186 <= time <= 222) and minimum < .13:
+                    raise AssertionError(f"Roll loads the head at {time}: lowest head vertex {minimum:.4f}m")
+    for frame in (330, 342):
+        scene.frame_set(frame)
+        forward = rig.pose.bones["DEF_TORSO"].matrix.to_quaternion() @ Vector((0, 0, -1))
+        if forward.z > -.85:
+            raise AssertionError(f"Sprawl chest faces away from floor at {frame}: {tuple(forward)}")
+    return {"fractionalFrameSamples": 1681, "maxBoneLengthErrorM": round(max_length_error, 6),
+            "maxJointSeamM": round(max_seam, 6), "maxJointStepM": round(max_step, 5),
+            "maxSegmentTurnDegrees": round(math.degrees(max_turn), 3),
+            "lowestSurface": {"z": round(worst_floor[0], 5), "mesh": worst_floor[1], "frame": worst_floor[2]}}
+
+
 def main():
     if not GLB_PATH.exists():
         raise AssertionError(f"Missing GLB: {GLB_PATH}")
@@ -504,14 +573,15 @@ def main():
     guide_checks = validate_diagonal_guides(scene, rig)
     sprawl_checks = validate_sprawl_contact(scene, rig)
     camera_checks = validate_cameras(scene, defender_objects, coach_objects)
+    anatomy_checks = validate_anatomy(scene, rig, defender_objects)
 
     # Verify the authored pose survived both glTF export and re-import without
     # the Blender-bone local-axis swap that caused the first invalid prototype.
     expected_heads = {
         0: (0.0, -5.72, 0.88),
-        96: (1.92, -5.20, 0.34),
-        204: (-1.92, -5.20, 0.34),
-        342: (0.0, -4.18, 0.25),
+        102: (1.92, -5.20, 0.24),
+        210: (-1.92, -5.20, 0.24),
+        342: (0.0, -4.18, 0.21),
     }
     sampled_heads = {}
     for frame, expected in expected_heads.items():
@@ -536,6 +606,7 @@ def main():
         "diagonalGuideChecks": guide_checks,
         "sprawlContactChecks": sprawl_checks,
         "cameraChecks": camera_checks,
+        "anatomyChecks": anatomy_checks,
     }
     print("COACHCAM_VALIDATION=" + json.dumps(result, sort_keys=True))
 

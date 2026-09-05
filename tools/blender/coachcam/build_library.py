@@ -22,7 +22,7 @@ import pathlib
 import sys
 
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -33,8 +33,12 @@ if str(BLENDER_TOOLS) not in sys.path:
 
 import build_rolls_and_sprawls as base  # noqa: E402
 
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+import kinematics as motion  # noqa: E402
 
-FPS = 24
+
+FPS = 48
 GLB_PATH = REPO / "models" / "coachcam" / "coachcam-library.glb"
 BLEND_PATH = REPO / "design-assets" / "blender" / "coachcam-library.blend"
 PREVIEW_DIR = REPO / "design-assets" / "blender" / "previews"
@@ -303,7 +307,7 @@ def build_athlete(mats):
     root["prototype"] = True
     root["prototype_role"] = "athlete"
     root["rig_contract"] = "RR_Humanoid_v1"
-    segment_bones = [f"ATH_{segment}" for segment in base.SEGMENTS]
+    segment_bones = [f"ATH_{segment}" for segment in dict.fromkeys([*base.SEGMENTS, "HAND_L", "HAND_R"])]
     joint_bones = [f"ATH_JOINT_{joint}" for joint in base.POINT_JOINTS]
     rig = base.create_rig(segment_bones + joint_bones)
     rig.name = "RR_Humanoid_v1"
@@ -311,8 +315,7 @@ def build_athlete(mats):
     rig["rig_contract"] = "RR_Humanoid_v1"
     rig.parent = root
     palette = athlete_palette(mats)
-    base.add_athlete_mesh("ATH", rig, palette, "AthleteTemplate_Torso")
-    base.add_joint_meshes("ATH", rig, palette)
+    add_instructional_athlete_mesh(rig, palette)
 
     # Merge the many readable anatomical pieces into one skinned object. The
     # armature and material assignments remain intact, while 13-player drills
@@ -330,430 +333,121 @@ def build_athlete(mats):
     return root, rig, mesh
 
 
-def pose_stand():
-    return base.human_pose((0, 0, 0.98), limbs={
-        "elbow_L": (-0.31, 0.02, 0.28), "elbow_R": (0.31, 0.02, 0.28),
-        "wrist_L": (-0.34, 0.02, -0.02), "wrist_R": (0.34, 0.02, -0.02),
-        "knee_L": (-0.20, 0, -0.44), "knee_R": (0.20, 0, -0.44),
-        "ankle_L": (-0.20, 0, -0.88), "ankle_R": (0.20, 0, -0.88),
-        "toe_L": (-0.20, 0.26, -0.91), "toe_R": (0.20, 0.26, -0.91),
-    })
+def add_instructional_athlete_mesh(rig, palette):
+    """Adult proportions, real hand length, palms, fingers and facial direction."""
+    def part(name, bone, dims, center, color, offset=(0, 0, 0), segments=16, rings=8):
+        obj = base.weighted_ellipsoid(name, rig, "ATH_"+bone, dims, center,
+                                     palette[color], segments, rings)
+        for vert in obj.data.vertices:
+            vert.co += Vector(offset)
+        return obj
+
+    part("AthleteTemplate_Torso", "TORSO", (.45,.29,1.09), .48, "jersey", segments=28, rings=14)
+    part("ATH_JerseyPanel", "TORSO", (.15,.025,.24), .68, "jersey_alt", (0,0,-.143))
+    part("ATH_Shorts", "TORSO", (.39,.30,.30), .08, "shorts")
+    part("ATH_Head", "HEAD", (.23,.23,1.02), .50, "skin", segments=24,rings=12)
+    part("ATH_Hair", "HEAD", (.235,.236,.36), .84, "hair")
+    # Face details provide a clear front/back cue when coaching body rotation.
+    for sign in (-1,1):
+        part("ATH_Eye_"+str(sign), "HEAD", (.025,.012,.04), .63, "hair", (sign*.045,0,-.112), segments=10,rings=6)
+    part("ATH_Nose", "HEAD", (.035,.045,.09), .49, "skin", (0,0,-.122), segments=12,rings=6)
+    for side, sign in (("L",-1),("R",1)):
+        part("ATH_UpperArm_"+side,"UARM_"+side,(.125,.13,1.08),.5,"skin")
+        part("ATH_Forearm_"+side,"FARM_"+side,(.10,.105,1.07),.5,"skin")
+        part("ATH_Thigh_"+side,"THIGH_"+side,(.19,.205,1.08),.5,"skin")
+        part("ATH_Shin_"+side,"SHIN_"+side,(.14,.155,1.08),.5,"skin")
+        part("ATH_Kneepad_"+side,"SHIN_"+side,(.185,.18,.30),.055,"kneepad")
+        part("ATH_Shoe_"+side,"FOOT_"+side,(.17,.235,1.03),.48,"shoe")
+        part("ATH_Palm_"+side,"HAND_"+side,(.092,.052,.65),.30,"skin")
+        for index in range(4):
+            part("ATH_Finger_%s_%s"%(side,index),"HAND_"+side,
+                 (.018,.023,.48 if index in (1,2) else .40),.76,"skin",
+                 ((index-1.5)*.022,0,0),segments=10,rings=6)
+        part("ATH_Thumb_"+side,"HAND_"+side,(.023,.026,.37),.35,"skin",
+             (-sign*.055,0,-.010),segments=10,rings=6)
+    joint_specs = {"PELVIS":((.35,.28,.25),"shorts"),"NECK":((.13,.13,.16),"skin")}
+    for side in ("L","R"):
+        for joint,size,color in (("SHOULDER",.135,"skin"),("ELBOW",.105,"skin"),
+                                ("WRIST",.075,"skin"),("HIP",.20,"shorts"),
+                                ("KNEE",.175,"kneepad"),("ANKLE",.14,"shoe")):
+            joint_specs[joint+"_"+side]=((size,size,size),color)
+    for joint,(dims,color) in joint_specs.items():
+        part("ATH_Joint_"+joint,"JOINT_"+joint,dims,0,color)
 
 
-def pose_ready(low=0.0):
-    z = 0.86 - low * 0.14
-    return base.human_pose((0, 0, z), up=(0, 0.27 + low * 0.15, 0.96 - low * 0.06), limbs={
-        "elbow_L": (-0.25, 0.31, 0.31), "elbow_R": (0.25, 0.31, 0.31),
-        "wrist_L": (-0.10, 0.56, 0.16), "wrist_R": (0.10, 0.56, 0.16),
-        "knee_L": (-0.36, 0.12, -0.39), "knee_R": (0.36, 0.12, -0.39),
-        "ankle_L": (-0.49, -0.02, -0.72), "ankle_R": (0.49, -0.02, -0.72),
-        "toe_L": (-0.49, 0.27, -0.75), "toe_R": (0.49, 0.27, -0.75),
-    })
-
-
-def pose_run(side=1, back=False, high=False):
-    direction = -1 if back else 1
-    knee_front = 0.18 if high else -0.05
-    return base.human_pose((0, 0, 0.93 + (0.04 if high else 0)),
-                           up=(0, 0.30 * direction, 0.954), limbs={
-        "elbow_L": (-0.25, 0.25 * side * direction, 0.42),
-        "elbow_R": (0.25, -0.25 * side * direction, 0.42),
-        "wrist_L": (-0.18, 0.50 * side * direction, 0.20),
-        "wrist_R": (0.18, -0.50 * side * direction, 0.20),
-        "knee_L": (-0.20, 0.48 * side * direction, knee_front if side > 0 else -0.50),
-        "knee_R": (0.20, -0.48 * side * direction, knee_front if side < 0 else -0.50),
-        "ankle_L": (-0.20, 0.35 * side * direction, -0.36 if side > 0 else -0.88),
-        "ankle_R": (0.20, -0.35 * side * direction, -0.36 if side < 0 else -0.88),
-        "toe_L": (-0.20, 0.62 * side * direction, -0.42 if side > 0 else -0.91),
-        "toe_R": (0.20, -0.62 * side * direction, -0.42 if side < 0 else -0.91),
-    })
-
-
-def pose_shuffle(side=1):
-    return base.human_pose((0.12 * side, 0, 0.76), up=(0.12 * side, 0.34, 0.93), limbs={
-        "elbow_L": (-0.30, 0.30, 0.30), "elbow_R": (0.30, 0.30, 0.30),
-        "wrist_L": (-0.14, 0.55, 0.16), "wrist_R": (0.14, 0.55, 0.16),
-        "knee_L": (-0.50, 0.12, -0.30), "knee_R": (0.50, 0.12, -0.30),
-        "ankle_L": (-0.76 if side < 0 else -0.48, 0, -0.58),
-        "ankle_R": (0.76 if side > 0 else 0.48, 0, -0.58),
-        "toe_L": (-0.79 if side < 0 else -0.48, 0.27, -0.62),
-        "toe_R": (0.79 if side > 0 else 0.48, 0.27, -0.62),
-    })
-
-
-def platform_pose(side=0, low=0.0, one_arm=False):
-    pose = pose_ready(0.35 + low * 0.45)
-    contact = Vector((0.62 * side, 0.82, 0.50 - low * 0.20))
-    if one_arm:
-        shoulder = pose["shoulder_R" if side >= 0 else "shoulder_L"]
-        active = "R" if side >= 0 else "L"
-        other = "L" if active == "R" else "R"
-        direction = (contact - shoulder).normalized()
-        pose[f"elbow_{active}"] = shoulder + direction * 0.42
-        pose[f"wrist_{active}"] = contact
-        pose[f"elbow_{other}"] = pose[f"shoulder_{other}"] + Vector((0, 0.20, -0.08))
-        pose[f"wrist_{other}"] = pose[f"elbow_{other}"] + Vector((0, 0.25, -0.13))
-    else:
-        base.platform_overrides(pose, contact)
-    return pose
-
-
-def overhead_pose(kind="set", phase=0.5):
-    pose = pose_ready(0.15 if phase < 0.5 else 0)
-    if kind == "block":
-        pose = base.human_pose((0, 0, 1.25 if phase >= 0.5 else 0.82), limbs={
-            "elbow_L": (-0.28, 0.05, 0.78), "elbow_R": (0.28, 0.05, 0.78),
-            "wrist_L": (-0.24, 0.18, 1.14), "wrist_R": (0.24, 0.18, 1.14),
-            "knee_L": (-0.20, 0, -0.44), "knee_R": (0.20, 0, -0.44),
-            "ankle_L": (-0.20, 0, -0.88), "ankle_R": (0.20, 0, -0.88),
-            "toe_L": (-0.20, 0.24, -0.91), "toe_R": (0.20, 0.24, -0.91),
-        })
-    else:
-        # Build the setting window from this pose's actual head/shoulder
-        # landmarks. Absolute world heights caused the raised skeleton to put
-        # its hands below the neck in the first library export.
-        head = pose["head_top"]
-        pose["elbow_L"] = Vector((-0.35, 0.15, head.z - 0.30))
-        pose["elbow_R"] = Vector((0.35, 0.15, head.z - 0.30))
-        pose["wrist_L"] = Vector((-0.15, 0.24, head.z + 0.03 + phase * 0.08))
-        pose["wrist_R"] = Vector((0.15, 0.24, head.z + 0.03 + phase * 0.08))
-    return pose
-
-
-def arm_swing_pose(phase=0.0, jump=False, roll=False):
-    height = 1.24 if jump and 0.38 <= phase <= 0.72 else 0.92
-    pose = base.human_pose((0, 0, height), up=(0, 0.20, 0.98), limbs={
-        "knee_L": (-0.24, 0.10, -0.43), "knee_R": (0.24, 0.10, -0.43),
-        "ankle_L": (-0.24, 0, -0.86), "ankle_R": (0.24, 0, -0.86),
-        "toe_L": (-0.24, 0.26, -0.89), "toe_R": (0.24, 0.26, -0.89),
-    })
-    head_z = pose["head_top"].z
-    shoulder_z = pose["shoulder_R"].z
-    if phase < 0.28:
-        pose.update({"elbow_R": Vector((0.38, -0.18, head_z - 0.30)),
-                     "wrist_R": Vector((0.28, -0.34, head_z - 0.02)),
-                     "elbow_L": Vector((-0.35, 0.30, shoulder_z - 0.12)),
-                     "wrist_L": Vector((-0.18, 0.60, shoulder_z - 0.32))})
-    elif phase < 0.62:
-        pose.update({"elbow_R": Vector((0.20, 0.14, head_z - 0.12)),
-                     "wrist_R": Vector((0.10, 0.42, head_z + 0.28)),
-                     "elbow_L": Vector((-0.28, 0.22, shoulder_z - 0.14)),
-                     "wrist_L": Vector((-0.12, 0.54, shoulder_z - 0.34))})
-    else:
-        side = -0.32 if roll else 0.05
-        pose.update({"elbow_R": Vector((0.22, 0.48, shoulder_z - 0.12)),
-                     "wrist_R": Vector((side, 0.78, shoulder_z - 0.32)),
-                     "elbow_L": Vector((-0.20, 0.36, shoulder_z - 0.28)),
-                     "wrist_L": Vector((-0.06, 0.58, shoulder_z - 0.46))})
-    return pose
-
-
-def toss_pose(phase=0.5, low=False, underhand=False):
-    pose = pose_stand()
-    if underhand or low:
-        pose["elbow_R"] = Vector((0.26, 0.35 if phase < 0.5 else 0.48, 0.24))
-        pose["wrist_R"] = Vector((0.12, 0.68 if phase < 0.5 else 0.88, 0.16 + phase * 0.35))
-        pose["elbow_L"] = Vector((-0.25, 0.18, 0.42))
-        pose["wrist_L"] = Vector((-0.14, 0.42, 0.58))
-    else:
-        pose["elbow_L"] = Vector((-0.20, 0.20, 0.82))
-        pose["wrist_L"] = Vector((-0.10, 0.25, 1.20 + phase * 0.22))
-        pose["elbow_R"] = Vector((0.35, -0.10, 0.72))
-        pose["wrist_R"] = Vector((0.25, -0.28, 1.02))
-    return pose
-
-
-def jump_pose(height=0.0, arms="up"):
-    pelvis = 0.80 + height
-    pose = base.human_pose((0, 0, pelvis), limbs={
-        "knee_L": (-0.24, 0.08, -0.36), "knee_R": (0.24, 0.08, -0.36),
-        "ankle_L": (-0.24, 0, -0.72), "ankle_R": (0.24, 0, -0.72),
-        "toe_L": (-0.24, 0.25, -0.76), "toe_R": (0.24, 0.25, -0.76),
-    })
-    if arms == "up":
-        pose.update({"elbow_L": Vector((-0.28, 0.06, 0.82)), "elbow_R": Vector((0.28, 0.06, 0.82)),
-                     "wrist_L": Vector((-0.20, 0.15, 1.18)), "wrist_R": Vector((0.20, 0.15, 1.18))})
-    elif arms == "back":
-        pose.update({"elbow_L": Vector((-0.31, -0.24, 0.25)), "elbow_R": Vector((0.31, -0.24, 0.25)),
-                     "wrist_L": Vector((-0.24, -0.48, 0.08)), "wrist_R": Vector((0.24, -0.48, 0.08))})
-    return pose
-
-
-def prone_pose(reach=True):
-    # Long axis follows +Y; chest and hips share the low landing while knees
-    # remain visibly lifted behind the body.
-    return base.human_pose((0, 0.12, 0.26), up=(0, 0.998, 0.06), forward=(0, -0.06, 0.998), limbs={
-        "elbow_L": (-0.28, 0.14, 0.84 if reach else 0.38),
-        "elbow_R": (0.28, 0.14, 0.84 if reach else 0.38),
-        "wrist_L": (-0.12, 0.03, 1.22 if reach else 0.62),
-        "wrist_R": (0.12, 0.03, 1.22 if reach else 0.62),
-        "knee_L": (-0.24, 0.14, -0.43), "knee_R": (0.24, 0.14, -0.43),
-        "ankle_L": (-0.25, 0.44, -0.78), "ankle_R": (0.25, 0.44, -0.78),
-        "toe_L": (-0.24, 0.37, -1.01), "toe_R": (0.24, 0.37, -1.01),
-    }, overrides={"head_top": (0, 1.08, 0.61)})
-
-
-def pancake_pose(side=1, extension=1.0):
-    """Full-layout one-hand pancake with the free arm protecting the landing.
-
-    The active hand stays long, flat, and court-level while the chest and hips
-    arrive behind it. This is intentionally different from a two-arm sprawl:
-    one shoulder reaches through the ball and the other elbow remains bent so
-    the athlete can absorb the slide safely.
-    """
-    active_right = side >= 0
-    active_x = 0.18 if active_right else -0.18
-    support_x = -0.34 if active_right else 0.34
-    limbs = {
-        "knee_L": (-0.25, 0.12, -0.42), "knee_R": (0.25, 0.12, -0.42),
-        "ankle_L": (-0.26, 0.42, -0.78), "ankle_R": (0.26, 0.42, -0.78),
-        "toe_L": (-0.25, 0.38, -1.00), "toe_R": (0.25, 0.38, -1.00),
-    }
-    if active_right:
-        limbs.update({
-            "elbow_R": (0.24, -0.03, 0.84 + 0.14 * extension),
-            "wrist_R": (active_x, -0.17, 1.28 + 0.28 * extension),
-            "elbow_L": (support_x, 0.16, 0.48),
-            "wrist_L": (-0.46, 0.10, 0.25),
-        })
-    else:
-        limbs.update({
-            "elbow_L": (-0.24, -0.03, 0.84 + 0.14 * extension),
-            "wrist_L": (active_x, -0.17, 1.28 + 0.28 * extension),
-            "elbow_R": (support_x, 0.16, 0.48),
-            "wrist_R": (0.46, 0.10, 0.25),
-        })
-    return base.human_pose(
-        (0.06 * side, 0.10, 0.25), up=(0, 0.998, 0.06),
-        forward=(0, -0.06, 0.998), limbs=limbs,
-        overrides={"head_top": (0.10 * side, 1.03, 0.62)}
-    )
-
-
-def roll_pose(side=1, phase=0.5):
-    if phase < 0.34:
-        return platform_pose(side, 0.65)
-    if phase < 0.70:
-        # Curled across the outside shoulder, never over the neck/spine.
-        pose = base.human_pose((0.28 * side, 0.18, 0.38),
-                               up=(0.70 * side, 0.66, 0.28), forward=(0, 0.30, 0.95), limbs={
-            "elbow_L": (-0.24, 0.12, 0.34), "elbow_R": (0.24, 0.12, 0.34),
-            "wrist_L": (-0.10, 0.30, 0.24), "wrist_R": (0.10, 0.30, 0.24),
-            "knee_L": (-0.25, -0.16, -0.25), "knee_R": (0.25, -0.16, -0.25),
-            "ankle_L": (-0.31, 0.06, -0.49), "ankle_R": (0.31, 0.06, -0.49),
-            "toe_L": (-0.30, 0.29, -0.52), "toe_R": (0.30, 0.29, -0.52),
-        }, overrides={"head_top": (0.42 * side, 0.82, 0.60)})
-        # The continuous rounded silhouette includes kneepad volume outside the
-        # centerline skeleton. Lift the curled phase by 8 cm so neither knee
-        # shell penetrates the 3.5 cm court surface after glTF round-trip.
-        for landmark in pose.values():
-            landmark.z += 0.08
-        return pose
-    return pose_ready(0.55)
-
-
-def floor_recovery_pose(phase):
-    if phase < 0.34:
-        return prone_pose(False)
-    if phase < 0.68:
-        return base.human_pose((0, 0, 0.54), up=(0, 0.52, 0.85), limbs={
-            "elbow_L": (-0.30, 0.26, 0.30), "elbow_R": (0.30, 0.26, 0.30),
-            "wrist_L": (-0.35, 0.52, 0.04), "wrist_R": (0.35, 0.52, 0.04),
-            "knee_L": (-0.26, 0.12, -0.38), "knee_R": (0.30, -0.04, -0.18),
-            "ankle_L": (-0.34, -0.08, -0.53), "ankle_R": (0.42, -0.18, -0.38),
-            "toe_L": (-0.34, 0.18, -0.56), "toe_R": (0.48, 0.06, -0.42),
-        })
-    return pose_ready(0.15)
-
-
-def bridge_pose(up=False):
-    pose = base.human_pose((0, 0, 0.32 if up else 0.20), up=(0, 0.97, 0.24 if up else 0.08),
-                           forward=(0, -0.15, 0.98), limbs={
-        "elbow_L": (-0.34, 0.05, 0.30), "elbow_R": (0.34, 0.05, 0.30),
-        "wrist_L": (-0.38, -0.25, 0.10), "wrist_R": (0.38, -0.25, 0.10),
-        "knee_L": (-0.25, 0.28, -0.05), "knee_R": (0.25, 0.28, -0.05),
-        "ankle_L": (-0.25, 0.10, -0.42), "ankle_R": (0.25, 0.10, -0.42),
-        "toe_L": (-0.25, 0.34, -0.46), "toe_R": (0.25, 0.34, -0.46),
-    })
-    return pose
-
-
-def band_pose(kind, phase):
-    pose = pose_stand()
-    if kind == "upper":
-        y = 0.24 + 0.10 * math.sin(phase * math.pi)
-        z = 0.74 + 0.52 * phase
-        spread = 0.22 + 0.32 * math.sin(phase * math.pi)
-        pose.update({"elbow_L": Vector((-0.30, y, z - 0.18)), "elbow_R": Vector((0.30, y, z - 0.18)),
-                     "wrist_L": Vector((-spread, y + 0.05, z)), "wrist_R": Vector((spread, y + 0.05, z))})
-    else:
-        pose.update({"elbow_R": Vector((0.28, 0.10, 0.42)), "wrist_R": Vector((0.42, 0.30 + phase * 0.25, 0.42)),
-                     "elbow_L": Vector((-0.28, 0.10, 0.42)), "wrist_L": Vector((-0.10, 0.28, 0.42))})
-    return pose
-
-
-def medicine_pose(kind, phase):
-    pose = pose_ready(0.2)
-    if kind == "slam":
-        z = 1.35 - 1.05 * phase
-        pose.update({"elbow_L": Vector((-0.24, 0.18, z - 0.20)), "elbow_R": Vector((0.24, 0.18, z - 0.20)),
-                     "wrist_L": Vector((-0.10, 0.35, z)), "wrist_R": Vector((0.10, 0.35, z))})
-    elif kind == "rotate":
-        side = -1 + 2 * phase
-        pose.update({"elbow_L": Vector((-0.25, 0.28, 0.45)), "elbow_R": Vector((0.25, 0.28, 0.45)),
-                     "wrist_L": Vector((0.34 * side - 0.10, 0.58, 0.42)),
-                     "wrist_R": Vector((0.34 * side + 0.10, 0.58, 0.42))})
-    elif kind == "scoop":
-        z = 0.20 + phase * 0.90
-        pose.update({"elbow_L": Vector((-0.22, 0.28, z + 0.10)), "elbow_R": Vector((0.22, 0.28, z + 0.10)),
-                     "wrist_L": Vector((-0.10, 0.58, z)), "wrist_R": Vector((0.10, 0.58, z))})
-    else:
-        reach = 0.32 + phase * 0.42
-        pose.update({"elbow_L": Vector((-0.26, reach, 0.55)), "elbow_R": Vector((0.26, reach, 0.55)),
-                     "wrist_L": Vector((-0.11, reach + 0.28, 0.55)), "wrist_R": Vector((0.11, reach + 0.28, 0.55))})
-    return pose
-
-
-def stretch_pose(phase):
-    side = -1 if phase < 0.5 else 1
-    return base.human_pose((0.16 * side, 0, 0.83), up=(0.22 * side, 0.18, 0.96), limbs={
-        "elbow_L": (-0.35, 0.08, 0.65 if side < 0 else 0.42),
-        "elbow_R": (0.35, 0.08, 0.65 if side > 0 else 0.42),
-        "wrist_L": (-0.52, 0.12, 0.90 if side < 0 else 0.22),
-        "wrist_R": (0.52, 0.12, 0.90 if side > 0 else 0.22),
-        "knee_L": (-0.46, 0.08, -0.30), "knee_R": (0.46, 0.08, -0.30),
-        "ankle_L": (-0.70, 0, -0.66), "ankle_R": (0.70, 0, -0.66),
-        "toe_L": (-0.72, 0.28, -0.70), "toe_R": (0.72, 0.28, -0.70),
-    })
-
-
-def foam_pose(phase):
-    # Seated hamstring/calves roll: the torso remains long while the hips travel
-    # a visible short distance above the roller.
-    travel = -0.18 + 0.36 * phase
-    return base.human_pose((0, travel, 0.45), up=(0, 0.58, 0.81), limbs={
-        "elbow_L": (-0.34, -0.04, 0.24), "elbow_R": (0.34, -0.04, 0.24),
-        "wrist_L": (-0.42, -0.24, -0.04), "wrist_R": (0.42, -0.24, -0.04),
-        "knee_L": (-0.24, 0.38, -0.24), "knee_R": (0.24, 0.38, -0.24),
-        "ankle_L": (-0.24, 0.75, -0.36), "ankle_R": (0.24, 0.75, -0.36),
-        "toe_L": (-0.24, 0.98, -0.30), "toe_R": (0.24, 0.98, -0.30),
-    })
-
-
-def pose_sequence(motion_id):
-    """Return five full-body poses; every semantic action stays distinct."""
-    ready = pose_ready()
-    stand = pose_stand()
-    if motion_id in ("ready", "defensive-ready"):
-        return [pose_ready(0.05), pose_ready(0.16), pose_ready(0.08), pose_ready(0.16), pose_ready(0.05)]
-    if motion_id == "admin":
-        return [stand, pose_ready(0.05), stand, pose_ready(0.05), stand]
-    if motion_id == "sprint":
-        return [pose_run(1), pose_run(-1, high=True), pose_run(1, high=True), pose_run(-1), pose_run(1)]
-    if motion_id == "backpedal":
-        return [pose_run(1, True), pose_run(-1, True, True), pose_run(1, True, True), pose_run(-1, True), pose_run(1, True)]
-    if motion_id in ("shuffle", "mini-band"):
-        return [pose_shuffle(-1), pose_shuffle(1), pose_shuffle(-1), pose_shuffle(1), pose_shuffle(-1)]
-    if motion_id == "ladder":
-        return [pose_run(1, high=True), pose_run(-1, high=True), pose_run(1, high=True), pose_run(-1, high=True), pose_run(1, high=True)]
-    if motion_id in ("pass", "platform-save"):
-        return [ready, platform_pose(0, 0.15), platform_pose(0, 0.28), platform_pose(0, 0.12), ready]
-    if motion_id == "dig":
-        return [ready, platform_pose(-1, 0.38), platform_pose(1, 0.62), platform_pose(0, 0.28), ready]
-    if motion_id == "one-arm-save":
-        return [ready, platform_pose(1, 0.58, True), pancake_pose(1, 0.35),
-                pancake_pose(1, 1.0), pancake_pose(1, 1.0)]
-    if motion_id == "set":
-        return [ready, overhead_pose("set", 0.15), overhead_pose("set", 0.65), overhead_pose("set", 1), ready]
-    if motion_id in ("feed", "low-toss"):
-        return [stand, toss_pose(0.05, low=True), toss_pose(0.55, low=True), toss_pose(1, low=True), stand]
-    if motion_id in ("serve", "jump-float", "jump-topspin"):
-        jump = motion_id != "serve"
-        return [pose_ready(0.1), toss_pose(0.15), arm_swing_pose(0.18, jump), arm_swing_pose(0.52, jump), arm_swing_pose(0.90, False)]
-    if motion_id == "underhand":
-        return [stand, toss_pose(0.05, underhand=True), toss_pose(0.55, underhand=True), arm_swing_pose(0.75), stand]
-    if motion_id in ("attack", "down-ball-hit", "free-arm-swing", "band-arm-swing", "box-hit"):
-        jump = motion_id in ("attack", "box-hit")
-        return [pose_ready(0.3), arm_swing_pose(0.12, jump), arm_swing_pose(0.48, jump), arm_swing_pose(0.72, jump), arm_swing_pose(0.95)]
-    if motion_id == "tip-roll":
-        return [pose_ready(0.15), arm_swing_pose(0.18, True), arm_swing_pose(0.48, True, True), arm_swing_pose(0.72, False, True), ready]
-    if motion_id in ("block", "box-block"):
-        return [pose_ready(0.4), jump_pose(0, "back"), overhead_pose("block", 0.65), overhead_pose("block", 0.9), pose_ready(0.3)]
-    if motion_id in ("sprawl", "chest-hip-sprawl"):
-        return [ready, platform_pose(0, 0.8, True), prone_pose(True), prone_pose(False), floor_recovery_pose(0.70)]
-    if motion_id == "run-through":
-        return [pose_run(1), pose_run(-1, high=True), platform_pose(0, 0.42), pose_run(1), pose_run(-1)]
-    if motion_id == "shoulder-roll-right":
-        return [ready, roll_pose(1, 0.2), roll_pose(1, 0.5), roll_pose(1, 0.8), ready]
-    if motion_id == "shoulder-roll-left":
-        return [ready, roll_pose(-1, 0.2), roll_pose(-1, 0.5), roll_pose(-1, 0.8), ready]
-    if motion_id == "floor-recovery":
-        return [floor_recovery_pose(0), floor_recovery_pose(0.30), floor_recovery_pose(0.55), floor_recovery_pose(0.80), ready]
-    if motion_id == "mat-defense":
-        return [ready, platform_pose(1, 0.65), roll_pose(1, 0.55), floor_recovery_pose(0.58), ready]
-    if motion_id == "jump-rope":
-        return [jump_pose(0.05), jump_pose(0.24), jump_pose(0.06), jump_pose(0.24), jump_pose(0.05)]
-    if motion_id == "bridge":
-        return [bridge_pose(False), bridge_pose(True), bridge_pose(False), bridge_pose(True), bridge_pose(False)]
-    if motion_id == "band":
-        return [band_pose("rotation", 0), band_pose("rotation", 1), band_pose("rotation", 0), band_pose("rotation", 1), band_pose("rotation", 0)]
-    if motion_id == "band-upper":
-        return [band_pose("upper", 0), band_pose("upper", .25), band_pose("upper", .5), band_pose("upper", .75), band_pose("upper", 1)]
-    if motion_id == "signal":
-        signal = pose_stand()
-        signal["elbow_R"] = Vector((0.30, 0.05, 0.82)); signal["wrist_R"] = Vector((0.22, 0.08, 1.18))
-        return [stand, signal, signal, stand, signal]
-    if motion_id.startswith("medicine"):
-        kind = motion_id.split("-", 1)[1] if "-" in motion_id else "pass"
-        return [medicine_pose(kind, 0), medicine_pose(kind, .25), medicine_pose(kind, .5), medicine_pose(kind, .75), medicine_pose(kind, 1)]
-    if motion_id == "box":
-        return [pose_stand(), jump_pose(0.05), jump_pose(0.42), pose_stand(), pose_ready(0.1)]
-    if motion_id == "depth-drop":
-        return [jump_pose(0.38), jump_pose(0.18), jump_pose(0), pose_ready(0.55), pose_ready(0.15)]
-    if motion_id in ("jump", "power"):
-        return [pose_ready(0.45), jump_pose(0, "back"), jump_pose(0.48), jump_pose(0.16), pose_ready(0.25)]
-    if motion_id == "approach-jump":
-        return [pose_run(1), pose_run(-1, high=True), jump_pose(0.50, "up"), jump_pose(0.18, "up"), pose_ready(0.22)]
-    if motion_id == "warmup":
-        return [pose_run(1, high=True), pose_shuffle(1), stretch_pose(.2), pose_run(-1, high=True), pose_ready(0.1)]
-    if motion_id == "foam":
-        return [foam_pose(0), foam_pose(.35), foam_pose(.7), foam_pose(1), foam_pose(0)]
-    if motion_id == "stretch":
-        return [stretch_pose(0), stretch_pose(.25), stretch_pose(.5), stretch_pose(.75), stretch_pose(1)]
-    if motion_id == "recovery":
-        breathe = pose_stand()
-        breathe["elbow_L"] = Vector((-0.32, 0.16, 0.52)); breathe["elbow_R"] = Vector((0.32, 0.16, 0.52))
-        breathe["wrist_L"] = Vector((-0.12, 0.34, 0.58)); breathe["wrist_R"] = Vector((0.12, 0.34, 0.58))
-        return [stand, breathe, stand, breathe, stand]
-    return [stand, ready, stand, ready, stand]
+def key_pose(rig, frame, pose, controls, previous):
+    segments = {**base.SEGMENTS, "HAND_L":("wrist_L","hand_tip_L"),
+                "HAND_R":("wrist_R","hand_tip_R")}
+    for segment,(a,b) in segments.items():
+        bone = rig.pose.bones["ATH_"+segment]
+        direction = (pose[b]-pose[a]).normalized()
+        reference = controls["head"] if segment=="HEAD" else controls["body"]
+        right = reference @ Vector((1,0,0))
+        right -= direction * right.dot(direction)
+        if right.length<.00001:
+            right=Vector((0,0,1)).cross(direction)
+        right.normalize()
+        rotation=Matrix((right,direction,right.cross(direction))).transposed().to_quaternion()
+        if segment in previous and rotation.dot(previous[segment])<0:
+            rotation.negate()
+        previous[segment]=rotation.copy()
+        bone.location=pose[a]
+        bone.rotation_mode="QUATERNION"
+        bone.rotation_quaternion=rotation
+        bone.scale=(1,(pose[b]-pose[a]).length,1)
+        for path in ("location","rotation_quaternion","scale"):
+            bone.keyframe_insert(data_path=path,frame=frame,group=bone.name)
+    for suffix,joint in base.POINT_JOINTS.items():
+        # Library frames already use source_fps. The dedicated scene's point
+        # helper applies its own supersampling rate and must not retime these.
+        bone=rig.pose.bones["ATH_JOINT_"+suffix]
+        bone.location=pose[joint]
+        bone.rotation_mode="QUATERNION"
+        bone.rotation_quaternion=(1,0,0,0)
+        bone.scale=(1,1,1)
+        for path in ("location","rotation_quaternion","scale"):
+            bone.keyframe_insert(data_path=path,frame=frame,group=bone.name)
 
 
 def build_motion_reel(rig):
-    if not rig.animation_data:
-        rig.animation_data_create()
-    action = bpy.data.actions.new(CLIP_NAME)
-    action.use_fake_user = True
-    rig.animation_data.action = action
-    manifest = {}
-    cursor = 0
-    for motion_id, duration_seconds in MOTIONS:
-        duration_frames = max(18, round(duration_seconds * FPS))
-        start = cursor
-        end = start + duration_frames
-        poses = pose_sequence(motion_id)
-        for index, pose in enumerate(poses):
-            frame = round(start + duration_frames * index / (len(poses) - 1))
-            base.key_human(rig, "ATH", frame, pose)
-        manifest[motion_id] = {
-            "startFrame": start,
-            "endFrame": end,
-            "startSeconds": start / FPS,
-            "durationSeconds": duration_frames / FPS,
-        }
-        cursor = end + 2
-    # A final key ensures Blender/glTF retain the complete reel duration.
-    base.key_human(rig, "ATH", cursor, pose_stand())
-    return action, manifest, cursor
+    rig.animation_data_create()
+    action=bpy.data.actions.new(CLIP_NAME)
+    action.use_fake_user=True
+    rig.animation_data.action=action
+    manifest={}
+    cursor=0
+    previous={}
+    for motion_id,duration_seconds in MOTIONS:
+        duration_frames=max(18,round(duration_seconds*FPS))
+        start,end=cursor,cursor+duration_frames
+        # Bake control-space interpolation and two-bone constraints at each
+        # exported sample. Constant bone scales prevent changing limb length.
+        for offset in range(duration_frames+1):
+            controls=motion.sample_control(motion_id,offset/duration_frames)
+            pose=motion.solve(controls)
+            key_pose(rig,start+offset,pose,controls,previous)
+        manifest[motion_id]={"startFrame":start,"endFrame":end,
+                             "startSeconds":start/FPS,"durationSeconds":duration_frames/FPS,
+                             "cyclic":motion_id in motion.CYCLIC}
+        if motion_id in motion.CONTACTS:
+            contact,kind=motion.CONTACTS[motion_id]
+            manifest[motion_id].update(contactProgress=contact,contactType=kind)
+        if motion_id in ("sprint","backpedal","ladder"):
+            manifest[motion_id]["strideMeters"] = .8 if motion_id=="ladder" else 1.0666666667
+        if motion_id in ("box","box-hit","box-block","depth-drop"):
+            manifest[motion_id].update(equipmentAnchor=[0,.62,0],boxHeight=.32)
+        cursor=end+2
+    controls=motion.standing()
+    key_pose(rig,cursor,motion.solve(controls),controls,previous)
+    # Blender's default Bezier overshoots between baked samples. Linear curves
+    # and quaternion sign continuity keep exports bounded and joints attached.
+    for layer in action.layers:
+        for strip in layer.strips:
+            for bag in strip.channelbags:
+                for curve in bag.fcurves:
+                    for key in curve.keyframe_points:
+                        key.interpolation="LINEAR"
+    return action,manifest,cursor
 
 
 def setup_lighting_and_cameras():
@@ -773,7 +467,7 @@ def setup_lighting_and_cameras():
     area("Library_Fill", (6, 2, 7), 900, 5.0, base.rgba("#b9dfff")[:3])
     area("Library_Rim", (0, 8, 7), 760, 4.5, base.rgba("#ff9b71")[:3])
     court_camera = base.camera("Camera_Court_Library", (16.5, -25.0, 19.0), (0, 0.15, 0.62), 40)
-    mechanics_camera = base.camera("Camera_Mechanics_Library", (4.8, -5.8, 3.1), (0, 0, 1.0), 42)
+    mechanics_camera = base.camera("Camera_Mechanics_Library", (4.8, 5.8, 3.1), (0, 0, 1.0), 42)
     court_camera.data.clip_start = mechanics_camera.data.clip_start = 0.05
     court_camera.data.clip_end = mechanics_camera.data.clip_end = 100
     court_camera["camera_role"] = "full-court"
@@ -818,7 +512,8 @@ def main():
     scene.frame_end = final_frame
 
     scene["asset"] = "RallyReady CoachCam Shared Production Library"
-    scene["asset_version"] = 1
+    scene["asset_version"] = 2
+    scene["source_fps"] = FPS
     scene["rig_contract"] = "RR_Humanoid_v1"
     scene["animation"] = CLIP_NAME
     scene["motion_count"] = len(MOTIONS)
@@ -828,6 +523,8 @@ def main():
     scene["camera_mechanics"] = mechanics_camera.name
     scene["coordinate_system"] = "Blender Z-up; glTF/Three.js Y-up"
     scene["production_note"] = "Shared geometry; drill facts are supplied by RR.drillChoreography."
+    scene["anatomy_note"] = "Fixed adult segment lengths; per-frame two-bone IK; 3-145 degree knee and 3-150 degree elbow flexion. Instructional visualization requires coach review."
+    scene["segment_lengths_json"] = json.dumps(motion.LENGTHS,sort_keys=True)
     rig["motion_manifest_json"] = scene["motion_manifest_json"]
     athlete_mesh["triangle_budget_target"] = 18000
 

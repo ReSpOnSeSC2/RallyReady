@@ -5,7 +5,7 @@ Run with Blender 5.1+:
 
 The file is intentionally procedural and dependency free.  It creates a stylised
 volleyball court, two articulated athletes, three live-ball exchanges, coaching
-guides, two embedded cameras, one continuous animation action, a .blend source,
+guides, three embedded cameras, one continuous animation action, a .blend source,
 browser-ready GLB, and QA preview renders.
 """
 
@@ -13,19 +13,27 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Quaternion, Vector
 
 
 FPS = 30
+SAMPLE_RATE = 2
 FRAME_END = 420
 CLIP_NAME = "CoachCam_RollsSprawls"
 ROOT = Path(__file__).resolve().parents[2]
 GLB_PATH = ROOT / "models" / "coachcam" / "rolls-and-sprawls.glb"
 BLEND_PATH = ROOT / "design-assets" / "blender" / "rolls-and-sprawls.blend"
 PREVIEW_DIR = ROOT / "design-assets" / "blender" / "previews"
+
+# Adult reference proportions in metres. End effectors and joint poles are
+# animated, but bones never change length, including between authored poses.
+BODY = {"TORSO": 0.58, "HEAD": 0.27, "UARM": 0.32, "FARM": 0.28,
+        "THIGH": 0.44, "SHIN": 0.43, "FOOT": 0.25, "HAND": 0.16}
+FLOOR_Z = 0.06
 
 for directory in (GLB_PATH.parent, BLEND_PATH.parent, PREVIEW_DIR):
     directory.mkdir(parents=True, exist_ok=True)
@@ -262,40 +270,97 @@ def add_athlete_mesh(prefix, rig, palette, torso_public_name):
     def e(suffix, bone, dims, center, mat, **kwargs):
         return weighted_ellipsoid(f"{prefix}_{suffix}", rig, f"{prefix}_{bone}", dims, center, palette[mat], **kwargs)
 
-    torso = weighted_ellipsoid(torso_public_name, rig, f"{prefix}_TORSO", (0.58, 0.34, 1.14), 0.52, palette["jersey"], 28, 14)
+    torso = weighted_profile(torso_public_name, rig, f"{prefix}_TORSO", [
+        (-0.04, .165, .125), (.12, .185, .135), (.32, .175, .125),
+        (.56, .205, .14), (.76, .235, .14), (.88, .225, .125), (1.0, .10, .09),
+    ], palette["jersey"])
     torso["role"] = "defender" if prefix == "DEF" else "coach"
     torso["rig_prefix"] = prefix
-    e("JerseyPanel", "TORSO", (0.46, 0.345, 0.54), 0.60, "jersey_alt", segments=24, rings=12)
-    e("Shorts", "TORSO", (0.47, 0.34, 0.26), 0.13, "shorts", segments=24, rings=12)
-    e("Head", "HEAD", (0.31, 0.29, 1.0), 0.50, "skin", segments=28, rings=14)
-    e("Hair", "HEAD", (0.325, 0.30, 0.42), 0.86, "hair", segments=24, rings=12)
+    e("Shorts", "TORSO", (0.36, 0.27, 0.31), 0.09, "shorts", segments=24, rings=12)
+    e("Head", "HEAD", (0.205, 0.225, 1.0), 0.50, "skin", segments=28, rings=14)
+    e("Hair", "HEAD", (0.212, 0.235, 0.42), 0.83, "hair", segments=24, rings=12)
+    # Face landmarks expose head orientation and a tucked chin in the roll.
+    for name, offset, dims, mat in (
+        ("Nose", (0, .48, -.115), (.043, .046, .15), "skin"),
+        ("Eye_L", (-.045, .61, -.104), (.017, .011, .055), "hair"),
+        ("Eye_R", (.045, .61, -.104), (.017, .011, .055), "hair"),
+        ("Ear_L", (-.106, .49, 0), (.034, .037, .21), "skin"),
+        ("Ear_R", (.106, .49, 0), (.034, .037, .21), "skin"),
+    ):
+        feature = e(name, "HEAD", dims, offset[1], mat)
+        for vertex in feature.data.vertices:
+            vertex.co.x += offset[0]
+            vertex.co.z += offset[2]
 
     for side in ("L", "R"):
-        e(f"UpperArm_{side}", f"UARM_{side}", (0.16, 0.16, 1.14), 0.50, "skin")
-        e(f"Forearm_{side}", f"FARM_{side}", (0.14, 0.14, 1.14), 0.50, "skin")
-        e(f"Hand_{side}", f"FARM_{side}", (0.17, 0.14, 0.18), 1.01, "skin")
-        e(f"Thigh_{side}", f"THIGH_{side}", (0.22, 0.22, 1.13), 0.50, "skin")
-        e(f"Shin_{side}", f"SHIN_{side}", (0.18, 0.18, 1.13), 0.50, "skin")
-        e(f"Kneepad_{side}", f"SHIN_{side}", (0.245, 0.21, 0.24), 0.06, "kneepad")
-        e(f"Shoe_{side}", f"FOOT_{side}", (0.19, 0.24, 0.98), 0.50, "shoe")
+        for label, bone, widths, mat in (
+            ("UpperArm", "UARM", (.062, .077, .058), "skin"),
+            ("Forearm", "FARM", (.058, .060, .040), "skin"),
+            ("Thigh", "THIGH", (.10, .118, .079), "skin"),
+            ("Shin", "SHIN", (.077, .082, .046), "skin"),
+        ):
+            weighted_profile(f"{prefix}_{label}_{side}", rig, f"{prefix}_{bone}_{side}",
+                             [(-.05, widths[0]*.8, widths[0]*.8), (.12, widths[0], widths[0]),
+                              (.40, widths[1], widths[1]*.95), (.82, widths[2], widths[2]),
+                              (1.04, widths[2]*.82, widths[2]*.82)], palette[mat])
+        e(f"Hand_{side}", f"HAND_{side}", (.084, .042, .67), .31, "skin")
+        for finger, offset, center in (("Index", -.029, .79), ("Middle", -.009, .85),
+                                        ("Ring", .011, .82), ("Little", .029, .74)):
+            digit = e(f"{finger}_{side}", f"HAND_{side}", (.017, .020, .34), center, "skin", segments=12, rings=8)
+            for vertex in digit.data.vertices:
+                vertex.co.x += -offset if side == "L" else offset
+        thumb = e(f"Thumb_{side}", f"HAND_{side}", (.030, .028, .40), .32, "skin", segments=12, rings=8)
+        for vertex in thumb.data.vertices:
+            vertex.co.x += .046 if side == "L" else -.046
+        weighted_profile(f"{prefix}_ShortsLeg_{side}", rig, f"{prefix}_THIGH_{side}",
+                         [(-.07, .103, .103), (.13, .119, .114), (.40, .117, .109)], palette["shorts"])
+        e(f"Kneepad_{side}", f"SHIN_{side}", (0.18, 0.18, 0.27), 0.04, "kneepad")
+        e(f"Shoe_{side}", f"FOOT_{side}", (0.125, 0.13, 1.24), 0.43, "shoe")
+
+
+def weighted_profile(name, rig, bone, rings, mat, count=24):
+    """Continuous tapered cross sections, rather than stacked ellipsoids."""
+    vertices, faces = [], []
+    for y, rx, rz in rings:
+        for i in range(count):
+            angle = i * math.tau / count
+            vertices.append((rx * math.cos(angle), y, rz * math.sin(angle)))
+    for ring in range(len(rings) - 1):
+        for i in range(count):
+            a, b = ring*count+i, ring*count+(i+1)%count
+            faces.append((a, b, b+count, a+count))
+    faces += [tuple(reversed(range(count))), tuple(range((len(rings)-1)*count, len(rings)*count))]
+    mesh = bpy.data.meshes.new(name + "Mesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.update()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    mesh.materials.append(mat)
+    for poly in mesh.polygons:
+        poly.use_smooth = True
+    group = obj.vertex_groups.new(name=bone)
+    group.add(list(range(len(vertices))), 1, "REPLACE")
+    obj.modifiers.new("Anatomical skin", "ARMATURE").object = rig
+    obj.parent = rig
+    return obj
 
 
 def add_joint_meshes(prefix, rig, palette):
     specs = {
-        "PELVIS": ((0.44, 0.30, 0.28), "shorts"),
-        "NECK": ((0.23, 0.21, 0.23), "skin"),
-        "SHOULDER_L": ((0.18, 0.18, 0.18), "skin"),
-        "SHOULDER_R": ((0.18, 0.18, 0.18), "skin"),
-        "ELBOW_L": ((0.16, 0.16, 0.16), "skin"),
-        "ELBOW_R": ((0.16, 0.16, 0.16), "skin"),
-        "WRIST_L": ((0.16, 0.15, 0.16), "skin"),
-        "WRIST_R": ((0.16, 0.15, 0.16), "skin"),
-        "HIP_L": ((0.23, 0.22, 0.23), "shorts"),
-        "HIP_R": ((0.23, 0.22, 0.23), "shorts"),
-        "KNEE_L": ((0.235, 0.22, 0.235), "kneepad"),
-        "KNEE_R": ((0.235, 0.22, 0.235), "kneepad"),
-        "ANKLE_L": ((0.17, 0.17, 0.17), "shoe"),
-        "ANKLE_R": ((0.17, 0.17, 0.17), "shoe"),
+        "PELVIS": ((0.36, 0.27, 0.22), "shorts"),
+        "NECK": ((0.13, 0.13, 0.16), "skin"),
+        "SHOULDER_L": ((0.15, 0.15, 0.15), "skin"),
+        "SHOULDER_R": ((0.15, 0.15, 0.15), "skin"),
+        "ELBOW_L": ((0.12, 0.12, 0.12), "skin"),
+        "ELBOW_R": ((0.12, 0.12, 0.12), "skin"),
+        "WRIST_L": ((0.09, 0.085, 0.09), "skin"),
+        "WRIST_R": ((0.09, 0.085, 0.09), "skin"),
+        "HIP_L": ((0.20, 0.20, 0.20), "shorts"),
+        "HIP_R": ((0.20, 0.20, 0.20), "shorts"),
+        "KNEE_L": ((0.18, 0.18, 0.18), "kneepad"),
+        "KNEE_R": ((0.18, 0.18, 0.18), "kneepad"),
+        "ANKLE_L": ((0.105, 0.105, 0.105), "shoe"),
+        "ANKLE_R": ((0.105, 0.105, 0.105), "shoe"),
     }
     for suffix, (dimensions, material_key) in specs.items():
         weighted_ellipsoid(
@@ -384,12 +449,12 @@ def human_pose(pelvis, up=(0, 0.25, 0.97), forward=(0, 1, 0), limbs=None, overri
     local.update(limbs)
     pose = {
         "pelvis": pelvis,
-        "neck": transform((0, 0, 0.70)),
-        "head_top": transform((0, 0, 1.03)),
-        "shoulder_L": transform((-0.28, 0, 0.57)),
-        "shoulder_R": transform((0.28, 0, 0.57)),
-        "hip_L": transform((-0.18, 0, 0)),
-        "hip_R": transform((0.18, 0, 0)),
+        "neck": transform((0, 0, BODY["TORSO"])),
+        "head_top": transform((0, 0, BODY["TORSO"] + BODY["HEAD"])),
+        "shoulder_L": transform((-0.22, 0, 0.48)),
+        "shoulder_R": transform((0.22, 0, 0.48)),
+        "hip_L": transform((-0.145, 0, 0)),
+        "hip_R": transform((0.145, 0, 0)),
     }
     for joint, coordinate in local.items():
         pose[joint] = transform(coordinate)
@@ -405,6 +470,8 @@ SEGMENTS = {
     "FARM_L": ("elbow_L", "wrist_L"),
     "UARM_R": ("shoulder_R", "elbow_R"),
     "FARM_R": ("elbow_R", "wrist_R"),
+    "HAND_L": ("wrist_L", "fingers_L"),
+    "HAND_R": ("wrist_R", "fingers_R"),
     "THIGH_L": ("hip_L", "knee_L"),
     "SHIN_L": ("knee_L", "ankle_L"),
     "FOOT_L": ("ankle_L", "toe_L"),
@@ -434,20 +501,44 @@ POINT_JOINTS = {
 }
 
 
-def key_segment(pose_bone, frame, start, end, scale_xy=1.0):
+def key_segment(pose_bone, frame, start, end, scale_xy=1.0, lateral=None):
     start, end = Vector(start), Vector(end)
     delta = end - start
     pose_bone.location = start
     pose_bone.rotation_mode = "QUATERNION"
-    pose_bone.rotation_quaternion = Vector((0, 1, 0)).rotation_difference(delta.normalized())
+    if lateral is None:
+        rotation = Vector((0, 1, 0)).rotation_difference(delta.normalized())
+    else:
+        y = delta.normalized()
+        x = Vector(lateral) - y * Vector(lateral).dot(y)
+        if x.length < .01:
+            x = Vector((1, 0, 0)) - y * y.x
+        x.normalize()
+        rotation = Matrix((x, y, x.cross(y))).transposed().to_quaternion()
+        kind = pose_bone.name.split("_")[1]
+        if frame > 0 and kind not in ("TORSO", "HEAD"):
+            # Parallel transport avoids an axial 180-degree flip when an arm
+            # passes through the body's lateral axis. Small twist corrections
+            # keep palms and shoe soles oriented without crossing that pole.
+            previous = pose_bone.rotation_quaternion.copy()
+            transported = (previous @ Vector((0, 1, 0))).rotation_difference(y) @ previous
+            transported_x = transported @ Vector((1, 0, 0))
+            twist = math.atan2(y.dot(transported_x.cross(x)), transported_x.dot(x))
+            rotation = Quaternion(y, max(-.09/SAMPLE_RATE, min(.09/SAMPLE_RATE, twist))) @ transported
+    # Quaternion signs are equivalent rotations but different interpolation
+    # paths; hemisphere continuity prevents a one-frame 360-degree limb flip.
+    if pose_bone.rotation_quaternion.dot(rotation) < 0:
+        rotation.negate()
+    pose_bone.rotation_quaternion = rotation
     pose_bone.scale = (scale_xy, delta.length, scale_xy)
     for path in ("location", "rotation_quaternion", "scale"):
-        pose_bone.keyframe_insert(data_path=path, frame=frame, group=pose_bone.name)
+        pose_bone.keyframe_insert(data_path=path, frame=frame * SAMPLE_RATE, group=pose_bone.name)
 
 
 def key_human(rig, prefix, frame, pose):
+    lateral = pose["shoulder_R"] - pose["shoulder_L"]
     for segment, joints in SEGMENTS.items():
-        key_segment(rig.pose.bones[f"{prefix}_{segment}"], frame, pose[joints[0]], pose[joints[1]])
+        key_segment(rig.pose.bones[f"{prefix}_{segment}"], frame, pose[joints[0]], pose[joints[1]], lateral=lateral)
     for bone_suffix, joint in POINT_JOINTS.items():
         key_point(rig, f"{prefix}_JOINT_{bone_suffix}", frame, pose[joint])
 
@@ -459,19 +550,162 @@ def key_point(rig, bone_name, frame, location, scale=1.0, rotation=None):
     bone.rotation_quaternion = rotation or (1, 0, 0, 0)
     bone.scale = (scale, scale, scale)
     for path in ("location", "rotation_quaternion", "scale"):
-        bone.keyframe_insert(data_path=path, frame=frame, group=bone_name)
+        bone.keyframe_insert(data_path=path, frame=frame * SAMPLE_RATE, group=bone_name)
 
 
 def platform_overrides(pose, contact):
     contact = Vector(contact)
-    shoulder_l, shoulder_r = pose["shoulder_L"], pose["shoulder_R"]
-    midpoint = (shoulder_l + shoulder_r) / 2
-    direction = (contact - midpoint).normalized()
-    pose["elbow_L"] = shoulder_l + direction * 0.37
-    pose["elbow_R"] = shoulder_r + direction * 0.37
-    pose["wrist_L"] = contact + Vector((-0.055, 0, 0))
-    pose["wrist_R"] = contact + Vector((0.055, 0, 0))
+    # Contact is the ball centre. The ball meets the upper forearm surface,
+    # just proximal to the wrists; it must never occupy the joined hands.
+    forward = Vector((contact.x - pose["pelvis"].x, contact.y - pose["pelvis"].y, 0)).normalized()
+    side = Vector((forward.y, -forward.x, 0))
+    direction = (forward * .66 + Vector((0, 0, -.75))).normalized()
+    wrist_center = contact + forward * .07 - Vector((0, 0, .14))
+    shoulder_mid = wrist_center - direction * .565
+    old_up = (pose["neck"] - pose["pelvis"]).normalized()
+    up = (forward*math.sqrt(max(0, 1-old_up.z**2)) + Vector((0, 0, old_up.z))).normalized()
+    pose["pelvis"] = shoulder_mid - up*.48
+    pose["neck"] = pose["pelvis"] + up*BODY["TORSO"]
+    pose["head_top"] = pose["neck"] + up*BODY["HEAD"]
+    for suffix, sign in (("L", -1), ("R", 1)):
+        pose[f"shoulder_{suffix}"] = shoulder_mid + side * .22 * sign
+        pose[f"hip_{suffix}"] = pose["pelvis"] + side*.145*sign
+        pose[f"wrist_{suffix}"] = wrist_center + side * .055 * sign
+        pose[f"elbow_{suffix}"] = pose[f"wrist_{suffix}"] - direction * .28 + side*.03*sign
     return pose
+
+
+def pose_orientation(pose):
+    up = (pose["neck"] - pose["pelvis"]).normalized()
+    side = (pose["shoulder_R"] - pose["shoulder_L"]).normalized()
+    return orientation(up, up.cross(side))
+
+
+def solve_limb(root, target, pole, upper, lower, minimum_z, previous=None):
+    """Analytic two-bone IK with a stable authored bend plane."""
+    target = Vector(target)
+    target.z = max(target.z, minimum_z)
+    ray = target - root
+    distance = max(.03, min(ray.length, upper + lower - .001))
+    direction = ray.normalized() if ray.length > 1e-5 else Vector((0, 0, -1))
+    target = root + direction * distance
+    along = (upper*upper - lower*lower + distance*distance) / (2*distance)
+    height = math.sqrt(max(0, upper*upper - along*along))
+    bend = Vector(pole) - root
+    bend -= direction * bend.dot(direction)
+    if bend.length < .01:
+        bend = Vector((0, 1, .2)) - direction * direction.dot(Vector((0, 1, .2)))
+    bend.normalize()
+    if previous is not None:
+        prior = previous - root
+        prior -= direction * prior.dot(direction)
+        if prior.length > .015:
+            prior.normalize()
+            angle = math.atan2(direction.dot(prior.cross(bend)), prior.dot(bend))
+            bend = Quaternion(direction, max(-.30/SAMPLE_RATE, min(.30/SAMPLE_RATE, angle))) @ prior
+    joint = root + direction * along + bend * height
+    # The floor is a geometric constraint on the bend plane, not a licence to
+    # stretch the limb or translate a planted foot after solving.
+    if joint.z < minimum_z:
+        upward = Vector((0, 0, 1)) - direction * direction.z
+        if upward.length > .01:
+            upward.normalize()
+            side = direction.cross(upward)
+            theta = math.atan2(bend.dot(side), bend.dot(upward))
+            needed = (minimum_z-root.z-direction.z*along) / max(.00001, height*upward.z)
+            limit = math.acos(max(-1, min(1, needed)))
+            theta = max(-limit, min(limit, theta))
+            bend = upward*math.cos(theta) + side*math.sin(theta)
+            joint = root + direction*along + bend*height
+    return joint, target
+
+
+def anatomical_pose(pose, previous=None):
+    pose = {name: value.copy() for name, value in pose.items()}
+    q = pose_orientation(pose)
+    pelvis = pose["pelvis"]
+    pose["neck"] = pelvis + q @ Vector((0, 0, BODY["TORSO"]))
+    head_direction = (pose["head_top"] - pose["neck"]).normalized()
+    if pose["neck"].z < .6:
+        head_direction.z = max(head_direction.z, .35)
+        head_direction.normalize()
+    pose["head_top"] = pose["neck"] + head_direction * BODY["HEAD"]
+    up_z = (q @ Vector((0, 0, 1))).z
+    plant_weight = max(0, min(1, (up_z - .35) / .35))
+    plant_weight = plant_weight*plant_weight*(3-2*plant_weight)
+    for side, sign in (("L", -1), ("R", 1)):
+        pose[f"shoulder_{side}"] = pelvis + q @ Vector((sign*.22, 0, .48))
+        pose[f"hip_{side}"] = pelvis + q @ Vector((sign*.145, 0, 0))
+        ankle = pose[f"ankle_{side}"].copy()
+        foot = pose[f"toe_{side}"] - ankle
+        ankle.z = ankle.z*(1-plant_weight) + (FLOOR_Z+.072)*plant_weight
+        knee, ankle = solve_limb(pose[f"hip_{side}"], ankle, pose[f"knee_{side}"],
+                                 BODY["THIGH"], BODY["SHIN"], FLOOR_Z + .072,
+                                 previous.get(f"knee_{side}") if previous else None)
+        pose[f"knee_{side}"], pose[f"ankle_{side}"] = knee, ankle
+        foot.z *= 1-plant_weight
+        if foot.length < .01:
+            foot = q @ Vector((0, 1, 0))
+        foot.normalize()
+        if previous:
+            old_foot = (previous[f"toe_{side}"]-previous[f"ankle_{side}"]).normalized()
+            turn = old_foot.rotation_difference(foot)
+            if turn.angle > .22/SAMPLE_RATE:
+                foot = Quaternion(turn.axis, .22/SAMPLE_RATE) @ old_foot
+        minimum_toe_z = max(-1, min(1, (FLOOR_Z+.065-ankle.z) / BODY["FOOT"]))
+        if foot.z < minimum_toe_z:
+            horizontal = Vector((foot.x, foot.y, 0))
+            if horizontal.length < .001:
+                horizontal = Vector((0, 1, 0))
+            horizontal.normalize()
+            foot = horizontal*math.sqrt(1-minimum_toe_z**2) + Vector((0, 0, minimum_toe_z))
+        pose[f"toe_{side}"] = ankle + foot * BODY["FOOT"]
+        elbow, wrist = solve_limb(pose[f"shoulder_{side}"], pose[f"wrist_{side}"], pose[f"elbow_{side}"],
+                                  BODY["UARM"], BODY["FARM"], FLOOR_Z + .065,
+                                  previous.get(f"elbow_{side}") if previous else None)
+        pose[f"elbow_{side}"], pose[f"wrist_{side}"] = elbow, wrist
+        hand_direction = (wrist - elbow).normalized()
+        if previous:
+            old_hand = (previous[f"fingers_{side}"]-previous[f"wrist_{side}"]).normalized()
+            turn = old_hand.rotation_difference(hand_direction)
+            if turn.angle > .24/SAMPLE_RATE:
+                hand_direction = Quaternion(turn.axis, .24/SAMPLE_RATE) @ old_hand
+        minimum_finger_z = max(-1, min(1, (FLOOR_Z+.025-wrist.z)/BODY["HAND"]))
+        if hand_direction.z < minimum_finger_z:
+            horizontal = Vector((hand_direction.x, hand_direction.y, 0))
+            if horizontal.length < .001:
+                horizontal = Vector((0, 1, 0))
+            horizontal.normalize()
+            hand_direction = horizontal*math.sqrt(1-minimum_finger_z**2) + Vector((0, 0, minimum_finger_z))
+        pose[f"fingers_{side}"] = wrist + hand_direction * BODY["HAND"]
+    return pose
+
+
+def sample_human_keys(rig, prefix, keys):
+    """Blend root rotation with SLERP, then solve anatomy on every frame."""
+    samples = {}
+    for (start, a), (end, b) in zip(keys, keys[1:]):
+        qa, qb = pose_orientation(a), pose_orientation(b)
+        for sample in range(start * SAMPLE_RATE, end * SAMPLE_RATE + 1):
+            frame = sample / SAMPLE_RATE
+            t = (frame-start) / (end-start)
+            t = t*t*(3-2*t)
+            pose = {name: value.lerp(b[name], t) for name, value in a.items()}
+            q = qa.slerp(qb, t)
+            pelvis = pose["pelvis"]
+            pose["neck"] = pelvis + q @ Vector((0, 0, BODY["TORSO"]))
+            pose["shoulder_L"] = pelvis + q @ Vector((-.22, 0, .48))
+            pose["shoulder_R"] = pelvis + q @ Vector((.22, 0, .48))
+            for side in ("L", "R"):
+                da = (a[f"toe_{side}"]-a[f"ankle_{side}"]).normalized()
+                db = (b[f"toe_{side}"]-b[f"ankle_{side}"]).normalized()
+                fa = Vector((0, 1, 0)).rotation_difference(da)
+                fb = Vector((0, 1, 0)).rotation_difference(db)
+                pose[f"toe_{side}"] = pose[f"ankle_{side}"] + (fa.slerp(fb,t) @ Vector((0, 1, 0))) * BODY["FOOT"]
+            samples[frame] = anatomical_pose(pose, samples.get(frame-1/SAMPLE_RATE))
+    for frame, pose in sorted(samples.items()):
+        key_human(rig, prefix, frame, pose)
+    return samples
 
 
 def build_defender_animation(rig):
@@ -495,15 +729,15 @@ def build_defender_animation(rig):
     platform_overrides(right_contact, (2.15, -5.02, 0.48))
 
     # The entry places the outside shoulder on the path while the head stays above it.
-    right_entry = human_pose((1.54, -5.25, 0.54), up=(0.70, 0.48, -0.53), forward=(0.18, 0.95, 0.25), limbs={
+    right_entry = human_pose((1.76, -5.32, 0.34), up=(0.72, 0.69, 0.08), forward=(-0.68, 0.72, 0.08), limbs={
         "elbow_L": (-0.15, 0.24, 0.31), "elbow_R": (0.10, 0.30, 0.22),
         "wrist_L": (-0.06, 0.50, 0.22), "wrist_R": (0.08, 0.51, 0.16),
         "knee_L": (-0.28, -0.02, -0.30), "knee_R": (0.32, 0.10, -0.18),
         "ankle_L": (-0.38, -0.12, -0.54), "ankle_R": (0.43, -0.02, -0.42),
         "toe_L": (-0.35, 0.12, -0.61), "toe_R": (0.50, 0.18, -0.48),
-    })
+    }, overrides={"head_top": (2.23, -4.75, .58)})
     # Back phase: knees tuck, arms protect the torso, and the skull remains clear of the floor.
-    right_mid = human_pose((1.92, -5.20, 0.34), up=(0.24, 0.94, 0.25), forward=(-0.04, 0.06, 1), limbs={
+    right_mid = human_pose((1.92, -5.20, 0.24), up=(0.24, 0.94, 0.25), forward=(-0.04, 0.06, 1), limbs={
         "elbow_L": (-0.26, 0.06, 0.36), "elbow_R": (0.26, 0.06, 0.36),
         "wrist_L": (-0.08, 0.15, 0.28), "wrist_R": (0.08, 0.15, 0.28),
         "knee_L": (-0.25, -0.18, -0.28), "knee_R": (0.25, -0.18, -0.28),
@@ -535,7 +769,7 @@ def build_defender_animation(rig):
     left_react, left_contact = mirror(right_react), mirror(right_contact)
     left_entry, left_mid, left_exit, kneel_left = mirror(right_entry), mirror(right_mid), mirror(right_exit), mirror(kneel_right)
 
-    # Forward sprawl: low split step -> one-hand/forearm save -> elongated flight -> chest and hips share the landing.
+    # Forward sprawl: low split step -> joined forearm save -> extended flight -> chest and hips share the landing.
     sprawl_read = human_pose((0, -5.45, 0.73), up=(0, 0.50, 0.87), limbs={
         "elbow_L": (-0.22, 0.38, 0.30), "elbow_R": (0.22, 0.40, 0.26),
         "wrist_L": (-0.10, 0.68, 0.12), "wrist_R": (0.10, 0.72, 0.10),
@@ -551,26 +785,26 @@ def build_defender_animation(rig):
         "toe_L": (-0.35, -0.03, -0.53), "toe_R": (0.35, -0.03, -0.53),
     })
     platform_overrides(sprawl_contact, (0, -3.98, 0.31))
-    sprawl_flight = human_pose((0, -4.45, 0.50), up=(0, 0.98, 0.18), forward=(0, -0.18, 0.98), limbs={
-        "elbow_L": (-0.26, 0.48, 0.18), "elbow_R": (0.26, 0.48, 0.18),
-        "wrist_L": (-0.10, 0.90, 0.12), "wrist_R": (0.10, 0.90, 0.12),
+    sprawl_flight = human_pose((0, -4.45, 0.42), up=(0, 0.98, 0.18), forward=(0, 0.18, -0.98), limbs={
+        "elbow_L": (-0.26, 0.12, 0.77), "elbow_R": (0.26, 0.12, 0.77),
+        "wrist_L": (-0.10, 0.10, 1.04), "wrist_R": (0.10, 0.10, 1.04),
         # Knees trail the hips in court space while remaining lifted; lower
         # legs fold upward instead of passing through the floor during flight.
         "knee_L": (-0.20, -0.10, -0.30), "knee_R": (0.20, -0.10, -0.30),
-        "ankle_L": (-0.24, 0.20, -0.68), "ankle_R": (0.24, 0.20, -0.68),
-        "toe_L": (-0.23, 0.16, -0.88), "toe_R": (0.23, 0.16, -0.88),
+        "ankle_L": (-0.24, -0.20, -0.68), "ankle_R": (0.24, -0.20, -0.68),
+        "toe_L": (-0.23, -0.16, -0.88), "toe_R": (0.23, -0.16, -0.88),
     }, overrides={"head_top": (0, -3.53, 0.72)})
-    sprawl_land = human_pose((0, -4.18, 0.25), up=(0, 1, 0.05), forward=(0, -0.05, 1), limbs={
+    sprawl_land = human_pose((0, -4.18, 0.21), up=(0, 1, 0.05), forward=(0, 0.05, -1), limbs={
         # Arms remain long in the direction of travel after the save rather
         # than posting underneath the shoulders or taking the landing load.
-        "elbow_L": (-0.30, 0.12, 0.88), "elbow_R": (0.30, 0.12, 0.88),
-        "wrist_L": (-0.12, 0.03, 1.23), "wrist_R": (0.12, 0.03, 1.23),
+        "elbow_L": (-0.26, 0.06, 0.78), "elbow_R": (0.26, 0.06, 0.78),
+        "wrist_L": (-0.12, 0.06, 1.02), "wrist_R": (0.12, 0.06, 1.02),
         # Chest and hips are the low contact surfaces. Knees trail behind and
         # stay clearly elevated; ankles fold upward to keep every leg segment
         # above the court through the settled slide.
-        "knee_L": (-0.23, 0.13, -0.46), "knee_R": (0.23, 0.13, -0.46),
-        "ankle_L": (-0.25, 0.42, -0.82), "ankle_R": (0.25, 0.42, -0.82),
-        "toe_L": (-0.23, 0.35, -1.04), "toe_R": (0.23, 0.35, -1.04),
+        "knee_L": (-0.23, -0.10, -0.42), "knee_R": (0.23, -0.10, -0.42),
+        "ankle_L": (-0.25, -0.42, -0.75), "ankle_R": (0.25, -0.42, -0.75),
+        "toe_L": (-0.23, -0.35, -0.96), "toe_R": (0.23, -0.35, -0.96),
     }, overrides={"head_top": (0, -3.20, 0.58)})
     sprawl_push = human_pose((0, -4.34, 0.47), up=(0, 0.83, 0.56), limbs={
         "elbow_L": (-0.28, 0.28, 0.13), "elbow_R": (0.28, 0.28, 0.13),
@@ -583,31 +817,32 @@ def build_defender_animation(rig):
     keys = [
         (0, ready), (20, ready), (30, ready_low), (48, ready_low),
         (54, right_react), (70, right_contact), (78, right_contact),
-        (84, right_entry), (96, right_mid), (108, right_exit), (114, kneel_right),
-        (126, kneel_right), (138, ready),
+        (90, right_entry), (102, right_mid), (114, right_exit), (126, kneel_right), (138, ready),
         (150, ready_low), (162, left_react), (178, left_contact), (186, left_contact),
-        (192, left_entry), (204, left_mid), (216, left_exit), (222, kneel_left),
-        (234, kneel_left), (246, ready),
+        (198, left_entry), (210, left_mid), (222, left_exit), (234, kneel_left), (246, ready),
         (264, ready_low), (276, sprawl_read), (294, sprawl_contact), (306, sprawl_contact),
         (318, sprawl_flight), (330, sprawl_land), (348, sprawl_land),
         (360, sprawl_push), (378, sprawl_read), (390, ready), (420, ready),
     ]
-    for frame, pose in keys:
-        key_human(rig, "DEF", frame, pose)
+    samples = sample_human_keys(rig, "DEF", keys)
+    global DEFENDER_SAMPLES
+    DEFENDER_SAMPLES = samples
 
     # A slim body-attached stripe makes the safe diagonal unmistakable: outside
     # shoulder -> upper back -> opposite hip. It appears only during each roll.
     hidden = 0.001
     key_point(rig, "GUIDE_DIAG_RIGHT", 0, right_contact["shoulder_R"], hidden)
     key_point(rig, "GUIDE_DIAG_RIGHT", 76, right_contact["shoulder_R"], hidden)
-    for frame, pose in ((78, right_contact), (84, right_entry), (96, right_mid), (108, right_exit), (114, kneel_right)):
+    for frame in range(78, 115):
+        pose = samples[frame]
         key_segment(rig.pose.bones["GUIDE_DIAG_RIGHT"], frame, pose["shoulder_R"], pose["hip_L"])
     key_point(rig, "GUIDE_DIAG_RIGHT", 116, kneel_right["shoulder_R"], hidden)
     key_point(rig, "GUIDE_DIAG_RIGHT", FRAME_END, kneel_right["shoulder_R"], hidden)
 
     key_point(rig, "GUIDE_DIAG_LEFT", 0, left_contact["shoulder_L"], hidden)
     key_point(rig, "GUIDE_DIAG_LEFT", 184, left_contact["shoulder_L"], hidden)
-    for frame, pose in ((186, left_contact), (192, left_entry), (204, left_mid), (216, left_exit), (222, kneel_left)):
+    for frame in range(186, 223):
+        pose = samples[frame]
         key_segment(rig.pose.bones["GUIDE_DIAG_LEFT"], frame, pose["shoulder_L"], pose["hip_R"])
     key_point(rig, "GUIDE_DIAG_LEFT", 224, kneel_left["shoulder_L"], hidden)
     key_point(rig, "GUIDE_DIAG_LEFT", FRAME_END, kneel_left["shoulder_L"], hidden)
@@ -655,8 +890,7 @@ def build_coach_animation(rig):
     keys = [(0, "ready"), (22, "ready"), (30, "toss"), (44, "swing"), (62, "swing"), (88, "ready"),
             (128, "ready"), (138, "toss"), (152, "swing"), (170, "swing"), (196, "ready"),
             (238, "ready"), (246, "toss"), (262, "swing"), (282, "swing"), (312, "ready"), (420, "ready")]
-    for frame, phase in keys:
-        key_human(rig, "COACH", frame, coach_pose(base, phase))
+    sample_human_keys(rig, "COACH", [(frame, coach_pose(base, phase)) for frame, phase in keys])
 
 
 def build_ball_animation(rig):
@@ -674,6 +908,8 @@ def build_ball_animation(rig):
     }
     for bone_name, keys in paths.items():
         for frame, location, scale in keys:
+            if frame in (78, 186, 306):
+                location = forearm_ball_contact(DEFENDER_SAMPLES[frame])
             spin = Matrix.Rotation(math.radians(frame * 7), 4, "Z").to_quaternion()
             key_point(rig, bone_name, frame, location, scale, spin)
 
@@ -683,12 +919,22 @@ def build_ball_animation(rig):
         "IMPACT_SPRAWL": (306, (0, -3.98, 0.31)),
     }
     for bone_name, (frame, location) in impacts.items():
+        location = forearm_ball_contact(DEFENDER_SAMPLES[frame])
         key_point(rig, bone_name, 0, location, hidden)
         key_point(rig, bone_name, frame - 2, location, hidden)
         key_point(rig, bone_name, frame, location, 1.0)
         key_point(rig, bone_name, frame + 8, location, 1.65)
         key_point(rig, bone_name, frame + 10, location, hidden)
         key_point(rig, bone_name, FRAME_END, location, hidden)
+
+
+def forearm_ball_contact(pose):
+    wrists = (pose["wrist_L"] + pose["wrist_R"]) / 2
+    elbows = (pose["elbow_L"] + pose["elbow_R"]) / 2
+    along = (wrists-elbows).normalized()
+    normal = Vector((0, 0, 1)) - along*along.z
+    normal.normalize()
+    return elbows.lerp(wrists, .75) + normal*.157
 
 
 def add_timeline_metadata(rig):
@@ -702,6 +948,7 @@ def add_timeline_metadata(rig):
     ]
     rig["clip_name"] = CLIP_NAME
     rig["fps"] = FPS
+    rig["sample_fps"] = FPS * SAMPLE_RATE
     rig["duration_seconds"] = FRAME_END / FPS
     rig["loop"] = True
     rig["drill_id"] = "rolls-and-sprawls"
@@ -710,7 +957,7 @@ def add_timeline_metadata(rig):
         for name, start, end in phases
     ])
     for name, start, end in phases:
-        bpy.context.scene.timeline_markers.new(name, frame=start)
+        bpy.context.scene.timeline_markers.new(name, frame=start * SAMPLE_RATE)
         marker = bpy.data.objects.new(f"Marker_{name}", None)
         bpy.context.collection.objects.link(marker)
         marker.empty_display_type = "PLAIN_AXES"
@@ -729,10 +976,14 @@ def setup_animation(rig):
     build_defender_animation(rig)
     build_coach_animation(rig)
     build_ball_animation(rig)
-    # Blender's default Bezier interpolation provides continuous body motion.
-    # Exact contacts and floor poses are held by the paired keys around them.
-    # (Blender 5 stores curves in layered action channel-bags rather than the
-    # legacy Action.fcurves collection.)
+    # Dense solved frames use linear interpolation so glTF cannot add Bezier
+    # overshoot, joint disconnection, or an unplanned elbow/knee inversion.
+    for layer in action.layers:
+        for strip in layer.strips:
+            for bag in strip.channelbags:
+                for curve in bag.fcurves:
+                    for key in curve.keyframe_points:
+                        key.interpolation = "LINEAR"
     return action
 
 
@@ -779,7 +1030,7 @@ def setup_lighting_and_cameras(mats):
 
 def render_preview(scene, camera_obj, frame, filename):
     scene.camera = camera_obj
-    scene.frame_set(frame)
+    scene.frame_set(frame * SAMPLE_RATE)
     scene.render.filepath = str(PREVIEW_DIR / filename)
     bpy.ops.render.render(write_still=True)
 
@@ -788,8 +1039,8 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     scene.frame_start = 0
-    scene.frame_end = FRAME_END
-    scene.render.fps = FPS
+    scene.frame_end = FRAME_END * SAMPLE_RATE
+    scene.render.fps = FPS * SAMPLE_RATE
     scene.render.fps_base = 1.0
     # Blender 5.1 exposes Eevee Next under the compact BLENDER_EEVEE enum.
     scene.render.engine = "BLENDER_EEVEE"
@@ -841,7 +1092,11 @@ def main():
         "GUIDE_DIAG_RIGHT", "GUIDE_DIAG_LEFT", "LANDING_CHEST", "LANDING_HIPS",
     ]
     rig = create_rig(segment_bones + joint_bones + utility_bones)
-    rig["asset_version"] = 1
+    rig["asset_version"] = 2
+    rig["anatomy_profile_json"] = json.dumps(BODY)
+    rig["motion_sampling"] = "60 fps fixed-length IK, torso SLERP, continuous quaternion hemisphere"
+    rig["coaching_reference"] = "USA Volleyball Indoor High Performance Boys Training Manual, floor defense, pp. 21-22"
+    rig["coaching_reference_url"] = "https://cdn3.sportngin.com/attachments/document/0120/6224/2017_USA_Volleyball_Indoor_High_Performance_Boys_Training__Manual__2_.pdf"
     rig["coordinate_system"] = "Blender Z-up; glTF Y-up"
     add_timeline_metadata(rig)
 
@@ -898,11 +1153,12 @@ def main():
     )
 
     # Render distinct wide and mechanics moments for visual QA.
-    render_preview(scene, court_camera, 0, "rolls-and-sprawls-court.png")
-    render_preview(scene, mechanics_camera, 84, "rolls-and-sprawls-right-roll.png")
-    render_preview(scene, mechanics_camera, 192, "rolls-and-sprawls-left-roll.png")
-    render_preview(scene, sprawl_camera, 294, "rolls-and-sprawls-sprawl.png")
-    render_preview(scene, sprawl_camera, 342, "rolls-and-sprawls-sprawl-landing.png")
+    if not os.environ.get("COACHCAM_SKIP_PREVIEWS"):
+        render_preview(scene, court_camera, 0, "rolls-and-sprawls-court.png")
+        render_preview(scene, mechanics_camera, 90, "rolls-and-sprawls-right-roll.png")
+        render_preview(scene, mechanics_camera, 198, "rolls-and-sprawls-left-roll.png")
+        render_preview(scene, sprawl_camera, 306, "rolls-and-sprawls-sprawl.png")
+        render_preview(scene, sprawl_camera, 342, "rolls-and-sprawls-sprawl-landing.png")
 
     report = {
         "glb": str(GLB_PATH), "blend": str(BLEND_PATH), "clip": action.name,

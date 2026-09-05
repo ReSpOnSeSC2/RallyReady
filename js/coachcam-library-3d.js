@@ -64,6 +64,55 @@
   function finite(value) { return typeof value === "number" && isFinite(value); }
   function list(value) { return Array.isArray(value) ? value : []; }
   function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+  // Pure sampling rules are shared with the regression checks. Every pose and
+  // ball position is a function of authored time, including paused scrubbing.
+  function contactProgress(segment) {
+    return clamp(segment && finite(segment.contactProgress) ? segment.contactProgress : 0.5, 0.05, 0.95);
+  }
+  function contactTime(beat, segment) {
+    return beat.startMs + beat.durationMs * contactProgress(segment);
+  }
+  function sampleTime(segment, progress) {
+    return segment.startSeconds + clamp(progress, 0, 1) * segment.durationSeconds;
+  }
+  function travelProgress(progress) {
+    var p = clamp(progress, 0, 1);
+    return p * p * (3 - 2 * p);
+  }
+  function blendYaw(from, to, amount) {
+    return from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * clamp(amount, 0, 1);
+  }
+  function routeFacing(motionId, routeYaw, initialYaw) {
+    if (/^(shuffle|mini-band|ladder)$/.test(motionId)) return initialYaw;
+    return routeYaw + (motionId === "backpedal" ? Math.PI : 0);
+  }
+  function stationMotion(motionId) {
+    // These clips already contain their reach, step and weight transfer in
+    // metres. Their diagram arrows describe the exercise at one station.
+    return /^(box|box-hit|box-block|depth-drop|bridge|foam|band|band-upper|band-arm-swing|medicine|medicine-slam|medicine-rotate|medicine-scoop|jump-rope)$/.test(motionId);
+  }
+  function motionTimingScale(plan) {
+    // Diagram routes span a full court. A one-second sprite beat must not
+    // turn a lateral shuffle into a 15 m/s slide. Scale the whole phase so
+    // parallel events and ball contacts retain their shared clock.
+    var scale = 1;
+    list(plan.beats).forEach(function (beat) {
+      if (stationMotion(beat.motionId)) return;
+      var route = list(plan.routes).find(function (item) { return item.id === beat.routeId && item.type === "move"; });
+      if (!route) return;
+      var points = [route.from].concat(list(route.via), [route.to]);
+      var distance = 0;
+      for (var i = 1; i < points.length; i++) {
+        var dx = (points[i][0] - points[i - 1][0]) * 9 / Math.max(1, Number(plan.width) || 9);
+        var dz = (points[i][1] - points[i - 1][1]) * 18 / Math.max(1, Number(plan.height) || 10);
+        distance += Math.sqrt(dx * dx + dz * dz);
+      }
+      var speed = /shuffle|mini-band|backpedal/.test(beat.motionId) ? 1.8
+        : beat.motionId === "ladder" ? 2 : /sprint|run-through/.test(beat.motionId) ? 5.5 : 3;
+      scale = Math.max(scale, 1.5 * distance / Math.max(0.001, beat.durationMs / 1000) / speed);
+    });
+    return scale;
+  }
   function slug(value) {
     return clean(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "phase";
   }
@@ -145,7 +194,7 @@
       });
       if (!plan || !plan.valid) return;
       var sourceDuration = Math.max(1200, Number(plan.durationMs) || 1200);
-      var duration = clamp(sourceDuration / 1000, 2.6, 14);
+      var duration = Math.max(sourceDuration / 1000 * motionTimingScale(plan), 2.6);
       var used = {};
       var motions = list(plan.beats).map(function (beat) { return beat.motionId; }).filter(function (id) {
         if (!id || used[id]) return false;
@@ -299,10 +348,14 @@
       "<path d='M4 11a8 8 0 1 0 2.3-5.7L4 7.6'/><path d='M4 3v4.6h4.6'/>");
     controls.appendChild(pause);
     controls.appendChild(replay);
+    var frameBack = controlButton("coachcam__control--frame-back", "Back one frame", "<path d='M6 5v14M18 5 8 12l10 7z'/>");
+    var frameNext = controlButton("coachcam__control--frame-next", "Forward one frame", "<path d='M18 5v14M6 5l10 7-10 7z'/>");
+    controls.appendChild(frameBack);
+    controls.appendChild(frameNext);
     var speed = node("div", "coachcam__speed");
     speed.setAttribute("role", "group");
     speed.setAttribute("aria-label", translated("Playback speed"));
-    [0.5, 1].forEach(function (value) {
+    [0.25, 0.5, 1].forEach(function (value) {
       var button = node("button", "coachcam__speed-button" + (value === 1 ? " is-active" : ""), value + "×");
       button.type = "button";
       button.setAttribute("aria-pressed", value === 1 ? "true" : "false");
@@ -338,6 +391,18 @@
       first.plan.actors.length + " people · " + (equipmentKeys(first.plan).join(" · ") || "court only"));
     formation.appendChild(formationValue);
     root.appendChild(formation);
+    var angles = node("div", "coachcam__angles");
+    angles.setAttribute("role", "group");
+    angles.setAttribute("aria-label", translated("Body mechanics viewing angle"));
+    angles.appendChild(node("span", "coachcam__formation-label", "View technique"));
+    [["three-quarter", "Three-quarter"], ["front", "Front"], ["side", "Side"]].forEach(function (choice, index) {
+      var button = node("button", "coachcam__control", choice[1]);
+      button.type = "button";
+      button.setAttribute("data-angle", choice[0]);
+      button.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+      angles.appendChild(button);
+    });
+    root.appendChild(angles);
 
     var timeline = node("div", "coachcam__timeline");
     var now = node("div", "coachcam__now");
@@ -401,6 +466,7 @@
 
     mountPlayer(compiled, {
       root: root, canvas: canvas, stage: stage, courtView: courtView,
+      frameBack: frameBack, frameNext: frameNext, angles: angles,
       mechanicsView: mechanicsView, loading: loading, fallbackText: fallbackText,
       pause: pause, replay: replay, speed: speed, scrubber: scrubber,
       phaseRail: phaseRail, phaseStatus: phaseStatus, phaseTitle: phaseTitle,
@@ -447,6 +513,7 @@
       netSystem: null,
       activeActor: null,
       mechanicsTarget: null,
+      cameraAngle: "three-quarter",
       resizeObserver: null,
       intersectionObserver: null,
       mutationObserver: null,
@@ -479,7 +546,7 @@
     }
 
     function shouldAnimate() {
-      return player.initialized && !player.destroyed && !player.userPaused &&
+      return player.initialized && !player.destroyed && !player.userPaused && !player.scrubbing &&
         !player.autoPaused && !document.hidden;
     }
 
@@ -707,7 +774,8 @@
       applyAppearance(root, actor, index);
       var home = mapPoint(phase.plan, [actor.x, actor.y], 0);
       root.position.copy(home);
-      root.add(makeLabelSprite(THREE, actor));
+      var label = makeLabelSprite(THREE, actor);
+      root.add(label);
 
       var ringGeometry = new THREE.RingGeometry(0.38, 0.47, 32);
       ringGeometry.userData.coachCamOwnedGeometry = true;
@@ -730,7 +798,8 @@
       action.play();
       var entry = {
         data: actor, root: root, home: home, mixer: mixer, action: action,
-        ring: ring, currentMotion: "", currentRoute: ""
+        ring: ring, label: label, currentMotion: "ready", currentProgress: 0,
+        currentRoute: "", contactPoints: {}
       };
       player.actors[actor.id] = entry;
       player.actorList.push(entry);
@@ -739,6 +808,9 @@
     }
 
     function createRouteVisual(phase, route) {
+      if (route.type === "move" && list(phase.plan.beats).some(function (beat) {
+        return beat.routeId === route.id && stationMotion(beat.motionId);
+      })) return;
       var THREE = player.runtime.THREE;
       var points = routePoints(phase.plan, route, 0.055);
       if (points.length < 2) return;
@@ -803,7 +875,17 @@
       } else if (key === "mats") {
         root.position.copy(anchor).add(new player.runtime.THREE.Vector3(0, 0, 0.32));
       } else if (key === "box") {
-        root.position.copy(anchor).add(new player.runtime.THREE.Vector3(0.75, 0, 0.15));
+        var boxBeat = list(phase.plan.beats).find(function (beat) { return /^(box|box-hit|box-block|depth-drop)$/.test(beat.motionId); });
+        var demonstrator = boxBeat && player.actors[boxBeat.actorId];
+        var segment = boxBeat && player.motionManifest[boxBeat.motionId];
+        if (demonstrator && segment && segment.equipmentAnchor) {
+          actorTransform(demonstrator, phase, 0);
+          var at = segment.equipmentAnchor;
+          root.position.copy(new player.runtime.THREE.Vector3(at[0], at[2], -at[1])
+            .applyQuaternion(demonstrator.root.quaternion).add(demonstrator.home));
+          root.quaternion.copy(demonstrator.root.quaternion);
+          root.scale.set(1, (segment.boxHeight || 0.32) / 0.8, 1);
+        } else root.position.copy(anchor).add(new player.runtime.THREE.Vector3(0.75, 0, 0.15));
       } else if (key === "hoops") {
         var route = phase.plan.routes[0];
         root.position.copy(route ? mapPoint(phase.plan, route.to, 0) : anchor);
@@ -876,11 +958,12 @@
 
     function motionSample(entry, motionId, progress) {
       var segment = player.motionManifest[motionId] || player.motionManifest.ready;
-      var sample = segment.startSeconds + clamp(progress, 0, 0.999) * segment.durationSeconds;
+      var sample = sampleTime(segment, progress);
       entry.action.paused = false;
       entry.mixer.setTime(sample);
       entry.action.paused = true;
       entry.currentMotion = motionId;
+      entry.currentProgress = progress;
     }
 
     function activeBeats(phase, planTimeMs) {
@@ -905,39 +988,77 @@
       });
     }
 
+    function actorTransform(entry, phase, planTimeMs) {
+      var THREE = player.runtime.THREE;
+      var beats = list(phase.plan.beats).filter(function (beat) { return beat.actorId === entry.data.id; });
+      var movement = beats.filter(function (beat) {
+        var route = routeFor(phase, beat);
+        return beat.startMs <= planTimeMs && route && route.type === "move" && !stationMotion(beat.motionId);
+      }).pop();
+      entry.root.position.copy(entry.home);
+      var initialYaw = facingYaw(entry.data);
+      // Both partners face the actual exchange, including the person waiting.
+      var exchange = list(phase.plan.contacts).find(function (contact) {
+        return contact.sourceActorId === entry.data.id || contact.recipientActorId === entry.data.id;
+      });
+      if (exchange) {
+        var otherId = exchange.sourceActorId === entry.data.id ? exchange.recipientActorId : exchange.sourceActorId;
+        var other = player.actors[otherId];
+        var toward = other ? other.home : mapPoint(phase.plan, exchange.to, 0);
+        var facing = toward.clone().sub(entry.home);
+        if (facing.lengthSq() > 0.01) initialYaw = Math.atan2(-facing.x, -facing.z);
+      }
+      entry.root.rotation.y = initialYaw;
+      if (movement) {
+        var route = routeFor(phase, movement);
+        var points = routePoints(phase.plan, route, 0);
+        var progress = clamp((planTimeMs - movement.startMs) / movement.durationMs, 0, 1);
+        var travel = travelProgress(progress);
+        pointOnPolyline(points, travel, entry.root.position);
+        var direction = routeDirection(points, travel, new THREE.Vector3());
+        if (direction.lengthSq() > 0.001) {
+          var yaw = routeFacing(movement.motionId, Math.atan2(-direction.x, -direction.z), initialYaw);
+          entry.root.rotation.y = blendYaw(initialYaw, yaw, travelProgress(progress / 0.16));
+        }
+        entry.currentRoute = route.id;
+      }
+      if (!entry.data.support && equipmentKeys(phase.plan).indexOf("mats") !== -1) entry.root.position.y += 0.095;
+    }
+
     function updateActors(phase, planTimeMs, active) {
       var THREE = player.runtime.THREE;
       var activeByActor = {};
       active.forEach(function (beat) {
         if (beat.actorId && !activeByActor[beat.actorId]) activeByActor[beat.actorId] = beat;
       });
-      var completedMovement = {};
-      list(phase.plan.beats).forEach(function (beat) {
-        var route = routeFor(phase, beat);
-        if (beat.actorId && route && route.type === "move" && beat.endMs <= planTimeMs) {
-          completedMovement[beat.actorId] = beat;
-        }
-      });
       player.activeActor = null;
       player.actorList.forEach(function (entry, index) {
         var beat = activeByActor[entry.data.id];
-        var motionId = beat ? beat.motionId : (entry.data.initialMotionId || "ready");
+        var completed = list(phase.plan.beats).filter(function (item) {
+          return item.actorId === entry.data.id && item.endMs <= planTimeMs;
+        }).pop();
+        // Keep the actual finish pose until the next instruction. In
+        // particular, a floor save must never pop upright while waiting.
+        var motionId = beat ? beat.motionId : completed ? completed.motionId : "ready";
         var progress = beat ? clamp((planTimeMs - beat.startMs) / Math.max(1, beat.durationMs), 0, 1)
-          : ((player.authoredTime * (0.55 + index * 0.015)) % player.motionManifest.ready.durationSeconds) /
+          : completed ? 1 : ((player.authoredTime * (0.55 + index * 0.015)) % player.motionManifest.ready.durationSeconds) /
             player.motionManifest.ready.durationSeconds;
-        motionSample(entry, motionId, progress);
-        entry.root.position.copy(entry.home);
-        entry.root.rotation.y = facingYaw(entry.data);
-        var routeBeat = beat && routeFor(phase, beat) && routeFor(phase, beat).type === "move"
-          ? beat : completedMovement[entry.data.id];
-        if (routeBeat) {
-          var route = routeFor(phase, routeBeat);
+        var segment = player.motionManifest[motionId];
+        var route = beat && routeFor(phase, beat);
+        if (route && route.type === "move" && segment.cyclic && segment.strideMeters > 0) {
           var points = routePoints(phase.plan, route, 0);
-          var routeProgress = beat === routeBeat ? progress : 1;
-          pointOnPolyline(points, routeProgress, entry.root.position);
-          var direction = routeDirection(points, routeProgress, new THREE.Vector3());
-          if (direction.lengthSq() > 0.001) entry.root.rotation.y = Math.atan2(-direction.x, -direction.z);
-          entry.currentRoute = route.id;
+          var distance = points.reduce(function (sum, point, i) {
+            return sum + (i ? point.distanceTo(points[i - 1]) : 0);
+          }, 0);
+          progress = (travelProgress(progress) * distance / segment.strideMeters) % 1;
+        }
+        motionSample(entry, motionId, progress);
+        actorTransform(entry, phase, planTimeMs);
+        entry.root.updateMatrixWorld(true);
+        var head = entry.root.getObjectByName("ATH_JOINT_NECK");
+        if (head) {
+          var headLocal = entry.root.worldToLocal(head.getWorldPosition(new THREE.Vector3()));
+          entry.label.position.set(headLocal.x, headLocal.y + 0.64, headLocal.z);
         }
         var activeActor = !!beat;
         entry.ring.material.opacity = activeActor ? 0.92 : 0.30;
@@ -949,97 +1070,257 @@
       }
     }
 
-    function endpointHeight(motionId, destination) {
-      if (/serve|attack|block|jump|set/.test(motionId)) return destination ? 0.82 : 2.12;
-      if (/pass|dig|save|sprawl|roll/.test(motionId)) return destination ? 1.02 : 0.62;
-      if (/feed|toss/.test(motionId)) return destination ? 0.82 : 1.10;
-      if (/medicine/.test(motionId)) return 0.92;
-      return 0.88;
+    function contactFor(phase, beat) {
+      return list(phase.plan.contacts).find(function (contact) { return contact.id === beat.contactId; });
+    }
+
+    function bodyContact(entry, motionId, hand) {
+      var THREE = player.runtime.THREE;
+      var segment = player.motionManifest[motionId] || {};
+      var singleHand = !!hand || segment.contactType === "right-hand" ||
+        /^(one-arm-save|serve|underhand|attack|down-ball-hit|tip-roll|jump-float|jump-topspin)$/.test(motionId);
+      entry.root.updateMatrixWorld(true);
+      function joint(name) {
+        var bone = entry.root.getObjectByName("ATH_JOINT_" + name);
+        return bone ? bone.getWorldPosition(new THREE.Vector3()) : entry.root.position.clone();
+      }
+      var point = joint(hand === "left-hand" ? "WRIST_L" : "WRIST_R");
+      if (!singleHand) point.add(joint("WRIST_L")).multiplyScalar(0.5);
+      if (/^(pass|dig|platform-save|run-through)$/.test(motionId)) {
+        var elbows = joint("ELBOW_L").add(joint("ELBOW_R")).multiplyScalar(0.5);
+        point.lerp(elbows, 0.28); // Distal forearm surface, clear of the joined hands.
+        point.y += 0.16;
+      } else if (motionId === "one-arm-save") {
+        point.add(new THREE.Vector3(0, 0.14, -0.06).applyQuaternion(entry.root.quaternion));
+      } else {
+        point.add(new THREE.Vector3(0, /set|block/.test(motionId) ? 0.12 : 0.03, -0.13)
+          .applyQuaternion(entry.root.quaternion));
+      }
+      point.y = Math.max(0.12, point.y);
+      return point;
+    }
+
+    function contactAnchor(phase, beat, atProgress, hand) {
+      var entry = player.actors[beat.actorId];
+      if (!entry) {
+        var route = routeFor(phase, beat);
+        return mapPoint(phase.plan, route && route.from, 1);
+      }
+      var cacheKey = beat.id + (atProgress == null ? "" : "-" + atProgress + "-" + hand);
+      if (entry.contactPoints[cacheKey]) return entry.contactPoints[cacheKey].clone();
+      var position = entry.root.position.clone(), rotation = entry.root.quaternion.clone();
+      var motion = entry.currentMotion, progress = entry.currentProgress;
+      var segment = player.motionManifest[beat.motionId];
+      var poseProgress = atProgress == null ? contactProgress(segment) : atProgress;
+      actorTransform(entry, phase, beat.startMs + beat.durationMs * poseProgress);
+      motionSample(entry, beat.motionId, poseProgress);
+      var point = bodyContact(entry, beat.motionId, hand);
+      entry.contactPoints[cacheKey] = point.clone();
+      motionSample(entry, motion, progress);
+      entry.root.position.copy(position);
+      entry.root.quaternion.copy(rotation);
+      entry.root.updateMatrixWorld(true);
+      return point;
+    }
+
+    function flight(from, to, progress, height, target) {
+      var p = clamp(progress, 0, 1);
+      target.lerpVectors(from, to, p);
+      target.y += 4 * height * p * (1 - p);
+      return target;
     }
 
     function ballArcHeight(motionId, route) {
-      if (/serve|jump-float|jump-topspin/.test(motionId)) return 3.0;
-      if (/attack|down-ball/.test(motionId) || route.kind === "serve") return 2.35;
-      if (/set/.test(motionId)) return 2.15;
-      if (/feed|toss/.test(motionId)) return 1.30;
-      if (/pass|dig|save/.test(motionId)) return 1.05;
-      return 1.45;
+      if (/serve|jump-float|jump-topspin/.test(motionId)) return 1.5;
+      if (/attack|down-ball/.test(motionId)) return 0.22;
+      if (/set/.test(motionId)) return 1.35;
+      if (/feed|toss/.test(motionId)) return 0.70;
+      if (/pass|dig|save/.test(motionId)) return 0.9;
+      return 0.8;
     }
 
     function updateBalls(phase, active) {
       var THREE = player.runtime.THREE;
-      var wallEntry = player.equipment.find(function (entry) { return entry.key === "wall"; });
-      var ballBeats = active.filter(function (beat) {
+      var now = phaseProgress(phase, player.authoredTime) * phase.sourceDurationMs;
+      var wall = player.equipment.find(function (entry) { return entry.key === "wall"; });
+      var chains = {};
+      list(phase.plan.beats).forEach(function (beat) {
         var route = routeFor(phase, beat);
-        return route && route.type !== "move";
+        if (!route || route.type === "move") return;
+        var key = beat.trackId || (contactFor(phase, beat) || {}).chainId || beat.id;
+        (chains[key] = chains[key] || []).push(beat);
+      });
+      // A saved self-toss may have no diagram route. Attach it to the next
+      // contact by the same athlete so release, flight and set are continuous.
+      list(phase.plan.beats).forEach(function (beat) {
+        if (beat.routeId || !/^(feed|low-toss)$/.test(beat.motionId)) return;
+        var key = Object.keys(chains).find(function (id) {
+          var next = chains[id][0];
+          return next.actorId === beat.actorId && next.startMs >= beat.endMs;
+        });
+        if (key) chains[key].unshift(beat);
       });
       var used = 0;
-      ballBeats.forEach(function (beat) {
-        var route = routeFor(phase, beat);
+      Object.keys(chains).forEach(function (key) {
+        var beats = chains[key].sort(function (a, b) {
+          return contactTime(a, player.motionManifest[a.motionId]) - contactTime(b, player.motionManifest[b.motionId]);
+        });
+        var first = beats[0];
+        if (now < first.startMs) return;
+        var lastIndex = -1;
+        beats.forEach(function (beat, i) {
+          if (now >= contactTime(beat, player.motionManifest[beat.motionId])) lastIndex = i;
+        });
         var ball = ensureBall(used++);
-        var progress = clamp((phaseProgress(phase, player.authoredTime) * phase.sourceDurationMs - beat.startMs) /
-          Math.max(1, beat.durationMs), 0, 1);
-        if (wallEntry && player.activeActor) {
-          // One authored beat contains the complete set-wall-rebound cycle.
-          // This keeps the ball visibly tied to the athlete and the actual
-          // target instead of sending a generic court-length arc past the wall.
-          var hand = player.activeActor.root.position.clone();
-          hand.y = 1.92;
-          hand.z -= 0.18;
-          var target = wallEntry.root.position.clone();
-          target.x = hand.x;
-          target.y = 2.36;
-          target.z += 0.20;
-          var outbound = progress <= 0.5;
-          var travel = outbound ? progress * 2 : (1 - progress) * 2;
-          ball.position.lerpVectors(hand, target, clamp(travel, 0, 1));
-          ball.position.y += Math.sin(Math.PI * clamp(travel, 0, 1)) * 0.28;
-        } else if (compiled.drill.id === "pancake-and-recover" && player.activeActor &&
-            player.activeActor.currentMotion === "one-arm-save") {
-          // Bind the ball to the rig's actual flat contact hand at the save
-          // moment, so the explanation visibly demonstrates the pancake
-          // instead of leaving the ball on a generic diagram route.
-          var wrist = player.activeActor.root.getObjectByName("ATH_JOINT_WRIST_R");
-          player.activeActor.root.updateMatrixWorld(true);
-          if (wrist) wrist.getWorldPosition(ball.position);
-          else {
-            ball.position.copy(player.activeActor.root.position);
-            var reach = new THREE.Vector3(0, 0, -1.20).applyQuaternion(player.activeActor.root.quaternion);
-            ball.position.add(reach);
+        var beat = beats[Math.max(0, lastIndex)];
+        var entry = player.actors[beat.actorId];
+        var segment = player.motionManifest[beat.motionId];
+        var release = contactTime(beat, segment);
+        var anchor = contactAnchor(phase, beat);
+        if (lastIndex < 0) {
+          // A feed is held until release. Strikes/sets have an incoming ball
+          // arriving at the authored contact pose, not a ball glued to a wrist.
+          if (entry && /^(feed|low-toss)$/.test(beat.motionId)) {
+            ball.position.copy(bodyContact(entry, beat.motionId));
+          } else if (entry && beat.motionId === "underhand") {
+            var preparation = clamp((now - beat.startMs) / Math.max(1, release - beat.startMs), 0, 1);
+            ball.position.copy(bodyContact(entry, beat.motionId, "left-hand"))
+              .lerp(anchor, travelProgress((preparation - 0.8) / 0.2));
+          } else if (entry && /^(serve|jump-float|jump-topspin)$/.test(beat.motionId)) {
+            var tossProgress = Math.min(0.20, contactProgress(segment) * 0.4);
+            var tossTime = beat.startMs + tossProgress * beat.durationMs;
+            if (now < tossTime) ball.position.copy(bodyContact(entry, beat.motionId, "left-hand"));
+            else flight(contactAnchor(phase, beat, tossProgress, "left-hand"), anchor,
+              (now - tossTime) / Math.max(1, release - tossTime), 0.4, ball.position);
+          } else {
+            var incoming = anchor.clone().add(new THREE.Vector3(0, 0.75, 0));
+            var p = clamp((now - beat.startMs) / Math.max(1, release - beat.startMs), 0, 1);
+            flight(incoming, anchor, p, /serve|jump-/.test(beat.motionId) ? 0.45 : 0, ball.position);
           }
-          ball.position.y = Math.max(0.16, ball.position.y + 0.05);
         } else {
-          var points = routePoints(phase.plan, route, 0);
-          pointOnPolyline(points, progress, ball.position);
-          var fromHeight = endpointHeight(beat.motionId, false);
-          var toHeight = endpointHeight(beat.motionId, true);
-          ball.position.y = fromHeight + (toHeight - fromHeight) * progress +
-            ballArcHeight(beat.motionId, route) * 4 * progress * (1 - progress);
+          var next = beats[lastIndex + 1];
+          var route = routeFor(phase, beat) || { to: [entry.data.x, entry.data.y] };
+          var contact = contactFor(phase, beat);
+          var arrival = next ? contactTime(next, player.motionManifest[next.motionId]) : beat.endMs + 450;
+          var destination;
+          if (next) destination = contactAnchor(phase, next);
+          else if (contact && contact.recipientActorId && player.actors[contact.recipientActorId]) {
+            destination = bodyContact(player.actors[contact.recipientActorId], "feed");
+          } else destination = mapPoint(phase.plan, (contact || route).to, 0.12);
+          var progress = clamp((now - release) / Math.max(1, arrival - release), 0, 1);
+          if (wall) {
+            var impact = wall.root.position.clone();
+            impact.x = anchor.x;
+            impact.y = Math.max(anchor.y + 0.30, 1.4);
+            impact.z += 0.20;
+            // One continuous outbound/rebound path, with exact hand endpoints.
+            if (progress < 0.5) flight(anchor, impact, progress * 2, 0.18, ball.position);
+            else flight(impact, destination, (progress - 0.5) * 2, 0.18, ball.position);
+          } else flight(anchor, destination, progress, ballArcHeight(beat.motionId, route), ball.position);
         }
-        ball.rotation.x += 0.10;
-        ball.rotation.y += 0.14;
-        ball.rotation.z += 0.08;
+        ball.rotation.set(player.authoredTime * 2.1, player.authoredTime * 2.9, player.authoredTime * 1.7);
         ball.visible = true;
       });
-      for (var index = used; index < player.ballPool.length; index++) player.ballPool[index].visible = false;
+      for (var i = used; i < player.ballPool.length; i++) player.ballPool[i].visible = false;
 
-      // Equipment-only ball-control phases still show the object in the active
-      // athlete's hands instead of leaving a visually empty demonstration.
-      if (!used && equipmentKeys(phase.plan).indexOf("balls") !== -1 && player.activeActor) {
+      // Only show a held ball when this step actually calls for handling one.
+      // Floor recovery, waiting, and footwork no longer conjure a bouncing ball.
+      if (!used && player.activeActor && equipmentKeys(phase.plan).indexOf("balls") !== -1 &&
+          /^(feed|low-toss|admin)$/.test(player.activeActor.currentMotion)) {
         var held = ensureBall(0);
         held.visible = true;
-        held.position.copy(player.activeActor.root.position);
-        held.position.y = /set|serve|attack/.test(player.activeActor.currentMotion) ? 2.05 : 1.08;
-        held.position.z -= 0.42;
-        held.position.y += Math.sin(player.authoredTime * 4.5) * 0.12;
+        held.position.copy(bodyContact(player.activeActor, "feed"));
       }
+      player.equipment.forEach(function (equipment) {
+        if (equipment.key !== "medicine ball" || !player.activeActor) return;
+        var actor = player.activeActor;
+        var powerBeat = active.find(function (beat) { return beat.actorId === actor.data.id && /^medicine/.test(beat.motionId); });
+        if (!powerBeat) return;
+        var release = contactTime(powerBeat, player.motionManifest[powerBeat.motionId]);
+        if (now <= release) equipment.root.position.copy(bodyContact(actor, powerBeat.motionId));
+        else {
+          var start = contactAnchor(phase, powerBeat);
+          var end = start.clone().add(new THREE.Vector3(0, 0, -1.4).applyQuaternion(actor.root.quaternion));
+          if (/slam/.test(powerBeat.motionId)) end.y = 0.18;
+          flight(start, end, (now - release) / Math.max(1, powerBeat.endMs - release),
+            /slam/.test(powerBeat.motionId) ? 0 : 0.22, equipment.root.position);
+        }
+      });
+      updateTrainingEquipment();
+    }
 
-      // Medicine-ball prototypes follow the hands for the four power actions.
-      player.equipment.forEach(function (entry) {
-        if (entry.key !== "medicine ball" || !player.activeActor) return;
-        entry.root.position.copy(player.activeActor.root.position);
-        entry.root.position.y = /slam/.test(player.activeActor.currentMotion) ? 1.75 : 1.0;
-        entry.root.position.z -= 0.48;
+    function updateTrainingEquipment() {
+      if (!player.activeActor) return;
+      var THREE = player.runtime.THREE;
+      var actor = player.activeActor;
+      actor.root.updateMatrixWorld(true);
+      function joint(name) {
+        var bone = actor.root.getObjectByName("ATH_JOINT_" + name);
+        return bone ? bone.getWorldPosition(new THREE.Vector3()) : actor.root.position.clone();
+      }
+      player.equipment.forEach(function (equipment) {
+        var id = actor.currentMotion;
+        // Boxes are placed once in activatePhase. Only wearable or handled
+        // equipment follows the active athlete during playback.
+        if (equipment.key === "box") return;
+        if (equipment.key === "foam roller" && id === "foam") {
+          equipment.root.position.copy(new THREE.Vector3(0, 0, -0.56)
+            .applyQuaternion(actor.root.quaternion).add(actor.root.position));
+          equipment.root.quaternion.copy(actor.root.quaternion);
+          return;
+        }
+        var rope = equipment.key === "jump ropes" && id === "jump-rope";
+        var band = equipment.key === "bands" && /^band/.test(id);
+        var mini = equipment.key === "mini bands" && /mini-band|bridge/.test(id);
+        if (!rope && !band && !mini) {
+          equipment.root.visible = true;
+          if (equipment.dynamicLine) equipment.dynamicLine.visible = false;
+          return;
+        }
+        equipment.root.visible = false;
+        var left = joint(mini ? "KNEE_L" : "WRIST_L");
+        var right = joint(mini ? "KNEE_R" : "WRIST_R");
+        if (mini) {
+          left.lerp(joint("HIP_L"), 0.24);
+          right.lerp(joint("HIP_R"), 0.24);
+        }
+        var points = [];
+        var center = left.clone().add(right).multiplyScalar(0.5);
+        var across = right.clone().sub(left).normalize();
+        var forward = new THREE.Vector3(0, 0, -1).applyQuaternion(actor.root.quaternion);
+        var theta = 4 * Math.PI * (actor.currentProgress - 0.125);
+        for (var i = 0; i <= 48; i++) {
+          var p = i / 48, angle = p * Math.PI * 2;
+          var point;
+          if (mini) {
+            point = center.clone().addScaledVector(across, Math.cos(angle) * (left.distanceTo(right) / 2 + 0.055))
+              .addScaledVector(forward, Math.sin(angle) * 0.105);
+          } else if (rope) {
+            point = left.clone().lerp(right, p);
+            var radius = Math.sin(Math.PI * p) * Math.max(0.65, center.y - actor.root.position.y - 0.02);
+            point.y -= radius * Math.cos(theta);
+            point.addScaledVector(forward, radius * Math.sin(theta));
+          } else {
+            point = center.clone().addScaledVector(across, Math.cos(angle) * left.distanceTo(right) / 2)
+              .addScaledVector(forward, Math.sin(angle) * 0.055);
+          }
+          points.push(point);
+        }
+        if (!equipment.dynamicLine) {
+          var geometry = new THREE.BufferGeometry().setFromPoints(points);
+          geometry.userData.coachCamOwnedGeometry = true;
+          var material = new THREE.LineBasicMaterial({ color: mini ? 0xff7444 : 0x2de0c4 });
+          material.userData.coachCamOwnedMaterial = true;
+          equipment.dynamicLine = new THREE.Line(geometry, material);
+          equipment.dynamicLine.name = "WorkingEquipment_" + slug(equipment.key);
+          player.drillGroup.add(equipment.dynamicLine);
+        } else {
+          var attribute = equipment.dynamicLine.geometry.getAttribute("position");
+          points.forEach(function (point, index) { attribute.setXYZ(index, point.x, point.y, point.z); });
+          attribute.needsUpdate = true;
+          equipment.dynamicLine.geometry.computeBoundingSphere();
+        }
+        equipment.dynamicLine.visible = true;
       });
     }
 
@@ -1053,12 +1334,18 @@
       if (!player.mechanicsTarget) player.mechanicsTarget = target.clone();
       var blend = delta ? clamp(1 - Math.pow(0.002, delta), 0.06, 1) : 1;
       player.mechanicsTarget.lerp(target, blend);
-      var offset = floorAction ? new THREE.Vector3(3.35, 1.30, 2.80)
-        : airAction ? new THREE.Vector3(3.85, 2.20, 3.65)
-          : new THREE.Vector3(3.10, 1.68, 2.95);
+      // The view is relative to the athlete, so hands stay visible when a
+      // partner on the other side of the court becomes the demonstrator.
+      var radius = floorAction ? 4.5 : airAction ? 5.0 : 4.1;
+      var azimuth = player.cameraAngle === "front" ? 0 : player.cameraAngle === "side" ? Math.PI / 2 : Math.PI / 4;
+      var offset = new THREE.Vector3(Math.sin(azimuth) * radius,
+        floorAction ? 1.30 : 1.05, -Math.cos(azimuth) * radius);
+      offset.applyQuaternion(player.activeActor.root.quaternion);
       var desired = player.mechanicsTarget.clone().add(offset);
       player.mechanicsCamera.position.lerp(desired, blend);
       player.mechanicsCamera.fov = floorAction ? 44 : airAction ? 42 : 39;
+      player.mechanicsCamera.userData.coachCamBaseFov = player.mechanicsCamera.fov;
+      player.mechanicsCamera.userData.coachCamBaseAspect = 1;
       player.mechanicsCamera.near = 0.04;
       player.mechanicsCamera.far = 80;
       player.mechanicsCamera.lookAt(player.mechanicsTarget);
@@ -1075,7 +1362,7 @@
       updateRoutes(active);
       updateActors(phase, planTimeMs, active);
       updateBalls(phase, active);
-      updateMechanicsCamera(0, phase);
+      if (force || !player.mechanicsTarget) updateMechanicsCamera(0, phase);
       var activeBeat = active[0];
       if (activeBeat) {
         ui.phaseTitle.textContent = translated(motionLabel(activeBeat.motionId));
@@ -1141,6 +1428,8 @@
       var key = new THREE.DirectionalLight(0xfff1dc, 2.1);
       key.position.set(-7, 13, 9);
       key.castShadow = true;
+      key.shadow.bias = -0.00025;
+      key.shadow.normalBias = 0.025;
       key.shadow.mapSize.set(mobile ? 512 : 1024, mobile ? 512 : 1024);
       key.shadow.camera.left = key.shadow.camera.bottom = -12;
       key.shadow.camera.right = key.shadow.camera.top = 12;
@@ -1353,6 +1642,17 @@
     }
 
     ui.pause.addEventListener("click", function () { setUserPaused(!player.userPaused, true); });
+    ui.frameBack.addEventListener("click", function () { setUserPaused(true, false); seek(player.authoredTime - 1 / 24, true); });
+    ui.frameNext.addEventListener("click", function () { setUserPaused(true, false); seek(player.authoredTime + 1 / 24, true); });
+    ui.angles.addEventListener("click", function (event) {
+      var button = event.target.closest("button[data-angle]");
+      if (!button) return;
+      player.cameraAngle = button.getAttribute("data-angle");
+      Array.prototype.forEach.call(ui.angles.querySelectorAll("button"), function (item) {
+        item.setAttribute("aria-pressed", item === button ? "true" : "false");
+      });
+      renderNow();
+    });
     ui.replay.addEventListener("click", function () {
       player.userPaused = false;
       updatePlayButton();
@@ -1363,7 +1663,8 @@
     ui.speed.addEventListener("click", function (event) {
       var button = event.target.closest("button[data-speed]");
       if (!button) return;
-      player.speed = Number(button.getAttribute("data-speed")) === 0.5 ? 0.5 : 1;
+      var speed = Number(button.getAttribute("data-speed"));
+      player.speed = [0.25, 0.5, 1].indexOf(speed) !== -1 ? speed : 1;
       updateSpeedButtons();
       syncTransport();
       announce("Playback speed " + player.speed + " times.");
@@ -1377,6 +1678,7 @@
       player.resumeAfterScrub = !player.userPaused;
     });
     ui.scrubber.addEventListener("input", function () {
+      if (!player.scrubbing) player.resumeAfterScrub = !player.userPaused;
       player.scrubbing = true;
       seek((Number(ui.scrubber.value) / 1000) * compiled.durationSeconds, false);
     });
@@ -1384,6 +1686,7 @@
       if (!player.scrubbing) return;
       player.scrubbing = false;
       if (player.resumeAfterScrub) player.userPaused = false;
+      player.resumeAfterScrub = false;
       updatePlayButton();
       syncTransport();
       var phase = phaseAt(compiled, player.authoredTime);
@@ -1448,6 +1751,9 @@
     phaseAt: phaseAt,
     contract: CONTRACT,
     motionIds: MOTION_IDS,
-    equipmentModels: EQUIPMENT_MODELS
+    equipmentModels: EQUIPMENT_MODELS,
+    mechanics: Object.freeze({ contactProgress: contactProgress, contactTime: contactTime,
+      sampleTime: sampleTime, travelProgress: travelProgress, blendYaw: blendYaw, routeFacing: routeFacing,
+      motionTimingScale: motionTimingScale, stationMotion: stationMotion })
   });
 })();

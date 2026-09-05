@@ -2,11 +2,19 @@
 
 RallyReady's complete drill catalog is rendered through a reusable Blender
 CoachCam library. The shared asset contains the court, a production humanoid
-rig, 52 mechanically distinct motion clips, two teaching cameras, and 14
+rig, 52 authored motion clips, two teaching cameras, and 14
 equipment families. At runtime each of the 241 real drills is compiled from its
 saved participants, roles, positions, instructions, routes, contacts, and
 equipment. This produces a drill-specific full-court view and synchronized
 mechanics close-up without shipping a duplicate 3D scene for every drill.
+
+The anatomy update uses fixed limb lengths, bounded two-bone inverse
+kinematics, stable joint bend directions, and articulated wrists. Controls are
+interpolated before solving the skeleton at 48 fps. Contact timing and contact
+surfaces are exported with the motions so browser ball flight meets the actual
+hands or forearms. Quarter-speed playback, frame stepping, and front/side views
+support technique review. See [the motion review](../../docs/coachcam-motion-review.md)
+for coaching references, verification scope, and training limitations.
 
 ## Complete drill library
 
@@ -28,9 +36,10 @@ floor safety, and exported GLB size:
 
 ```powershell
 & 'C:\Program Files\Blender Foundation\Blender 5.1\blender.exe' `
-  --background --factory-startup `
+  --background --factory-startup --python-exit-code 1 `
   --python 'tools\blender\coachcam\validate_library.py'
 node scripts/verify-coachcam-library-3d.js
+node scripts/verify-coachcam-mechanics.js
 ```
 
 The catalog verifier exhaustively expands every walkthrough phase and saved
@@ -63,7 +72,7 @@ Outputs:
 - `design-assets/blender/previews/rolls-and-sprawls-*.png` — local visual QA
   renders (ignored from the production app and deployment)
 
-The GLB contains one continuous 14-second, 30 fps action named
+The GLB contains one continuous 14-second, 60 fps action named
 `CoachCam_RollsSprawls`. Its exported node extras include a machine-readable
 phase timeline, loop metadata, drill id, and safety cues. The scene includes
 `Camera_Court`, `Camera_Mechanics`, and a phase-specific `Camera_Sprawl`. The
@@ -75,12 +84,13 @@ All mechanics cameras retain the athlete's head, hands, and shoes.
 
 ```powershell
 & 'C:\Program Files\Blender Foundation\Blender 5.1\blender.exe' `
-  --background --factory-startup `
+  --background --factory-startup --python-exit-code 1 `
   --python 'tools\blender\validate_rolls_and_sprawls.py'
 ```
 
 Validation performs a GLB round trip, checks the exact clip and required node
-contract, samples the authored body position after export, and projects the full
+contract, samples limb lengths, joint continuity, floor clearances and forearm
+contacts between frames after export, and projects the full
 defender through both cameras at key phases to catch axis mistakes or cropping.
 
 ### Timeline

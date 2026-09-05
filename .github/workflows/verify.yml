@@ -25,6 +25,11 @@ jobs:
         run: node scripts/verify-drill-animation.js
       - name: Human drill motion assets
         run: node scripts/verify-drill-human-motion.js
+      - name: CoachCam catalog and motion mechanics
+        run: |
+          node scripts/verify-coachcam-3d.js
+          node scripts/verify-coachcam-library-3d.js
+          node scripts/verify-coachcam-mechanics.js
       - name: Service worker precache completeness
         run: node scripts/verify-sw.js
       - name: i18n dictionary health + coverage report

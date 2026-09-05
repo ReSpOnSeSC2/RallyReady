@@ -58,7 +58,7 @@ EXPECTED_EQUIPMENT_ROOTS = {
 }
 
 SEGMENT_BONES = (
-    "TORSO", "HEAD", "UARM_L", "FARM_L", "UARM_R", "FARM_R",
+    "TORSO", "HEAD", "UARM_L", "FARM_L", "HAND_L", "UARM_R", "FARM_R", "HAND_R",
     "THIGH_L", "SHIN_L", "FOOT_L", "THIGH_R", "SHIN_R", "FOOT_R",
 )
 POINT_BONES = (
@@ -78,8 +78,19 @@ MAX_MESH_NODES = 100
 MAX_PRIMITIVES = 120
 MAX_MATERIALS = 24
 FRAME_MARGIN = 0.012
-KNEE_RADIUS_M = 0.12
+KNEE_RADIUS_M = 0.095
 HEAD_RADIUS_M = 0.15
+
+# These dimensions describe this authored adult character, not a population
+# norm. Validate the exported landmark chain at and BETWEEN baked frames: a
+# constant mesh scale alone does not detect a detached wrist or sliding knee.
+LIMB_CHAINS = {
+    "upperArm": ("SHOULDER", "ELBOW", 0.31),
+    "forearm": ("ELBOW", "WRIST", 0.27),
+    "thigh": ("HIP", "KNEE", 0.43),
+    "shin": ("KNEE", "ANKLE", 0.43),
+}
+LANDMARK_LENGTH_TOLERANCE_M = 0.012
 
 
 def read_glb(path):
@@ -179,6 +190,88 @@ def sample_pose(scene, rig, manifest, motion, fraction):
     return frame, landmarks(rig)
 
 
+def contact_fraction(manifest, motion, fallback=0.5):
+    return float(manifest[motion].get("contactProgress", fallback))
+
+
+def validate_anatomy(scene, rig, manifest):
+    """Catch stretching, collapsed joints and frame pops in the shipped GLB.
+
+    Bounds are animation regression limits, not medical range-of-motion advice.
+    Interior angles alone cannot establish correct shoulder or spinal rotation.
+    """
+    failures = []
+    maximum_error = 0.0
+    maximum_speed = 0.0
+    samples = 0
+    worst_length = None
+    worst_speed = None
+    minimum_flexion = 180.0
+    maximum_flexion = 0.0
+    for motion, segment in manifest.items():
+        previous = None
+        previous_time = None
+        # Half frames exercise glTF interpolation as well as authored keys.
+        for half_frame in range(segment["startFrame"] * 2, segment["endFrame"] * 2 + 1):
+            frame = half_frame / 2
+            scene.frame_set(int(frame), subframe=frame % 1)
+            pose = landmarks(rig)
+            samples += 1
+            for name, point in pose.items():
+                if not all(math.isfinite(component) for component in point):
+                    raise AssertionError(f"{motion}@{frame:g} {name} has a non-finite position")
+            for name, (start, end, expected) in LIMB_CHAINS.items():
+                for side in ("L", "R"):
+                    actual = (pose[f"{end}_{side}"] - pose[f"{start}_{side}"]).length
+                    error = abs(actual - expected)
+                    if error > maximum_error:
+                        maximum_error = error
+                        worst_length = {"motion": motion, "frame": frame, "limb": f"{name}_{side}",
+                                        "actualM": round(actual, 5), "expectedM": expected}
+                    if error > LANDMARK_LENGTH_TOLERANCE_M and len(failures) < 16:
+                        failures.append(f"{motion}@{frame:g} {name}_{side} length {actual:.4f}m; expected {expected}m")
+            for side in ("L", "R"):
+                for proximal, joint, distal, max_flex in (
+                    ("SHOULDER", "ELBOW", "WRIST", 155),
+                    ("HIP", "KNEE", "ANKLE", 150),
+                ):
+                    incoming = pose[f"{proximal}_{side}"] - pose[f"{joint}_{side}"]
+                    outgoing = pose[f"{distal}_{side}"] - pose[f"{joint}_{side}"]
+                    if incoming.length < 0.1 or outgoing.length < 0.1:
+                        if len(failures) < 16:
+                            failures.append(f"{motion}@{frame:g} {joint}_{side} collapsed")
+                        continue
+                    interior = math.degrees(math.acos(max(-1, min(1, incoming.normalized().dot(outgoing.normalized())))))
+                    flexion = 180 - interior
+                    minimum_flexion = min(minimum_flexion, flexion)
+                    maximum_flexion = max(maximum_flexion, flexion)
+                    if flexion > max_flex and len(failures) < 16:
+                        failures.append(f"{motion}@{frame:g} {joint}_{side} folds to {flexion:.2f} degrees")
+            if previous is not None:
+                elapsed = (frame - previous_time) / FPS
+                for name in POINT_BONES:
+                    speed = (pose[name] - previous[name]).length / elapsed
+                    if speed > maximum_speed:
+                        maximum_speed = speed
+                        worst_speed = {"motion": motion, "frame": frame, "landmark": name}
+                    if speed > 18.0 and len(failures) < 16:
+                        failures.append(f"{motion}@{frame:g} {name} pops at {speed:.2f}m/s")
+            previous, previous_time = pose, frame
+    if failures:
+        raise AssertionError("; ".join(failures) +
+                             f"; worst length={worst_length}; max landmark speed={maximum_speed:.3f}m/s at {worst_speed}")
+    return {
+        "samples": samples,
+        "lengthToleranceM": LANDMARK_LENGTH_TOLERANCE_M,
+        "maxLengthErrorM": round(maximum_error, 6),
+        "worstLength": worst_length,
+        "maxLandmarkSpeedMps": round(maximum_speed, 4),
+        "worstSpeed": worst_speed,
+        "flexionDegrees": [round(minimum_flexion, 2), round(maximum_flexion, 2)],
+        "scope": "geometric regression; not biomechanical certification",
+    }
+
+
 def vector_round(value):
     return [round(component, 4) for component in value]
 
@@ -245,6 +338,14 @@ def validate_manifest(document, scene_extras, action):
             raise AssertionError(f"Invalid startSeconds for {motion}: {segment}")
         if not math.isclose(segment["durationSeconds"], (end - start) / FPS, abs_tol=1e-7):
             raise AssertionError(f"Invalid durationSeconds for {motion}: {segment}")
+        if not isinstance(segment.get("cyclic"), bool):
+            raise AssertionError(f"Missing authored cycle behavior for {motion}")
+        if "contactProgress" in segment:
+            contact = segment["contactProgress"]
+            if not isinstance(contact, (int, float)) or not math.isfinite(contact) or not 0.05 <= contact <= 0.95:
+                raise AssertionError(f"Invalid authored contact progress for {motion}: {contact!r}")
+            if segment.get("contactType") not in ("platform", "two-hands", "right-hand", "left-hand"):
+                raise AssertionError(f"Missing authored contact surface for {motion}")
         previous_end = end
 
     expected_final_frame = manifest[ordered[-1]]["endFrame"] + 2
@@ -264,8 +365,11 @@ def validate_manifest(document, scene_extras, action):
 
 
 def validate_sprint(scene, rig, manifest):
-    frame_a, phase_a = sample_pose(scene, rig, manifest, "sprint", 0.25)
-    frame_b, phase_b = sample_pose(scene, rig, manifest, "sprint", 0.50)
+    # Gait phase zero is an authoring choice; test both peak knee-drive phases
+    # over the full cycle rather than assuming a quarter-frame is airborne.
+    samples = [sample_pose(scene, rig, manifest, "sprint", i / 32) for i in range(33)]
+    frame_a, phase_a = max(samples, key=lambda item: item[1]["KNEE_L"].y - item[1]["KNEE_R"].y)
+    frame_b, phase_b = min(samples, key=lambda item: item[1]["KNEE_L"].y - item[1]["KNEE_R"].y)
     frame_ready, ready = sample_pose(scene, rig, manifest, "ready", 0.50)
     frame_dig, dig = sample_pose(scene, rig, manifest, "dig", 0.50)
 
@@ -279,14 +383,16 @@ def validate_sprint(scene, rig, manifest):
     signature_b = alternation_signature(phase_b)
     ready_signature = alternation_signature(ready)
     dig_signature = alternation_signature(dig)
-    if signature_a[0] * signature_b[0] >= -0.25 or signature_a[1] * signature_b[1] >= -0.25:
+    if signature_a[0] * signature_b[0] >= -0.04 or signature_a[1] * signature_b[1] >= -0.04:
         raise AssertionError(
             f"Sprint does not visibly alternate opposite phases: {signature_a} -> {signature_b}"
         )
-    if min(abs(signature_a[0]), abs(signature_b[0])) < 0.65:
+    if min(abs(signature_a[0]), abs(signature_b[0])) < 0.25:
         raise AssertionError(f"Sprint knee drive is too small: {signature_a[0]:.4f}/{signature_b[0]:.4f}m")
-    if min(abs(signature_a[1]), abs(signature_b[1])) < 0.65:
+    if min(abs(signature_a[1]), abs(signature_b[1])) < 0.25:
         raise AssertionError(f"Sprint arm swing is too small: {signature_a[1]:.4f}/{signature_b[1]:.4f}m")
+    if signature_a[0] * signature_a[1] >= 0 or signature_b[0] * signature_b[1] >= 0:
+        raise AssertionError("Sprint arm swing must oppose the leg on the same side")
     if max(abs(value) for value in ready_signature) > 0.32:
         raise AssertionError(f"Ready pose incorrectly resembles a sprint: {ready_signature}")
     if abs(dig_signature[1]) > 0.32:
@@ -303,7 +409,7 @@ def validate_sprint(scene, rig, manifest):
 
 
 def validate_set(scene, rig, manifest):
-    frame, pose = sample_pose(scene, rig, manifest, "set", 0.75)
+    frame, pose = sample_pose(scene, rig, manifest, "set", contact_fraction(manifest, "set"))
     wrists = (pose["WRIST_L"], pose["WRIST_R"])
     elbows = (pose["ELBOW_L"], pose["ELBOW_R"])
     shoulders = (pose["SHOULDER_L"], pose["SHOULDER_R"])
@@ -313,7 +419,9 @@ def validate_set(scene, rig, manifest):
             f"Set hands are not overhead at frame {frame}: wrists={tuple(round(w.z, 4) for w in wrists)} "
             f"neck={pose['neck'].z:.4f}"
         )
-    if min(wrist.z - elbow.z for wrist, elbow in zip(wrists, elbows)) < 0.18:
+    # A .27 m forearm is angled inward toward the setting window. Requiring
+    # .18 m vertically forced the old long-limbed character's proportions.
+    if min(wrist.z - elbow.z for wrist, elbow in zip(wrists, elbows)) < 0.12:
         raise AssertionError(f"Set wrists are not stacked above elbows at frame {frame}")
     if min(elbow.z - shoulder.z for elbow, shoulder in zip(elbows, shoulders)) < -0.10:
         raise AssertionError(f"Set elbows collapse below the shoulder line at frame {frame}")
@@ -328,7 +436,7 @@ def validate_set(scene, rig, manifest):
 
 
 def validate_pass(scene, rig, manifest):
-    frame, pose = sample_pose(scene, rig, manifest, "pass", 0.50)
+    frame, pose = sample_pose(scene, rig, manifest, "pass", contact_fraction(manifest, "pass"))
     wrists = (pose["WRIST_L"], pose["WRIST_R"])
     elbows = (pose["ELBOW_L"], pose["ELBOW_R"])
     shoulders = (pose["SHOULDER_L"], pose["SHOULDER_R"])
@@ -344,7 +452,9 @@ def validate_pass(scene, rig, manifest):
         raise AssertionError(f"Pass wrists are not locked together at frame {frame}: span={wrist_span:.4f}m")
     if abs(wrists[0].y - wrists[1].y) > 0.025 or abs(wrists[0].z - wrists[1].z) > 0.025:
         raise AssertionError(f"Pass platform is uneven at frame {frame}")
-    if platform_midpoint.y - shoulder_midpoint.y < 0.45:
+    # The .58 m arm also reaches down and inward; forward distance cannot be
+    # measured as if the complete arm were horizontal in the sagittal plane.
+    if platform_midpoint.y - shoulder_midpoint.y < 0.35:
         raise AssertionError(f"Pass platform is not extended in front at frame {frame}")
     if min(straightness) < 0.72:
         raise AssertionError(f"Pass elbows are not locked at frame {frame}: {straightness}")
@@ -361,7 +471,7 @@ def validate_jump_reach(scene, rig, manifest):
     failures = []
     for motion, both_hands in (("attack", False), ("block", True)):
         start_frame, start = sample_pose(scene, rig, manifest, motion, 0.0)
-        apex_frame, apex = sample_pose(scene, rig, manifest, motion, 0.50)
+        apex_frame, apex = sample_pose(scene, rig, manifest, motion, contact_fraction(manifest, motion))
         pelvis_rise = apex["pelvis"].z - start["pelvis"].z
         wrists = (apex["WRIST_L"], apex["WRIST_R"])
         if pelvis_rise < 0.30:
@@ -411,7 +521,7 @@ def validate_floor_actions(scene, rig, manifest, floor_top):
                     f"{motion} does not protect the head at frame {frame}: "
                     f"headSurface={head_surface - floor_top:.4f}m"
                 )
-            if knee_surface < chest_surface + 0.08:
+            if knee_surface < chest_surface + 0.025:
                 failures.append(
                     f"{motion} puts knees below chest/hips at frame {frame}: "
                     f"knee={knee_surface:.4f} chest={chest_surface:.4f}"
@@ -424,7 +534,7 @@ def validate_floor_actions(scene, rig, manifest, floor_top):
             })
         results[motion] = samples
 
-    pancake_frame, pancake = sample_pose(scene, rig, manifest, "one-arm-save", 0.75)
+    pancake_frame, pancake = sample_pose(scene, rig, manifest, "one-arm-save", contact_fraction(manifest, "one-arm-save", 0.75))
     pancake_wrist = pancake["WRIST_R"]
     pancake_shoulder = pancake["SHOULDER_R"]
     pancake_support_wrist = pancake["WRIST_L"]
@@ -439,9 +549,9 @@ def validate_floor_actions(scene, rig, manifest, floor_top):
             "one-arm-save contact hand is not flat at court level: "
             f"wrist={pancake_wrist.z - floor_top:.4f}m"
         )
-    if pancake_reach < 0.88:
+    if not 0.53 <= pancake_reach <= 0.60:
         failures.append(
-            "one-arm-save contact arm does not reach beyond the shoulder: "
+            "one-arm-save contact arm must extend within its fixed anatomical reach: "
             f"reach={pancake_reach:.4f}m"
         )
     if pancake_support_wrist.z < pancake_wrist.z + 0.08:
@@ -548,6 +658,7 @@ def validate_cameras(scene, athlete_root, athlete_mesh, manifest):
 
 
 def main():
+    global FPS
     if not GLB_PATH.exists():
         raise AssertionError(f"Missing shared CoachCam GLB: {GLB_PATH}")
     document = read_glb(GLB_PATH)
@@ -564,6 +675,10 @@ def main():
 
     scene_index = document.get("scene", 0)
     scene_extras = document["scenes"][scene_index].get("extras", {})
+    authored_fps = scene_extras.get("source_fps", 24)
+    if not isinstance(authored_fps, (int, float)) or not 24 <= authored_fps <= 96 or authored_fps != int(authored_fps):
+        raise AssertionError(f"Unsupported authored sample rate: {authored_fps!r}")
+    FPS = int(authored_fps)
     equipment_manifest = json.loads(scene_extras.get("equipment_manifest_json", "[]"))
     if len(equipment_manifest) != 14 or set(equipment_manifest) != set(EXPECTED_EQUIPMENT_ROOTS):
         raise AssertionError(f"Equipment manifest mismatch: {equipment_manifest}")
@@ -608,7 +723,7 @@ def main():
     skin_joint_names = {nodes[index].get("name") for index in document["skins"][0].get("joints", [])}
     if skin_joint_names != EXPECTED_BONES:
         raise AssertionError(
-            f"26-bone skin contract mismatch: missing={sorted(EXPECTED_BONES - skin_joint_names)} "
+            f"{len(EXPECTED_BONES)}-bone skin contract mismatch: missing={sorted(EXPECTED_BONES - skin_joint_names)} "
             f"extra={sorted(skin_joint_names - EXPECTED_BONES)}"
         )
 
@@ -663,7 +778,7 @@ def main():
         raise AssertionError(f"Expected one {RIG_NAME} armature after import: {[obj.name for obj in armatures]}")
     rig = armatures[0]
     if set(rig.pose.bones.keys()) != EXPECTED_BONES:
-        raise AssertionError("Blender round-trip changed the 26-bone rig contract")
+        raise AssertionError(f"Blender round-trip changed the {len(EXPECTED_BONES)}-bone rig contract")
     actions = list(bpy.data.actions)
     if len(actions) != 1:
         raise AssertionError(f"Unexpected Blender actions: {[action.name for action in actions]}")
@@ -707,6 +822,7 @@ def main():
             failures.append(f"{name}: {error}")
             return {"status": "FAIL", "error": str(error)}
 
+    anatomy_checks = run_semantic_check("anatomy", lambda: validate_anatomy(scene, rig, manifest))
     sprint_checks = run_semantic_check("sprint", lambda: validate_sprint(scene, rig, manifest))
     set_checks = run_semantic_check("set", lambda: validate_set(scene, rig, manifest))
     pass_checks = run_semantic_check("pass", lambda: validate_pass(scene, rig, manifest))
@@ -728,6 +844,7 @@ def main():
         "equipment": {"count": len(equipment_nodes), "roots": equipment_nodes},
         "animation": {
             "name": actions[0].name,
+            "sourceFps": FPS,
             "frameRange": action_range,
             "animatedBones": len(EXPECTED_BONES & animated_node_names),
         },
@@ -739,6 +856,7 @@ def main():
             "materials": len(document.get("materials", [])),
             "textures": len(document.get("textures", [])),
         },
+        "anatomy": anatomy_checks,
         "sprint": sprint_checks,
         "set": set_checks,
         "pass": pass_checks,

@@ -47,7 +47,7 @@ const expectedPhases = [
   ["roll-right", 2.6, 3.8], ["recover-right", 3.8, 4.6],
   ["read-left", 4.6, 5.4], ["reach-left", 5.4, 6.2],
   ["roll-left", 6.2, 7.4], ["recover-left", 7.4, 8.2],
-  ["read-short", 8.2, 9.2], ["one-hand-save", 9.2, 10.2],
+  ["read-short", 8.2, 9.2], ["platform-save", 9.2, 10.2],
   ["sprawl", 10.2, 11.6], ["recover-sprawl", 11.6, 13], ["reset", 13, 14]
 ];
 ok(api.phases.length === expectedPhases.length, "all 14 authored phases are exposed");
@@ -125,7 +125,7 @@ ok(/fallbackArtwork\(id \+ "-ball-arrow"\)/.test(js) && !/id='cc-ball-arrow'/.te
 
 // Interaction and layout requirements.
 ok(/scrubber\.type = "range"/.test(js), "continuous timeline uses an accessible range input");
-ok(/\[0\.5, 1\]/.test(js), "playback exposes 0.5x and 1x speeds");
+ok(/\[0\.25, 0\.5, 1\]/.test(js), "playback exposes quarter, half and normal speed");
 ok(!/Previous step|Next step/.test(js), "CoachCam has no previous/next step arrows");
 ok(/phaseRail\.appendChild/.test(js), "all phases are directly seekable without arrows");
 ok(/phaseRail\.scrollTo/.test(js) && !/\.scrollIntoView\(/.test(js),
