@@ -111,9 +111,11 @@ RR.feedDeck = (function () {
   // gesture engages, so normal clicks are never hijacked.
   function wireSwipe(wrapEl, cardEl, hintSave, hintSkip, item) {
     var drag = null;   // { id, x0, y0, dx, active, dead, w, t0 }
+    var suppressClick = false;
 
     wrapEl.addEventListener("pointerdown", function (e) {
       if (committing || e.button) return;
+      suppressClick = false;
       drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0,
                active: false, dead: false, w: wrapEl.offsetWidth || 320, t0: Date.now() };
     });
@@ -137,10 +139,11 @@ RR.feedDeck = (function () {
       if (!drag || e.pointerId !== drag.id) return;
       var d = drag; drag = null;
       wrapEl.classList.remove("deck-stage--dragging");
+      suppressClick = d.active || d.dead;
       if (!d.active) return;
       var ms = Math.max(1, Date.now() - d.t0);
       var flick = Math.abs(d.dx) > 60 && (Math.abs(d.dx) / ms) > 0.5;
-      if (Math.abs(d.dx) > d.w * 0.35 || flick) {
+      if (e.type === "pointerup" && (Math.abs(d.dx) > d.w * 0.35 || flick)) {
         commit(d.dx > 0 ? 1 : -1, item, cardEl, false);
       } else {
         // Below the threshold: snap back (the transition comes from CSS once
@@ -152,6 +155,14 @@ RR.feedDeck = (function () {
     }
     wrapEl.addEventListener("pointerup", release);
     wrapEl.addEventListener("pointercancel", release);
+    // A completed drag can synthesize a click on its original control. Block
+    // that click before it toggles the card. Keyboard activation has detail 0.
+    wrapEl.addEventListener("click", function (e) {
+      if (!suppressClick || e.detail === 0) return;
+      suppressClick = false;
+      e.preventDefault();
+      e.stopPropagation();
+    }, true);
   }
 
   // ArrowLeft / ArrowRight flip the deck from the keyboard. Wired on the deck

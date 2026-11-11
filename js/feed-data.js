@@ -166,6 +166,12 @@
         type: "challenge",
         title: "10 serves in a row",
         body: "Can your server land 10 serves in a row? One miss and the count starts over. Post the team record and chase it every week.",
+        details: {
+          setup: "Use a net, a basket of balls, and a scorekeeper. Pick a starting line each server can reach the court from consistently.",
+          steps: ["Serve in small groups with clear lanes. A serve that crosses the net and lands in the court counts.", "Track each server's current streak. Reset it to zero on a miss, then record their best streak after the round.", "Switch servers every five balls and resume each player's streak when they return. Collect loose balls only when serving stops."],
+          cue: "Pick your target before you toss. Keep your routine after a miss.",
+          adjustment: "Start with a streak of three from closer in. For a harder round, serve to a called half of the court."
+        },
         skill: "Serving",
         vibe: "fun",
         ageMin: 10, ageMax: 18
@@ -175,6 +181,12 @@
         type: "challenge",
         title: "Keep it off the floor",
         body: "Set a 90-second timer. The team rallies a free ball back and forth — every time it touches the floor, the clock resets. How long can you go clean?",
+        details: {
+          setup: "Play 2v2 or 3v3 across a net on a narrowed court. Give one player or assistant the timer and keep a spare ball off court.",
+          steps: ["Start the timer when the first controlled free ball crosses. Work together to send playable balls back over the net.", "Record the rally time when the ball drops or goes out. Restart the timer with the next free ball.", "Switch which team starts each rally. Stop the round when a group holds one continuous rally for 90 seconds or when the allotted practice time ends."],
+          cue: "Give your next teammate a ball they can play.",
+          adjustment: "Begin with a 20-second goal and allow a catch on the second contact. Add a three-contact requirement once teams can sustain the rally."
+        },
         skill: "Ball Control",
         vibe: "fun",
         ageMin: 8, ageMax: 14
@@ -183,7 +195,13 @@
         id: "ch-bullseye-passing",
         type: "challenge",
         title: "Bullseye passing",
-        body: "Drop a hoop or towel where the setter stands. A pass scores only if it lands on the target. First group to 15 wins.",
+        body: "Mark a target where the setter would stand. Pass a ball onto the target to score. First group to 15 wins.",
+        details: {
+          setup: "Mark a setter target with flat court-safe tape a few feet off the net. In groups of three, put a feeder across the net, a passer in the backcourt, and a scorer clear of the target.",
+          steps: ["Send a controlled ball over the net. The passer calls it, moves behind its path, and aims a high forearm pass toward the target.", "Award one point when the first bounce is on or inside the taped target. The scorer calls the running total and collects the ball after it lands.", "Rotate feeder, passer, and scorer after five feeds. Each group keeps its total. The first to 15 points wins."],
+          cue: "Move your feet early. Angle your platform toward the setter and hold it through contact.",
+          adjustment: "Start with a larger target and a predictable toss. Progress to a smaller target or mix short and deep serves."
+        },
         skill: "Passing",
         vibe: "skill-builder",
         ageMin: 10, ageMax: 16
@@ -193,6 +211,12 @@
         type: "challenge",
         title: "The silent game",
         body: "Play a short rally game where the only words allowed are calls — \"mine,\" \"help,\" \"out.\" It forces real, loud communication fast.",
+        details: {
+          setup: "Split into two teams on a small court. Agree on the three calls and what each one means before play starts.",
+          steps: ["Start with a controlled serve or free ball. During each rally, players use 'mine' to claim the first ball, 'help' for a teammate to set, and 'out' for a ball they read beyond the line.", "Use normal rally scoring and play to five. Between rallies, give players a moment to name any call that arrived too late.", "Switch the first server and play another round. Compare how many balls went untouched between teammates."],
+          cue: "Make your call early enough for a teammate to act.",
+          adjustment: "Use 'mine' alone at first. Add more calls and live serves once players consistently claim the seam."
+        },
         skill: "Team Play",
         vibe: "game-day",
         ageMin: 12, ageMax: 18
@@ -202,6 +226,12 @@
         type: "challenge",
         title: "Perfect-toss test",
         body: "Two minutes of serving where the toss has to be picture-perfect — catch any toss that isn't, instead of serving it. The toss is half the serve.",
+        details: {
+          setup: "Set servers behind their usual practice line with a partner watching from outside the serving lane. Demo a toss slightly in front of the hitting shoulder.",
+          steps: ["Set a two-minute timer. On each attempt, use the normal pre-serve routine and toss.", "Serve when the toss reaches the comfortable hitting window. Catch an off-target toss and reset during this drill.", "Record hittable tosses and total toss attempts separately from serves in. Switch the server and observer for a second round."],
+          cue: "Release in front of the hitting shoulder so you can contact the ball without chasing it.",
+          adjustment: "Rehearse toss and catch without a swing, then add the serve. Experienced servers can serve to a called target while keeping the same toss."
+        },
         skill: "Serving",
         vibe: "quick",
         ageMin: 11, ageMax: 18
@@ -211,6 +241,12 @@
         type: "challenge",
         title: "Beat the coach",
         body: "You stand across the net and tip balls into the gaps. Defenders earn a point for every ball they keep alive; you score when it drops. Race to 10.",
+        details: {
+          setup: "Put two or three defenders on one side. The coach or a player feeder starts across the net with a ball cart clear of the court.",
+          steps: ["Send a controlled tip into a short or deep gap. Defenders call the ball and send it high enough for a teammate to make the next contact.", "Give defenders one point for a playable dig and the feeder one point for an untouched ball or a dig no teammate can reach. Replay feeds that land out.", "Race to 10. Change defender positions every five feeds and collect loose balls during the rotation."],
+          cue: "Read the hand, call early, and dig high toward the middle.",
+          adjustment: "Announce the target before the feed to start. When defenders reach it consistently, mix tips with controlled standing roll shots."
+        },
         skill: "Defense",
         vibe: "fun",
         ageMin: 10, ageMax: 18
@@ -220,6 +256,12 @@
         type: "challenge",
         title: "Three touches or bust",
         body: "In a mini-game, a side only scores when it uses all three contacts — pass, set, hit. It rewires a team to stop sending free balls over on one touch.",
+        details: {
+          setup: "Play 3v3 on a narrowed court. Assign a server and scorekeeper. All players rotate through first, second, and third contact roles.",
+          steps: ["Start with a controlled serve. Play each rally normally through the final ball.", "Award one point to the rally winner if that team used three contacts on its last return. Otherwise record no point and switch which team starts.", "Play to seven. Rotate the server every three starts and ask both teams to name the player taking the second ball."],
+          cue: "First ball high. Second ball to someone ready. Third ball over with purpose.",
+          adjustment: "Allow a catch and release on the second contact for one learning round. Remove the catch and vary the serve once teams can connect three contacts."
+        },
         skill: "Team Play",
         vibe: "game-day",
         ageMin: 12, ageMax: 18
@@ -229,6 +271,12 @@
         type: "challenge",
         title: "Name that cue",
         body: "Quick-fire: show a skill and ask players for the single cue that matters most. A two-minute brain warm-up that gets them coaching themselves.",
+        details: {
+          setup: "Choose two skills the team already knows and gather where every player can see your demonstration.",
+          steps: ["Show one contact at normal speed. Give players five seconds to name one action they saw that helped the ball go to its target.", "Ask one player to demonstrate the cue. Give everyone one quick try in pairs, then repeat with the next skill.", "Finish by asking each player to pick one cue to use in the first drill."],
+          cue: "Use a cue short enough to say between two rallies.",
+          adjustment: "Offer two choices to newer players. Ask experienced players to choose a cue for a different ball location or speed."
+        },
         vibe: "quick",
         ageMin: 11, ageMax: 18
       }

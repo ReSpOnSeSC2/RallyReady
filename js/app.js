@@ -1,5 +1,4 @@
-// app.js — application boot: hash router, bottom tab-bar wiring, theme control,
-// and service worker registration. Each route renders its own screen module
+// app.js — application boot: hash router, bottom tab-bar wiring, theme control. Each route renders its own screen module
 // (Today, Season/Camp, Drills, Tips, Team, History) into #screen.
 window.RR = window.RR || {};
 
@@ -93,7 +92,7 @@ RR.app = (function () {
   // Safety fallback, shown only if a screen module failed to load (e.g. a script
   // was blocked). Every real route below has its own handler; this just keeps the
   // app from ever showing a blank screen, with an honest recovery message.
-  function fallbackCard(data) {
+  function fallbackCard(data, canReload) {
     var card = document.createElement("section");
     card.className = "card empty";
     var h2 = document.createElement("h2");
@@ -103,6 +102,14 @@ RR.app = (function () {
     p.textContent = "Something stopped this screen from loading. Close and reopen RallyReady — your saved team and history are safe.";
     card.appendChild(h2);
     card.appendChild(p);
+    if (canReload) {
+      var retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "btn btn-primary";
+      retry.textContent = "Reload RallyReady";
+      retry.addEventListener("click", function () { window.location.reload(); });
+      card.appendChild(retry);
+    }
     return card;
   }
 
@@ -116,7 +123,8 @@ RR.app = (function () {
     // screen re-registers its own when it paints.
     if (RR.share && RR.share.clearPrintable) RR.share.clearPrintable();
 
-    if (routeId === "club-practice" && RR.clubPracticeUI) {
+    if (routeId === "club-practice" && RR.clubPractice && RR.clubPracticeUI &&
+        typeof RR.state.getClubPractices === "function") {
       RR.clubPracticeUI.render(host, {
         onRun: function (plan) { RR.run.start(plan); },
         onShare: function (plan) { RR.share.session(plan); },
@@ -195,7 +203,7 @@ RR.app = (function () {
       // The Drills browser: a searchable, filterable, age/program-aware library.
       RR.drillsScreen.renderDrills(host);
     } else {
-      host.appendChild(fallbackCard(data));
+      host.appendChild(fallbackCard(data, routeId === "club-practice"));
     }
 
     h1.focus();   // move focus to the new title so screen readers announce it
@@ -262,38 +270,6 @@ RR.app = (function () {
     }
   }
 
-  function registerServiceWorker() {
-    if (!("serviceWorker" in navigator)) return;
-
-    // When a NEW worker takes control (sw.js bumps CACHE_VERSION, then
-    // skipWaiting + clients.claim), reload once so this page swaps to the
-    // freshly cached assets instead of running the old release. On a FIRST
-    // install there's no prior controller, so we skip that initial reload.
-    var hadController = !!navigator.serviceWorker.controller;
-    var reloading = false;
-    navigator.serviceWorker.addEventListener("controllerchange", function () {
-      if (!hadController) { hadController = true; return; }
-      if (reloading) return;
-      reloading = true;
-      window.location.reload();
-    });
-
-    window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").then(function (reg) {
-        // Re-check sw.js on launch and whenever the app returns to the
-        // foreground, so an installed PWA picks up a new release promptly
-        // rather than waiting for the browser's own periodic poll.
-        function checkForUpdate() { if (reg && reg.update) reg.update(); }
-        checkForUpdate();
-        document.addEventListener("visibilitychange", function () {
-          if (document.visibilityState === "visible") checkForUpdate();
-        });
-      }).catch(function (err) {
-        console.error("RallyReady: service worker registration failed", err);
-      });
-    });
-  }
-
   function init() {
     // Merge any coach-authored drills into the live library before the first paint.
     if (RR.state && RR.state.syncCustomDrills) RR.state.syncCustomDrills();
@@ -323,7 +299,6 @@ RR.app = (function () {
     // Watch persistence health from boot onward (see updateStorageWarning).
     if (RR.state && RR.state.subscribe) RR.state.subscribe(updateStorageWarning);
     updateStorageWarning();
-    registerServiceWorker();
   }
 
   // Scripts load with `defer`, so the DOM is fully parsed when this runs.

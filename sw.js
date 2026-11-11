@@ -1,17 +1,18 @@
 // RallyReady service worker.
-// Caches the app shell so the app loads and runs fully OFFLINE after first visit,
-// while staying fresh online: navigations are network-first and static assets are
-// stale-while-revalidate (see the fetch handler), so a deployed update shows up on
-// the next launch rather than being pinned to the cache.
-// Bump CACHE_VERSION whenever any cached file changes to force clients to update.
-const CACHE_VERSION = "rallyready-v91";
+// Install one coherent release of the app before claiming any page. Keep its
+// HTML and scripts together until the next worker activates and reloads the page.
+// On release, advance this version, the HTML marker, and the URLs of changed shell files.
+const CACHE_VERSION = "rallyready-v92";
+const RELEASE = CACHE_VERSION.split("-v")[1];
+// Large demos are warmed after activation and reused by later shell releases.
+// Change this cache name if bundled media changes at an existing URL.
+const MEDIA_CACHE = "rallyready-media-v1";
+const LEGACY_MEDIA_RELEASES = [90, 91];
 
-// Core files that make up the offline app shell. Everything here is fetched and
-// cached up front on install, so the app loads with NO network after first visit.
-// Keep this list in step with the files that actually exist.
+// Core app files are installed together. Demonstration assets listed here are
+// cached on demand and warmed separately, so they never delay a shell update.
 const APP_SHELL = [
-  "./",
-  "./index.html",
+  "./index.html?v=92",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -52,7 +53,7 @@ const APP_SHELL = [
   "./vendor/three/addons/loaders/GLTFLoader.js",
   "./vendor/three/addons/utils/BufferGeometryUtils.js",
   "./vendor/three/addons/utils/SkeletonUtils.js",
-  "./css/styles.css",
+  "./css/styles.css?v=92",
   "./css/page-guide.css",
   "./css/team.css",
   "./css/tips.css",
@@ -64,18 +65,18 @@ const APP_SHELL = [
   "./css/players.css",
   "./css/positions.css",
   "./css/calendar.css",
-  "./css/run.css",
+  "./css/run.css?v=92",
   "./css/diagram.css",
   "./css/drill-animation.css",
   "./css/drill-human-motion.css",
   "./css/drill-choreography.css",
   "./css/coachcam-3d.css",
-  "./css/feed.css",
-  "./css/club-practice.css",
-  "./css/print.css",
-  "./js/state.js",
-  "./js/i18n.js",
-  "./js/i18n-ui.js",
+  "./css/feed.css?v=92",
+  "./css/club-practice.css?v=92",
+  "./css/print.css?v=92",
+  "./js/state.js?v=92",
+  "./js/i18n.js?v=92",
+  "./js/i18n-ui.js?v=92",
   "./js/i18n-content.js",
   "./js/i18n-content2.js",
   "./js/i18n-positions.js",
@@ -132,8 +133,8 @@ const APP_SHELL = [
   "./js/games-ui.js",
   "./js/drill-editor.js",
   "./js/plan-edit.js",
-  "./js/run.js",
-  "./js/share.js",
+  "./js/run.js?v=92",
+  "./js/share.js?v=92",
   "./js/roster.js",
   "./js/players-ui.js",
   "./js/player-profile.js",
@@ -146,81 +147,125 @@ const APP_SHELL = [
   "./js/history.js",
   "./js/drills-ui.js",
   "./js/page-guide.js",
-  "./js/feed.js",
-  "./js/feed-data.js",
-  "./js/feed-deck.js",
-  "./js/club-practice.js",
-  "./js/club-practice-ui.js",
-  "./js/app.js"
+  "./js/feed.js?v=92",
+  "./js/feed-data.js?v=92",
+  "./js/feed-deck.js?v=92",
+  "./js/club-practice.js?v=92",
+  "./js/club-practice-ui.js?v=92",
+  "./js/app.js?v=92"
 ];
 
-// Pre-cache the shell as soon as the worker installs.
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(APP_SHELL))
-  );
-  // Activate this worker immediately instead of waiting for old tabs to close.
-  self.skipWaiting();
-});
+const scope = new URL(self.registration.scope);
+const documentUrl = new URL(`index.html?v=${RELEASE}`, scope);
+const shellUrls = APP_SHELL.map((path) => new URL(path, scope));
 
-// Clean up any caches from previous versions when the new worker activates.
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key))
-      )
-    )
-  );
-  self.clients.claim();
-});
+function isMedia(url) {
+  return url.origin === scope.origin && url.pathname.startsWith(scope.pathname) &&
+    /^(images|models|vendor)\//.test(url.pathname.slice(scope.pathname.length));
+}
 
-// Freshness-first strategy, so a deployed update is picked up promptly instead
-// of being masked by the cache. Only same-origin GETs are handled; anything else
-// is left to the browser. Every successful same-origin response is written back
-// to the cache, so the app still loads and runs fully OFFLINE after first visit.
-function cachePut(req, res) {
-  // Only cache complete, same-origin 200s (skip opaque/partial/range responses).
-  if (res && res.ok && res.type === "basic") {
-    const copy = res.clone();
-    caches.open(CACHE_VERSION).then((cache) => cache.put(req, copy));
+const mediaUrls = shellUrls.filter(isMedia);
+const coreUrls = new Set(shellUrls.filter((url) => !isMedia(url)).map((url) => url.href));
+
+async function installShell() {
+  const cache = await caches.open(CACHE_VERSION);
+  const request = new Request(documentUrl, { cache: "reload" });
+  const html = await fetch(request);
+  if (!html.ok || !(await html.clone().text()).includes(`<meta name="rallyready-release" content="${RELEASE}" />`)) {
+    throw new Error("RallyReady shell release is unavailable");
   }
-  return res;
+  const files = [...coreUrls].filter((url) => url !== documentUrl.href);
+  await cache.addAll(files.map((url) => new Request(url, { cache: "reload" })));
+  await cache.put(request, html);
+  await self.skipWaiting();
+}
+
+self.addEventListener("install", (event) => event.waitUntil(installShell()));
+
+function shellCacheRelease(name) {
+  const match = /^rallyready-v(\d+)$/.exec(name);
+  return match ? Number(match[1]) : 0;
+}
+
+async function activateShell() {
+  const keys = await caches.keys();
+  // Compatible combined caches survive until their media has been copied locally.
+  await Promise.all(keys.filter((name) => {
+    const release = shellCacheRelease(name);
+    return release > 0 && release < Number(RELEASE) && !LEGACY_MEDIA_RELEASES.includes(release);
+  }).map((name) => caches.delete(name)));
+  await self.clients.claim();
+}
+
+self.addEventListener("activate", (event) => event.waitUntil(activateShell()));
+
+async function legacyMediaCaches() {
+  const keys = await caches.keys();
+  return keys.filter((name) => LEGACY_MEDIA_RELEASES.includes(shellCacheRelease(name)))
+    .sort((a, b) => shellCacheRelease(b) - shellCacheRelease(a));
+}
+
+async function serveMedia(request) {
+  const cache = await caches.open(MEDIA_CACHE);
+  const hit = await cache.match(request, { ignoreVary: true });
+  if (hit) return hit;
+
+  for (const name of await legacyMediaCaches()) {
+    const old = await caches.match(request, { cacheName: name, ignoreVary: true });
+    if (old) return old;
+  }
+
+  const migrated = await cache.match(request, { ignoreVary: true });
+  if (migrated) return migrated;
+
+  const response = await fetch(request);
+  if (response.status === 200 && response.type === "basic") {
+    await cache.put(request, response.clone()).catch(() => {});
+  }
+  return response;
+}
+
+async function warmMedia() {
+  const cache = await caches.open(MEDIA_CACHE);
+  for (const name of await legacyMediaCaches()) {
+    const old = await caches.open(name);
+    const requests = await old.keys();
+    await Promise.all(requests.filter((request) => isMedia(new URL(request.url))).map(async (request) => {
+      if (await cache.match(request, { ignoreVary: true })) return;
+      const response = await old.match(request, { ignoreVary: true });
+      if (response) await cache.put(request, response);
+    }));
+    await caches.delete(name);
+  }
+  await Promise.allSettled(mediaUrls.map((url) => serveMedia(new Request(url))));
+}
+
+let warmingMedia;
+self.addEventListener("message", (event) => {
+  if (!event.data || event.data.type !== "RALLYREADY_WARM_MEDIA") return;
+  if (!warmingMedia) {
+    warmingMedia = warmMedia().catch((error) => console.warn("RallyReady: media cache update failed", error))
+      .finally(() => { warmingMedia = null; });
+  }
+  event.waitUntil(warmingMedia);
+});
+
+async function serveShell(request, key) {
+  const cache = await caches.open(CACHE_VERSION);
+  return await cache.match(key, { ignoreVary: true }) || fetch(request);
 }
 
 self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  if (req.method !== "GET") return;
+  const request = event.request;
+  if (request.method !== "GET") return;
+  const url = new URL(request.url);
+  if (url.origin !== scope.origin) return;
 
-  const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
-
-  // SPA navigations (address bar, refresh, deep link): NETWORK-FIRST, so an
-  // online launch always gets the latest shell. Fall back to the cached shell
-  // when offline, so any route still loads with no connection.
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req)
-        .then((res) => cachePut(req, res))
-        .catch(() =>
-          caches.match(req).then((hit) =>
-            hit || caches.match("./index.html").then((shell) => shell || caches.match("./"))
-          )
-        )
-    );
-    return;
+  if (request.mode === "navigate" && (url.pathname === scope.pathname || url.pathname === documentUrl.pathname)) {
+    event.respondWith(serveShell(request, documentUrl.href));
+  } else if (coreUrls.has(url.href)) {
+    event.respondWith(serveShell(request, url.href));
+  } else if (isMedia(url)) {
+    event.respondWith(serveMedia(request));
   }
-
-  // Static assets (JS/CSS/icons): STALE-WHILE-REVALIDATE. Serve the cached copy
-  // instantly (fast, offline-safe) while fetching a fresh one in the background
-  // and updating the cache — so the very next load runs the latest code even if
-  // a release ever ships without a CACHE_VERSION bump. Uncached → wait on network.
-  event.respondWith(
-    caches.match(req).then((hit) => {
-      const network = fetch(req)
-        .then((res) => cachePut(req, res))
-        .catch(() => hit);   // offline: fall back to whatever we cached
-      return hit || network;
-    })
-  );
 });

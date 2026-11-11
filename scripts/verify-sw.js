@@ -10,14 +10,17 @@
 //   • the manifest, its icons, and the preloaded fonts are precached;
 //   • all 15 close-up atlases, 11 full-scene WebP grids, and the reviewed PNG
 //     defensive-performance grid exist and are precached for offline demos;
-//   • the local Three.js CoachCam runtime + Blender GLB are precached;
+//   • the local Three.js CoachCam runtime + Blender GLB are warmed offline;
 //   • every js/*.js and css/*.css on disk is precached (a new module that loads
 //     fine online but was never added to APP_SHELL breaks ONLY offline — the
-//     worst kind of bug to spot in a gym with no signal).
+//     worst kind of bug to spot in a gym with no signal);
+//   • a worker installs a coherent core shell before claiming clients and
+//     serves it alongside locally migrated media when the network is gone.
 // Run with: node scripts/verify-sw.js
 "use strict";
 const fs = require("fs");
 const path = require("path");
+const vm = require("node:vm");
 const ROOT = path.join(__dirname, "..");
 
 let pass = 0, fail = 0;
@@ -38,11 +41,15 @@ ok(shell.length > 0, "APP_SHELL parsed from sw.js (" + shell.length + " entries)
 
 const inShell = {};
 shell.forEach((e) => { inShell[e.replace(/^\.\//, "")] = true; });
-inShell["index.html"] = inShell["index.html"] || inShell[""];   // "./" serves index.html
+function assetFile(url) { return url.split("?", 1)[0]; }
+const shellFiles = new Set(Object.keys(inShell).map(assetFile));
+const release = (ver || "").match(/\d+$/)?.[0];
+ok(!!inShell[`index.html?v=${release}`], "versioned document precached in APP_SHELL");
+ok(html.includes(`<meta name="rallyready-release" content="${release}" />`), "document release matches the worker cache");
 
 // ---- 1. Every APP_SHELL entry exists on disk --------------------------------
 shell.forEach((e) => {
-  const rel = e.replace(/^\.\//, "");
+  const rel = assetFile(e.replace(/^\.\//, ""));
   if (rel === "") return;   // "./" is the navigation root, not a file
   ok(fs.existsSync(path.join(ROOT, rel)), "APP_SHELL entry exists on disk: " + e);
 });
@@ -63,7 +70,7 @@ const preloads = (html.match(/<link[^>]+rel="preload"[^>]+href="([^"]+)"/g) || [
 preloads.forEach((s) => ok(!!inShell[s], "preloaded asset precached in APP_SHELL: " + s));
 
 ok(!!inShell["manifest.webmanifest"], "manifest.webmanifest precached");
-ok(!!inShell["index.html"], "index.html precached");
+ok(shellFiles.has("index.html"), "index.html precached");
 
 // ---- 3. Manifest icons exist and are precached ------------------------------
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.webmanifest"), "utf8"));
@@ -77,7 +84,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.webmanifes
 ["js", "css"].forEach((dir) => {
   fs.readdirSync(path.join(ROOT, dir)).forEach((f) => {
     if (!/\.(js|css)$/.test(f)) return;
-    ok(!!inShell[dir + "/" + f], dir + "/" + f + " is precached in APP_SHELL");
+    ok(shellFiles.has(dir + "/" + f), dir + "/" + f + " is precached in APP_SHELL");
   });
 });
 
@@ -209,12 +216,99 @@ if (fs.existsSync(coachCamLibraryGlb)) {
   ok(bytes.length < 8 * 1024 * 1024, "shared CoachCam library and exercise variants remain below 8 MiB");
 }
 
-console.log("──────────────────────────────────────────");
-if (fail) {
-  console.log(`SW: ${pass} passed, ${fail} FAILED`);
-  fails.forEach((m) => console.log("  ✗ " + m));
-  process.exit(1);
-} else {
-  console.log(`SW: ALL ${pass} CHECKS PASSED ` +
-    `(${ver}; ${shell.length} precached entries; ${scripts.length} scripts, ${styles.length} stylesheets)`);
+async function verifyReleaseLifecycle() {
+  const scope = "https://example.test/RallyReady/";
+  const requestUrl = (request) => typeof request === "string" ? request : request.url;
+  const handlers = {};
+  const storage = new Map();
+  const network = [];
+  let documentBody = "<meta name=\"rallyready-release\" content=\"90\" />";
+  let offline = false;
+  let skipped = 0;
+  let claimed = 0;
+
+  async function fetchAsset(request) {
+    network.push(request.url);
+    if (offline) throw new Error("offline");
+    const asset = new URL(request.url);
+    const response = new Response(asset.pathname.endsWith("/index.html") ? documentBody : asset.href);
+    Object.defineProperty(response, "type", { value: "basic" });
+    return response;
+  }
+
+  const caches = {
+    async keys() { return [...storage.keys()]; },
+    async delete(name) { return storage.delete(name); },
+    async open(name) {
+      if (!storage.has(name)) storage.set(name, new Map());
+      const assets = storage.get(name);
+      return {
+        async keys() { return [...assets.keys()].map((key) => new Request(key)); },
+        async match(request) { return assets.get(requestUrl(request))?.clone(); },
+        async put(request, response) { assets.set(requestUrl(request), response); },
+        async addAll(requests) {
+          const responses = await Promise.all(requests.map(fetchAsset));
+          requests.forEach((request, i) => assets.set(request.url, responses[i]));
+        }
+      };
+    },
+    async match(request, { cacheName }) {
+      return storage.get(cacheName)?.get(requestUrl(request))?.clone();
+    }
+  };
+  const self = {
+    registration: { scope },
+    addEventListener: (type, fn) => { handlers[type] = fn; },
+    skipWaiting: async () => { skipped += 1; },
+    clients: { claim: async () => { claimed += 1; } }
+  };
+  vm.runInNewContext(sw, { self, caches, URL, Request, fetch: fetchAsset, console }, { filename: "sw.js" });
+
+  function fire(type, props = {}) {
+    let pending;
+    const wait = (value) => { pending = value; };
+    handlers[type]({ waitUntil: wait, respondWith: wait, ...props });
+    return pending;
+  }
+  async function load(rel, mode = "same-origin") {
+    return (await fire("fetch", { request: { url: new URL(rel, scope).href, method: "GET", mode } })).text();
+  }
+
+  const appPath = scripts.find((url) => assetFile(url) === "js/app.js");
+  const demoUrl = new URL("models/coachcam/coachcam-library.glb", scope).href;
+  const legacy = await caches.open("rallyready-v91");
+  await legacy.put(new URL(appPath, scope).href, new Response("old router"));
+  await legacy.put(demoUrl, new Response("existing demo"));
+  await caches.open("unrelated-cache");
+
+  const rejected = await fire("install").then(() => false, () => true);
+  ok(rejected && skipped === 0, "worker rejects stale CDN HTML without activating");
+  documentBody = html;
+  await fire("install");
+  ok(skipped === 1, "worker requests activation after installing its core shell");
+  ok(network.every((url) => !/\/(images|models|vendor)\//.test(url)), "large demos do not delay worker installation");
+  await fire("activate");
+  ok(claimed === 1, "worker claims clients on activation");
+  ok((await caches.keys()).includes("unrelated-cache"), "worker keeps unrelated origin caches");
+
+  offline = true;
+  ok(await load("./?older-bookmark=1", "navigate") === html, "offline root serves the installed HTML release");
+  ok(await load("index.html", "navigate") === html, "installed app start URL serves the pinned HTML release");
+  ok(await load(appPath) === new URL(appPath, scope).href, "installed app serves its router despite an older cached version");
+  ok(await load(demoUrl) === "existing demo", "legacy offline media remains available during activation");
+  await fire("message", { data: { type: "RALLYREADY_WARM_MEDIA" } });
+  ok(!(await caches.keys()).includes("rallyready-v91"), "warmup retires the old cache after migrating its media");
+  ok(await load(demoUrl) === "existing demo", "legacy media stays available offline after migration");
 }
+
+verifyReleaseLifecycle().catch((error) => ok(false, error.stack)).then(() => {
+  console.log("──────────────────────────────────────────");
+  if (fail) {
+    console.log(`SW: ${pass} passed, ${fail} FAILED`);
+    fails.forEach((m) => console.log("  ✗ " + m));
+    process.exitCode = 1;
+  } else {
+    console.log(`SW: ALL ${pass} CHECKS PASSED ` +
+      `(${ver}; ${shell.length} app assets; ${scripts.length} scripts, ${styles.length} stylesheets)`);
+  }
+});

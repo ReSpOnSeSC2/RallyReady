@@ -180,9 +180,10 @@ marker on today.
   device. Using a different browser, a private/incognito window, or clearing your
   browser data will start you fresh. Installing it to your home screen and using
   that icon keeps everything in one place.
-- **I updated the files but see the old version.** The app caches itself for
-  offline use. Close it completely and reopen, or refresh the page, and it will
-  pick up the new version.
+- **I updated the files but see the old version.** RallyReady checks for
+  updates when you open it, bring it back to the foreground, or reconnect. It
+  reloads automatically once the new app files are ready. Drill demos download
+  in the background and become available offline as they finish.
 
 ---
 

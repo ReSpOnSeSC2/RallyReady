@@ -99,6 +99,12 @@ data.challenges.forEach((it) => {
   ok(!!it.title && !!it.body, it.id + ": has title + body");
   ok(!it.skill || skillSet[it.skill], it.id + ": skill is a real category (" + it.skill + ")");
   ok(typeof it.ageMin === "number" && typeof it.ageMax === "number", it.id + ": numeric age band");
+  const details = it.details || {};
+  ["setup", "cue", "adjustment"].forEach((field) => {
+    ok(typeof details[field] === "string" && !!details[field].trim(), it.id + ": has " + field + " for the detail panel");
+  });
+  ok(Array.isArray(details.steps) && details.steps.length > 1 &&
+    details.steps.every((step) => typeof step === "string" && !!step.trim()), it.id + ": has runnable detail steps");
 });
 
 // MINDSET

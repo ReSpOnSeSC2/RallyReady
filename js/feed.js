@@ -123,7 +123,7 @@ RR.feed = (function () {
     if (opts.vibe) kids.push(h("span", { class: "feed-vibe feed-vibe--" + opts.vibe, text: vibeLabel(opts.vibe) }));
     if (opts.theme) kids.push(h("span", { class: "feed-tag", text: opts.theme }));
     if (opts.minutes != null) kids.push(h("span", { class: "feed-mins", text: opts.minutes + " min" }));
-    return h("div", { class: "feed-meta" }, kids);
+    return h("span", { class: "feed-meta" }, kids);
   }
 
   function isSaved(item) {
@@ -212,48 +212,69 @@ RR.feed = (function () {
     }));
   }
 
-  // Collapsible "how to run it" — each block's drill steps, folded away by
-  // default. Built inline (a button + hideable panel), NOT RR.ui.disclosure,
-  // which would nest a card inside this card (forbidden by the design rules).
-  function stepsDisclosure(idea) {
+  // The preview doubles as the button for the detail it describes. Save and
+  // sharing controls stay outside that button so each has its own tap target.
+  function cardDisclosure(item, preview, previewClass, action, content) {
     var pid = "feed-steps-" + (++seq);
-    var panel = h("div", { class: "feed-steps", id: pid });
-    (idea.blocks || []).forEach(function (b) {
-      var d = drillById(b.drillId);
-      if (!d) return;
-      panel.appendChild(h("div", { class: "feed-steps__block" }, [
-        h("span", { class: "eyebrow", text: d.name + " · " + b.minutes + " min" }),
-        h("ol", { class: "feed-steps__list" }, (d.steps || []).map(function (s) { return h("li", { text: s }); }))
-      ]));
+    var titleId = pid + "-title";
+    var previewId = pid + "-preview";
+    var actionId = pid + "-action";
+    var meta = metaRow(item.type, {
+      vibe: item.vibe, theme: item.type === "idea" ? item.theme : item.skill, minutes: item.minutes
     });
-    panel.hidden = true;
-    var chev = h("span", { class: "feed-steps__chev", "aria-hidden": "true", html: ui.icon(CHEV_DOWN, 18) });
-    var label = h("span", { text: "Show how to run it" });
-    var toggle = h("button", { type: "button", class: "feed-steps__toggle",
-      "aria-expanded": "false", "aria-controls": pid }, [label, chev]);
+    var panel = h("div", { class: "feed-steps", id: pid, hidden: true }, content);
+    var label = h("span", { id: actionId, text: action });
+    var toggle = h("button", { type: "button", class: "feed-card__toggle",
+      "aria-expanded": "false", "aria-controls": pid, "aria-labelledby": titleId + " " + actionId,
+      "aria-describedby": previewId }, [
+      meta,
+      h("span", { class: "feed-card__title", id: titleId, text: item.title }),
+      h("span", { class: previewClass, id: previewId, text: preview }),
+      h("span", { class: "feed-card__action" }, [label,
+        h("span", { class: "feed-steps__chev", "aria-hidden": "true", html: ui.icon(CHEV_DOWN, 18) })])
+    ]);
     toggle.addEventListener("click", function () {
       var open = toggle.getAttribute("aria-expanded") !== "true";
-      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      toggle.setAttribute("aria-expanded", String(open));
       panel.hidden = !open;
-      chev.classList.toggle("is-open", open);
-      label.textContent = open ? "Hide steps" : "Show how to run it";
+      label.textContent = open ? "Hide details" : action;
     });
-    return h("div", { class: "feed-steps__wrap" }, [toggle, panel]);
+    return { toggle: toggle, panel: panel };
+  }
+
+  function stepList(steps, tag) {
+    if (!Array.isArray(steps) || !steps.length) return null;
+    return h(tag, { class: "feed-steps__list" }, steps.map(function (step) { return h("li", { text: step }); }));
+  }
+
+  function detailBlock(label, content) {
+    if (!content) return null;
+    return h("div", { class: "feed-steps__block" }, [
+      h("span", { class: "eyebrow", text: label }),
+      typeof content === "string" ? h("p", { text: content }) : content
+    ]);
+  }
+
+  function ideaSteps(idea) {
+    return (idea.blocks || []).map(function (block) {
+      var drill = drillById(block.drillId);
+      if (!drill) return null;
+      return detailBlock(drill.name + " · " + block.minutes + " min", stepList(drill.steps || [], "ol"));
+    });
   }
 
   // ======================================================================= //
   //  Card renderers — one per feed item type                                //
   // ======================================================================= //
   function ideaCard(idea) {
+    var details = cardDisclosure(idea, idea.goal, "feed-card__goal", "Show how to run it", ideaSteps(idea));
     var kids = [
-      metaRow("idea", { vibe: idea.vibe, theme: idea.theme, minutes: idea.minutes }),
-      h("h3", { class: "feed-card__title", text: idea.title }),
-      h("p", { class: "feed-card__goal", text: idea.goal }),
-      flowList(idea)
+      details.toggle,
+      flowList(idea),
+      details.panel
     ];
     var t = tipFor(idea.tipRef);
     if (t) kids.push(tipHookLine(t));
-    kids.push(stepsDisclosure(idea));
     kids.push(feedFooter([shareButton(idea), printButton(idea), saveButton(idea)]));
     return h("section", { class: "card feed-card feed-card--idea" }, kids);
   }
@@ -285,28 +306,31 @@ RR.feed = (function () {
     ]);
   }
 
-  function challengeCard(c) {
-    var kids = [
-      metaRow("challenge", { vibe: c.vibe, theme: c.skill || null }),
-      h("h3", { class: "feed-card__title", text: c.title }),
-      h("p", { class: "feed-card__body", text: c.body })
-    ];
-    var t = tipFor(c.tipRef);
-    if (t) kids.push(tipHookLine(t));
-    kids.push(feedFooter([saveButton(c)]));
-    return h("section", { class: "card feed-card feed-card--challenge" }, kids);
-  }
-
-  function mindsetCard(m) {
-    var kids = [
-      metaRow("mindset", {}),
-      h("h3", { class: "feed-card__title", text: m.title }),
-      h("p", { class: "feed-card__body", text: m.body })
-    ];
-    var t = tipFor(m.tipRef);
-    if (t) kids.push(tipHookLine(t));
-    kids.push(feedFooter([saveButton(m)]));
-    return h("section", { class: "card feed-card feed-card--mindset" }, kids);
+  function shortCard(item) {
+    var tip = tipFor(item.tipRef);
+    var coaching = item.details;
+    var sections = coaching ? [
+      detailBlock("Setup", coaching.setup),
+      detailBlock("Run it", stepList(coaching.steps, "ol")),
+      detailBlock("Coach cue", coaching.cue),
+      detailBlock("Adjust the challenge", coaching.adjustment)
+    ].filter(Boolean) : [];
+    if (tip && tip.points && tip.points.length) {
+      sections.push(detailBlock(tip.title, stepList(tip.points, "ul")));
+    }
+    var kids = [];
+    if (sections.length) {
+      var details = cardDisclosure(item, item.body, "feed-card__body",
+        item.type === "challenge" ? "Show how to run it" : "Show coaching tips", sections);
+      kids.push(details.toggle, details.panel);
+    } else {
+      kids.push(metaRow(item.type, { vibe: item.vibe, theme: item.skill }),
+        h("h3", { class: "feed-card__title", text: item.title }),
+        h("p", { class: "feed-card__body", text: item.body }));
+    }
+    if (tip) kids.push(tipHookLine(tip));
+    kids.push(feedFooter([saveButton(item)]));
+    return h("section", { class: "card feed-card feed-card--" + item.type }, kids);
   }
 
   // A theme/collection card: tapping "See ideas" applies its filter to the feed.
@@ -331,8 +355,8 @@ RR.feed = (function () {
     if (!item) return document.createComment("empty");
     switch (item.type) {
       case "idea": return ideaCard(item);
-      case "challenge": return challengeCard(item);
-      case "mindset": return mindsetCard(item);
+      case "challenge":
+      case "mindset": return shortCard(item);
       case "theme": return themeCard(item);
       case "tip": return tipCard(item);
       case "drill": return drillSpotlightCard(item, opts);
