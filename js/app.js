@@ -113,17 +113,18 @@ RR.app = (function () {
     return card;
   }
 
-  function renderScreen(routeId) {
+  function renderScreen(routeId, sameRoute) {
     var host = document.getElementById("screen");
     if (!host) return;
     var data = SCREENS[routeId];
+    var practiceScroll = routeId === "club-practice" && sameRoute ? window.scrollY : 0;
     host.innerHTML = "";
 
     // Drop any print-ready carry sheet from the previous screen; the Today
     // screen re-registers its own when it paints.
     if (RR.share && RR.share.clearPrintable) RR.share.clearPrintable();
 
-    if (routeId === "club-practice" && RR.clubPractice && RR.clubPracticeUI &&
+    if (routeId === "club-practice" && RR.clubPractice && RR.clubPractice.variantCount && RR.clubPracticeUI &&
         typeof RR.state.getClubPractices === "function") {
       RR.clubPracticeUI.render(host, {
         onRun: function (plan) { RR.run.start(plan); },
@@ -132,11 +133,11 @@ RR.app = (function () {
         onPlanChange: function (plan) { RR.share.setPrintable(plan); },
         isSaved: function (plan) { return RR.state.isClubPracticeSaved(plan.id); },
         savedPlans: RR.state.getClubPractices,
-        onSave: RR.state.saveClubPractice,
+        onSave: function (plan) { return RR.state.saveClubPractice(RR.clubPractice.localize(plan, "en")); },
         onRemove: function (plan) { return RR.state.removeClubPractice(plan.id); }
       });
       var practiceTitle = host.querySelector(".screen-title");
-      window.scrollTo(0, 0);
+      window.scrollTo(0, practiceScroll);
       if (practiceTitle) practiceTitle.focus({ preventScroll: true });
       return;
     }
@@ -235,8 +236,9 @@ RR.app = (function () {
     var raw = (location.hash || "").replace(/^#/, "");
     if (REDIRECTS[raw]) { location.replace("#" + REDIRECTS[raw]); return; }
     var id = currentRoute();
+    var sameRoute = document.body.dataset.route === id;
     document.body.dataset.route = id;
-    renderScreen(id);
+    renderScreen(id, sameRoute);
     updateTabs(id);
     document.title = "RallyReady · " + SCREENS[id].title;
   }

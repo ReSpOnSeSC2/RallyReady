@@ -1,0 +1,126 @@
+/* A single court example and numbered ball path, sized for a phone. */
+.cp-court-map {
+  --cp-map-surface: var(--surface);
+  --cp-map-far: #d9eafa;
+  --cp-map-near: #b9e6dc;
+  --cp-map-target: #ffe5a6;
+  --cp-map-chip-ink: #152338;
+  --cp-map-floor-ink: var(--text-muted);
+  --cp-map-flight-ink: var(--link);
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.cp-court-map__caption {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+}
+
+.cp-court-map__title { color: var(--text); font-weight: 800; }
+.cp-court-map__note { color: var(--text-muted); }
+.cp-court-map__board {
+  display: block;
+  justify-self: center;
+  width: 100%;
+  max-width: 365px;
+  height: auto;
+}
+
+.cp-map-floor { fill: var(--cp-map-surface); stroke: var(--cp-map-floor-ink); stroke-width: 1.35; }
+.cp-map-half { fill: var(--cp-map-near); fill-opacity: 0.12; }
+.cp-map-attack-line { stroke: var(--cp-map-floor-ink); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.6; }
+.cp-map-net { stroke: var(--cp-map-floor-ink); stroke-width: 2.4; stroke-dasharray: 3 3; }
+.cp-map-net-post { fill: var(--cp-map-floor-ink); }
+.cp-map-net-tag { fill: var(--cp-map-surface); stroke: var(--cp-map-floor-ink); stroke-width: 1; }
+.cp-map-net-label { fill: var(--text); font: 750 10px var(--font-stack); }
+.cp-map-flight { fill: none; stroke: var(--cp-map-flight-ink); stroke-width: 2.3; stroke-linecap: round; }
+.cp-map-arrow { fill: var(--cp-map-flight-ink); }
+.cp-map-move { fill: none; stroke: var(--cp-map-floor-ink); stroke-width: 1.8; stroke-dasharray: 3 3; }
+.cp-map-move-arrow { fill: var(--cp-map-floor-ink); }
+.cp-map-index { fill: var(--cp-map-flight-ink); stroke: var(--cp-map-surface); stroke-width: 1.4; }
+.cp-map-index-label { fill: var(--cp-map-surface); font: 850 10.5px var(--font-stack); }
+.cp-map-player { stroke: var(--cp-map-chip-ink); stroke-width: 1.1; }
+.cp-map-player--far { fill: var(--cp-map-far); }
+.cp-map-player--near { fill: var(--cp-map-near); }
+.cp-map-player--ghost { fill: var(--cp-map-surface); stroke: var(--cp-map-floor-ink); stroke-dasharray: 3 3; }
+.cp-map-player--target { fill: var(--cp-map-target); stroke-dasharray: 2 2; }
+.cp-map-player-label { fill: var(--cp-map-chip-ink); font: 850 11.5px var(--font-stack); }
+.cp-map-player--ghost + .cp-map-player-label { fill: var(--text-muted); }
+
+.cp-court-map__legend,
+.cp-court-map__sequence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 11px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text);
+  font-size: 0.8125rem;
+  line-height: 1.25;
+}
+
+.cp-court-map__sequence { border-top: 1px solid var(--border); padding-top: 8px; }
+.cp-court-map__role,
+.cp-court-map__step { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; }
+.cp-map-role-label,
+.cp-map-action-label { overflow-wrap: anywhere; }
+.cp-map-chip,
+.cp-map-number {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 0.6875rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.cp-map-chip { color: var(--cp-map-chip-ink); border: 1px solid var(--cp-map-chip-ink); }
+.cp-map-chip--far { background: var(--cp-map-far); }
+.cp-map-chip--near { background: var(--cp-map-near); }
+.cp-map-chip--target { background: var(--cp-map-target); border-style: dashed; }
+.cp-map-number { color: var(--cp-map-surface); background: var(--cp-map-flight-ink); }
+
+@media print {
+  .cp-court-map {
+    --cp-map-surface: #fff;
+    --cp-map-far: #eef4fa;
+    --cp-map-near: #e7f4ed;
+    --cp-map-target: #fff3d4;
+    --cp-map-chip-ink: #17202b;
+    --cp-map-floor-ink: #414851;
+    --cp-map-flight-ink: #823000;
+    --surface-2: #fff;
+    --text: #17202b;
+    --text-muted: #414851;
+    --border: #bcc3c8;
+    break-inside: avoid;
+    margin-block: 5pt;
+    padding: 5pt 7pt;
+    gap: 4pt;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .cp-court-map__board { max-width: 2.6in; }
+  .cp-court-map__caption,
+  .cp-court-map__legend,
+  .cp-court-map__sequence { font-size: 8pt; }
+  .cp-court-map__sequence { padding-top: 4pt; }
+  .cp-map-chip,
+  .cp-map-number { flex-basis: 13pt; width: 13pt; height: 13pt; font-size: 7pt; }
+}

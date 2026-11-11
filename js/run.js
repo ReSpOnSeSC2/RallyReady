@@ -177,7 +177,7 @@ RR.run = (function () {
   }
   function headerSubText(session) {
     var bits = [];
-    if (session.skillFocus) bits.push("Skill: " + session.skillFocus);
+    if (session.skillFocus) bits.push(session.kind === "club-practice" ? session.skillFocus : "Skill: " + session.skillFocus);
     if (session.totalMinutes) bits.push(session.totalMinutes + " min");
     return bits.join("  •  ");
   }
@@ -189,6 +189,7 @@ RR.run = (function () {
     if (!S) return;
     var body = S.els.body;
     var club = S.session.kind === "club-practice";
+    var restoreFocus = club && body.contains(document.activeElement);
     var activeIndex = club ? Array.from(body.querySelectorAll("button")).indexOf(document.activeElement) : -1;
     if (club && (S.finished || S.renderedIndex !== S.index)) body.scrollTop = 0;
     S.renderedIndex = S.index;
@@ -196,7 +197,7 @@ RR.run = (function () {
 
     if (S.finished) {
       body.appendChild(renderComplete());
-      if (activeIndex !== -1) body.querySelector("button").focus();
+      if (restoreFocus) body.querySelector("button").focus();
       return;
     }
 
@@ -253,19 +254,19 @@ RR.run = (function () {
     var orgList = !club && RR.ui.organizeList ? RR.ui.organizeList(drill) : null;
     var motion = !club && RR.drillAnimation && RR.drillAnimation.figure
       ? RR.drillAnimation.figure(drill) : null;
+    var court = club && RR.clubPracticeCourt ? RR.clubPracticeCourt.figure(S.session, b, S.session.language) : null;
     var detail = h("div", { class: "rr-run__detail" }, [
       motion,
       club ? textSection("Objective", b.why) : null,
-      section("Setup", h("p", { class: "rr-run__text", text: drill.setup || "—" })),
-      club && drill.equipment && drill.equipment.length ? textSection("Equipment", drill.equipment.map(RR.ui.equipLabel).join(", ")) : null,
+      court,
+      section(club ? "Set up" : "Setup", h("p", { class: "rr-run__text", text: drill.setup || "—" })),
       orgList ? section("How it's organized", orgList) : null,
       section("Run it", h("ol", { class: "rr-run__steps" },
         (drill.steps || []).map(function (s) { return h("li", { text: s }); }))),
       club ? textSection("Scoring & tracking", drill.scoring) : null,
       section("Say this", h("ul", { class: "rr-run__cues" },
         (drill.cues || []).map(function (c) { return h("li", { text: c }); }))),
-      club ? textSection("Make it easier", drill.easier) : null,
-      club ? textSection("Make it harder", drill.harder) : null
+      club && RR.clubPracticeUI ? RR.clubPracticeUI.coachingDetails(drill) : null
     ]);
 
     // --- Transport controls -------------------------------------------------
@@ -312,7 +313,7 @@ RR.run = (function () {
     body.appendChild(clockBox);
     body.appendChild(controls);
     body.appendChild(detail);
-    if (activeIndex !== -1) {
+    if (restoreFocus) {
       var sameControl = body.querySelectorAll("button")[activeIndex];
       (sameControl && !sameControl.disabled ? sameControl : nextBtn).focus({ preventScroll: true });
     }
@@ -513,7 +514,7 @@ RR.run = (function () {
       close();
     }
     if (e.key === "Tab" && S.session.kind === "club-practice") {
-      var buttons = S.root.querySelectorAll("button:not([disabled])");
+      var buttons = S.root.querySelectorAll("button:not([disabled]), summary");
       var first = buttons[0];
       var last = buttons[buttons.length - 1];
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }

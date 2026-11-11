@@ -99,6 +99,8 @@ reference, for a coach who learned the game in Romania and is now coaching here.
 
 **To build a standalone club practice**, open **Practice**, choose 13U, 14U, 15U, or 16U, and enter 30–180 minutes. The plan includes a timed drill sequence, setup, scoring, coaching cues, and adjustments for player numbers and gym space. Run it with the timer, share or print it, or save it under **Saved practices** for another day. This works without a team profile and is available offline after the app loads and caches its files.
 
+Open a drill to see a court map with player positions and numbered ball paths. Read the short steps to start, then expand **Coaching details** for rotations, examples, corrections, and difficulty adjustments. The **EN / RO** toggle changes the instructions and diagrams, including for saved practices.
+
 1. **Open the app.** The bottom tabs are **Ideas, Practice, Season, Drills,
    Players, Tips, and Teams**. Use **Open the full planner & timer** in Ideas to reach Today.
 2. **Set up your Team** (you only do this once). Tap the **Team** tab and fill in:

@@ -2,7 +2,7 @@
 // Install one coherent release of the app before claiming any page. Keep its
 // HTML and scripts together until the next worker activates and reloads the page.
 // On release, advance this version, the HTML marker, and the URLs of changed shell files.
-const CACHE_VERSION = "rallyready-v92";
+const CACHE_VERSION = "rallyready-v93";
 const RELEASE = CACHE_VERSION.split("-v")[1];
 // Large demos are warmed after activation and reused by later shell releases.
 // Change this cache name if bundled media changes at an existing URL.
@@ -12,7 +12,7 @@ const LEGACY_MEDIA_RELEASES = [90, 91];
 // Core app files are installed together. Demonstration assets listed here are
 // cached on demand and warmed separately, so they never delay a shell update.
 const APP_SHELL = [
-  "./index.html?v=92",
+  "./index.html?v=93",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -53,7 +53,7 @@ const APP_SHELL = [
   "./vendor/three/addons/loaders/GLTFLoader.js",
   "./vendor/three/addons/utils/BufferGeometryUtils.js",
   "./vendor/three/addons/utils/SkeletonUtils.js",
-  "./css/styles.css?v=92",
+  "./css/styles.css?v=93",
   "./css/page-guide.css",
   "./css/team.css",
   "./css/tips.css",
@@ -65,18 +65,19 @@ const APP_SHELL = [
   "./css/players.css",
   "./css/positions.css",
   "./css/calendar.css",
-  "./css/run.css?v=92",
+  "./css/run.css?v=93",
   "./css/diagram.css",
   "./css/drill-animation.css",
   "./css/drill-human-motion.css",
   "./css/drill-choreography.css",
   "./css/coachcam-3d.css",
-  "./css/feed.css?v=92",
-  "./css/club-practice.css?v=92",
-  "./css/print.css?v=92",
-  "./js/state.js?v=92",
-  "./js/i18n.js?v=92",
-  "./js/i18n-ui.js?v=92",
+  "./css/feed.css?v=93",
+  "./css/club-practice.css?v=93",
+  "./css/club-practice-court.css?v=93",
+  "./css/print.css?v=93",
+  "./js/state.js?v=93",
+  "./js/i18n.js?v=93",
+  "./js/i18n-ui.js?v=93",
   "./js/i18n-content.js",
   "./js/i18n-content2.js",
   "./js/i18n-positions.js",
@@ -133,8 +134,8 @@ const APP_SHELL = [
   "./js/games-ui.js",
   "./js/drill-editor.js",
   "./js/plan-edit.js",
-  "./js/run.js?v=92",
-  "./js/share.js?v=92",
+  "./js/run.js?v=93",
+  "./js/share.js?v=93",
   "./js/roster.js",
   "./js/players-ui.js",
   "./js/player-profile.js",
@@ -147,12 +148,15 @@ const APP_SHELL = [
   "./js/history.js",
   "./js/drills-ui.js",
   "./js/page-guide.js",
-  "./js/feed.js?v=92",
-  "./js/feed-data.js?v=92",
-  "./js/feed-deck.js?v=92",
-  "./js/club-practice.js?v=92",
-  "./js/club-practice-ui.js?v=92",
-  "./js/app.js?v=92"
+  "./js/feed.js?v=93",
+  "./js/feed-data.js?v=93",
+  "./js/feed-deck.js?v=93",
+  "./js/club-practice-themes-1.js?v=93",
+  "./js/club-practice-themes-2.js?v=93",
+  "./js/club-practice.js?v=93",
+  "./js/club-practice-court.js?v=93",
+  "./js/club-practice-ui.js?v=93",
+  "./js/app.js?v=93"
 ];
 
 const scope = new URL(self.registration.scope);

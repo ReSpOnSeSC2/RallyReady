@@ -179,13 +179,47 @@ RR.clubPracticeUI = (function () {
   }
 
   function drillGear(gear) {
-    return (gear || []).map(function (item) { return RR.ui.equipLabel(item); }).join(", ");
+    return (gear || []).map(function (item) {
+      var label = RR.ui.equipLabel(item);
+      return RR.i18n ? RR.i18n.t(label) : label;
+    }).join(", ");
   }
 
-  function blockDetails(block) {
+  var openDisclosures = new Set();
+
+  function rememberDisclosure(details, key) {
+    if (!key) return details;
+    details.open = openDisclosures.has(key);
+    details.addEventListener("toggle", function () {
+      if (!details.isConnected) return;
+      if (details.open) openDisclosures.add(key);
+      else openDisclosures.delete(key);
+    });
+    return details;
+  }
+
+  function coachingDetails(drill, key) {
+    var notes = Array.isArray(drill.coaching) ? drill.coaching : [];
+    if (!notes.length && !drill.easier && !drill.harder && !drill.equipment.length) return null;
+    return rememberDisclosure(h("details", { class: "cp-coaching" }, [
+      h("summary", null, [h("span", { text: "Coaching details" }), icon("chevron", "cp-chevron")]),
+      h("div", { class: "cp-coaching__body" }, [
+        notes.length ? h("dl", { class: "cp-coaching__notes" }, notes.map(function (item) {
+          return [h("dt", { text: item.label }), h("dd", { text: item.text })];
+        })) : null,
+        drill.easier || drill.harder ? h("div", { class: "cp-adjustments" }, [
+          blockSection("Make it easier", drill.easier), blockSection("Increase the challenge", drill.harder)
+        ]) : null,
+        blockSection("Equipment", drillGear(drill.equipment))
+      ])
+    ]), key);
+  }
+
+  function blockDetails(plan, block) {
     var drill = block.drill;
     var role = block.role || "";
-    return h("li", null, h("details", { class: "cp-block", "data-role": role.toLowerCase() }, [
+    var map = RR.clubPracticeCourt && RR.clubPracticeCourt.figure(plan, block, plan.language);
+    var details = h("details", { class: "cp-block", "data-role": role.toLowerCase(), "data-block-key": block.blockKey }, [
       h("summary", { class: "cp-block__summary" }, [
         h("span", { class: "cp-block__clock" }, duration(block.startMinute + "–" + block.endMinute)),
         h("span", { class: "cp-block__identity" }, [
@@ -197,16 +231,15 @@ RR.clubPracticeUI = (function () {
       ]),
       h("div", { class: "cp-block__body" }, [
         block.why ? paragraph("cp-block__why", block.why) : null,
-        blockSection("Setup", drill.setup),
+        map,
+        blockSection("Set up", drill.setup),
         blockSection("Run it", items("ol", drill.steps)),
         blockSection("Scoring and success", drill.scoring),
         blockSection("Coach cues", items("ul", drill.cues)),
-        drill.easier || drill.harder ? h("div", { class: "cp-adjustments" }, [
-          blockSection("Make it easier", drill.easier), blockSection("Increase the challenge", drill.harder)
-        ]) : null,
-        blockSection("Equipment", drillGear(drill.equipment))
+        coachingDetails(drill, block.id + "-coaching")
       ])
-    ]));
+    ]);
+    return h("li", null, rememberDisclosure(details, block.id));
   }
 
   function timeline(plan) {
@@ -215,7 +248,8 @@ RR.clubPracticeUI = (function () {
         h("h2", { id: "club-practice-timeline", text: "Timeline" }),
         h("span", { class: "cp-timeline__total" }, [icon("clock"), duration(plan.totalMinutes)])
       ]),
-      h("ol", { class: "cp-block-list" }, plan.blocks.map(blockDetails))
+      paragraph("cp-timeline__hint", "Open a drill for the court map and steps."),
+      h("ol", { class: "cp-block-list" }, plan.blocks.map(function (block) { return blockDetails(plan, block); }))
     ]);
   }
 
@@ -255,12 +289,13 @@ RR.clubPracticeUI = (function () {
     ];
   }
 
-  function savedView(actions, navigation) {
+  function savedView(actions, navigation, language) {
     var plans = actions.savedPlans ? actions.savedPlans() : [];
     return [
       heroContent("Saved practices", "Reopen a plan whenever you’re ready to coach it.",
         button(draft.returnPage === "result" ? "Back to practice" : "Back to builder", "back", "back", navigation.back, { className: "cp-button--hero" })),
-      plans.length ? h("ul", { class: "cp-saved-list" }, plans.map(function (plan) {
+      plans.length ? h("ul", { class: "cp-saved-list" }, plans.map(function (stored) {
+        var plan = RR.clubPractice.localize(stored, language);
         return h("li", { class: "cp-saved-item" }, [
           h("button", { class: "cp-button cp-saved-item__open", type: "button", "data-action": "reopen", onclick: function () { navigation.reopen(plan); } }, [
             h("span", null, [
@@ -268,7 +303,7 @@ RR.clubPracticeUI = (function () {
               h("span", { class: "cp-saved-item__name", text: plan.title || plan.skillFocus })
             ]), icon("arrow")
           ]),
-          button("Remove " + (plan.title || plan.skillFocus), "trash", "remove", function () {
+          button((language === "ro" ? "Șterge " : "Remove ") + (plan.title || plan.skillFocus), "trash", "remove", function () {
             if (actions.onRemove && actions.onRemove(plan)) navigation.removed();
           }, { iconOnly: true, className: "cp-saved-item__remove" })
         ]);
@@ -307,7 +342,8 @@ RR.clubPracticeUI = (function () {
     }
 
     function paint(focus) {
-      var plan = draft.page === "result" ? draft.plan : null;
+      var language = RR.i18n ? RR.i18n.getLang() : "en";
+      var plan = draft.page === "result" ? RR.clubPractice.localize(draft.plan, language) : null;
       var content;
       root.classList.toggle("cp--result", Boolean(plan));
       if (plan) {
@@ -321,7 +357,7 @@ RR.clubPracticeUI = (function () {
           back: function () { draft.page = draft.returnPage; paint(true); },
           reopen: openPlan,
           removed: function () { paint(true); }
-        });
+        }, language);
       } else {
         content = builder({
           saved: goSaved,
@@ -353,7 +389,7 @@ RR.clubPracticeUI = (function () {
     "Change inputs": "Schimbă opțiunile",
     "Another practice": "Alt antrenament",
     "Practice actions": "Acțiuni pentru antrenament",
-    "Run practice": "Pornește antrenamentul",
+    "Run practice": "Pornește",
     "Practice saved.": "Antrenament salvat.",
     "Share practice": "Distribuie antrenamentul",
     "Print practice": "Printează antrenamentul",
@@ -363,6 +399,10 @@ RR.clubPracticeUI = (function () {
     "Success targets": "Obiective măsurabile",
     "Adjust for your gym": "Adaptări pentru sală",
     "Timeline": "Desfășurare",
+    "Open a drill for the court map and steps.": "Deschide un exercițiu pentru schema terenului și pași.",
+    "Coaching details": "Detalii pentru antrenor",
+    "Set up": "Așezare pe teren",
+    "Objective": "Obiectiv",
     "Serve": "Serviciu",
     "Team play": "Joc de echipă",
     "Water break": "Pauză de apă",
@@ -377,5 +417,5 @@ RR.clubPracticeUI = (function () {
     "Practices you save will appear here.": "Antrenamentele pe care le salvezi vor apărea aici."
   });
 
-  return { render: render };
+  return { render: render, coachingDetails: coachingDetails };
 })();

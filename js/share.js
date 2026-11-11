@@ -85,7 +85,25 @@ RR.share = (function () {
 
   function clubDrillDetails(drill) {
     return [["Scoring & tracking", drill.scoring], ["Make it easier", drill.easier], ["Make it harder", drill.harder]]
-      .filter(function (section) { return section[1]; });
+      .filter(function (section) { return section[1]; })
+      .concat((Array.isArray(drill.coaching) ? drill.coaching : []).map(function (item) { return [item.label, item.text]; }));
+  }
+
+  var clubRomanianLabels = {
+    "Skill": "Temă", "Note": "Indicație", "Focus": "Obiectiv", "min total": "min în total",
+    "Before players arrive": "Înainte să vină jucătorii", "Practice targets": "Obiective măsurabile",
+    "Equipment": "Echipament", "Adjust for your gym": "Adaptări pentru sală",
+    "Setup": "Așezare pe teren", "Run it": "Pașii exercițiului", "Say this": "Indicații pentru jucători",
+    "Scoring & tracking": "Punctaj și criterii de reușită", "Make it easier": "Variantă mai ușoară",
+    "Make it harder": "Variantă mai grea", "Gear": "Echipament", "Volleyballs": "Mingi de volei",
+    "Net": "Fileu", "Warm-up": "Încălzire", "Serve": "Serviciu", "Team play": "Joc de echipă",
+    "Water break": "Pauză de apă", "Pressure": "Joc sub presiune", "Compete": "Joc cu punctaj",
+    "Cool-down": "Revenire", "Made with RallyReady": "Creat cu RallyReady"
+  };
+
+  function labelsFor(session) {
+    var ro = session.kind === "club-practice" && session.language === "ro";
+    return function (label) { return ro && clubRomanianLabels[label] || label; };
   }
 
   function blockMinutes(block, club) {
@@ -103,6 +121,7 @@ RR.share = (function () {
     session = session || {};
     team = team || {};
     var club = session.kind === "club-practice";
+    var label = labelsFor(session);
     var ref = referenceFor(team);
     var L = [];   // lines
 
@@ -118,23 +137,23 @@ RR.share = (function () {
     if (session.dayType) sub.push(session.dayType);
     if (sub.length) L.push(sub.join(" · "));
 
-    if (session.skillFocus) L.push("Skill: " + session.skillFocus);
+    if (session.skillFocus) L.push(label("Skill") + ": " + session.skillFocus);
 
     var meta = [];
-    if (session.totalMinutes != null) meta.push(session.totalMinutes + " min total");
+    if (session.totalMinutes != null) meta.push(session.totalMinutes + " " + label("min total"));
     if (session.intensity != null) meta.push("Intensity " + session.intensity + "/10");
     if (meta.length) L.push(meta.join(" · "));
 
     if (!club) L.push("Net: " + ref.net + " · Ball: " + ref.ball);
 
     // Coach note + focus reminder.
-    if (session.coachNote) { L.push(""); L.push("Note: " + session.coachNote); }
+    if (session.coachNote) { L.push(""); L.push(label("Note") + ": " + session.coachNote); }
     if (session.focusReminder) {
       if (!session.coachNote) L.push("");
-      L.push("Focus: " + session.focusReminder);
+      L.push(label("Focus") + ": " + session.focusReminder);
     }
     if (club) clubOverview(session).forEach(function (section) {
-      L.push("", "## " + section[0]);
+      L.push("", "## " + label(section[0]));
       section[1].forEach(function (line) { L.push("• " + line); });
     });
 
@@ -145,41 +164,41 @@ RR.share = (function () {
       var drill = b.drill || {};
       L.push("");
       L.push("---");
-      var roleBit = b.role ? "[" + b.role + "] " : "";
+      var roleBit = b.role ? "[" + label(b.role) + "] " : "";
       var minBit = blockMinutes(b, club);
       L.push((i + 1) + ". " + roleBit + (b.title || drill.name || "Block") + minBit);
       if (b.why) L.push(b.why);
 
-      if (drill.setup) { L.push(""); L.push("Setup: " + drill.setup); }
+      if (drill.setup) { L.push(""); L.push(label("Setup") + ": " + drill.setup); }
 
       var steps = drill.steps || [];
       if (steps.length) {
         L.push("");
-        L.push("Run it:");
+        L.push(label("Run it") + ":");
         steps.forEach(function (s, si) { L.push("  " + (si + 1) + ". " + s); });
       }
 
       var cues = drill.cues || [];
       if (cues.length) {
         L.push("");
-        L.push("Say this:");
+        L.push(label("Say this") + ":");
         cues.forEach(function (c) { L.push("  • " + c); });
       }
 
       if (club) clubDrillDetails(drill).forEach(function (section) {
-        L.push(section[0] + ": " + section[1]);
+        L.push(label(section[0]) + ": " + section[1]);
       });
 
       var gear = drill.equipment || [];
       if (gear.length) {
-        L.push("Gear: " + gear.map(equipLabel).join(", "));
+        L.push(label("Gear") + ": " + gear.map(equipLabel).map(label).join(", "));
       }
 
       if (drill.videoSearchUrl) L.push("Watch: " + drill.videoSearchUrl);
     });
 
     L.push("");
-    L.push("— Made with RallyReady");
+    L.push("— " + label("Made with RallyReady"));
     return L.join("\n");
   }
 
@@ -468,6 +487,7 @@ RR.share = (function () {
     session = session || {};
     team = team || {};
     var club = session.kind === "club-practice";
+    var label = labelsFor(session);
     var ref = referenceFor(team);
 
     var kids = [];
@@ -485,8 +505,8 @@ RR.share = (function () {
     kids.push(h("p", { class: "rr-print-sub", text: headBits.join("  ·  ") }));
 
     var meta = [];
-    if (session.skillFocus) meta.push("Skill: " + session.skillFocus);
-    if (session.totalMinutes != null) meta.push(session.totalMinutes + " min total");
+    if (session.skillFocus) meta.push(label("Skill") + ": " + session.skillFocus);
+    if (session.totalMinutes != null) meta.push(session.totalMinutes + " " + label("min total"));
     if (session.intensity != null) meta.push("Intensity " + session.intensity + "/10");
     if (!club) {
       meta.push("Net: " + ref.net);
@@ -496,17 +516,17 @@ RR.share = (function () {
 
     if (session.coachNote) {
       kids.push(h("p", { class: "rr-print-note" }, [
-        h("strong", { text: "Note: " }), session.coachNote
+        h("strong", { text: label("Note") + ": " }), session.coachNote
       ]));
     }
     if (session.focusReminder) {
       kids.push(h("p", { class: "rr-print-note" }, [
-        h("strong", { text: "Focus: " }), session.focusReminder
+        h("strong", { text: label("Focus") + ": " }), session.focusReminder
       ]));
     }
     if (club) clubOverview(session).forEach(function (section) {
       kids.push(h("div", { class: "rr-print-overview" }, [
-        h("h2", { class: "rr-print-label", text: section[0] }),
+        h("h2", { class: "rr-print-label", text: label(section[0]) }),
         h("ul", { class: "rr-print-cues" }, section[1].map(function (line) {
           return h("li", { text: line });
         }))
@@ -520,43 +540,46 @@ RR.share = (function () {
       var drill = b.drill || {};
       var bodyKids = [];
 
-      var roleBit = b.role ? "[" + b.role + "] " : "";
+      var roleBit = b.role ? "[" + label(b.role) + "] " : "";
       var minBit = blockMinutes(b, club);
       bodyKids.push(h("h2", { class: "rr-print-block__title",
         text: (i + 1) + ". " + roleBit + (b.title || drill.name || "Block") + minBit }));
 
       if (b.why) bodyKids.push(h("p", { class: "rr-print-why", text: b.why }));
 
+      var court = club && RR.clubPracticeCourt ? RR.clubPracticeCourt.figure(session, b, session.language) : null;
+      if (court) bodyKids.push(court);
+
       if (drill.setup) {
         bodyKids.push(h("p", { class: "rr-print-setup" }, [
-          h("strong", { text: "Setup: " }), drill.setup
+          h("strong", { text: label("Setup") + ": " }), drill.setup
         ]));
       }
 
       var steps = drill.steps || [];
       if (steps.length) {
-        bodyKids.push(h("p", { class: "rr-print-label", text: "Run it" }));
+        bodyKids.push(h("p", { class: "rr-print-label", text: label("Run it") }));
         bodyKids.push(h("ol", { class: "rr-print-steps" },
           steps.map(function (s) { return h("li", { text: s }); })));
       }
 
       var cues = drill.cues || [];
       if (cues.length) {
-        bodyKids.push(h("p", { class: "rr-print-label", text: "Say this" }));
+        bodyKids.push(h("p", { class: "rr-print-label", text: label("Say this") }));
         bodyKids.push(h("ul", { class: "rr-print-cues" },
           cues.map(function (c) { return h("li", { text: c }); })));
       }
 
       if (club) clubDrillDetails(drill).forEach(function (section) {
         bodyKids.push(h("p", { class: "rr-print-note" }, [
-          h("strong", { text: section[0] + ": " }), section[1]
+          h("strong", { text: label(section[0]) + ": " }), section[1]
         ]));
       });
 
       var gear = drill.equipment || [];
       if (gear.length) {
         bodyKids.push(h("p", { class: "rr-print-gear" }, [
-          h("strong", { text: "Gear: " }), gear.map(equipLabel).join(", ")
+          h("strong", { text: label("Gear") + ": " }), gear.map(equipLabel).map(label).join(", ")
         ]));
       }
 
@@ -568,9 +591,9 @@ RR.share = (function () {
       kids.push(h("section", { class: "rr-print-block" }, bodyKids));
     });
 
-    kids.push(h("p", { class: "rr-print-foot", text: "Made with RallyReady" }));
+    kids.push(h("p", { class: "rr-print-foot", text: label("Made with RallyReady") }));
 
-    return h("div", { id: "rr-print-area", class: club ? "rr-print-club" : null }, kids);
+    return h("div", { id: "rr-print-area", class: club ? "rr-print-club" : null, lang: session.language }, kids);
   }
 
   // PUBLIC: register (or clear) the practice that printing should produce.

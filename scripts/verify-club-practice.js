@@ -12,7 +12,7 @@ const STORAGE_KEY = "rallyready.v1";
 function loadApp(storage) {
   const context = vm.createContext({ console, localStorage: storage });
   context.window = context;
-  for (const name of ["state.js", "club-practice.js"]) {
+  for (const name of ["state.js", "club-practice-themes-1.js", "club-practice-themes-2.js", "club-practice.js"]) {
     const source = fs.readFileSync(path.join(ROOT, "js", name), "utf8");
     vm.runInContext(source, context, { filename: name });
   }
@@ -43,7 +43,7 @@ function checkPlan(plan, age, minutes, label) {
   assert.equal(plan.ageGroup, age, `${label} uses the requested age`);
   assert.equal(plan.totalMinutes, minutes, `${label} uses the exact available time`);
   assert.equal(plan.kind, "club-practice", `${label} is recognized by native Run and Print actions`);
-  checkTextFields(plan, ["id", "title", "skillFocus", "phaseLabel", "dayType", "coachNote", "focusReminder", "setup"], label);
+  checkTextFields(plan, ["id", "themeKey", "title", "skillFocus", "phaseLabel", "dayType", "coachNote", "focusReminder", "setup"], label);
   checkTextList(plan.equipment, 1, `${label} equipment checklist`);
   assert.ok(plan.objectives.length >= 2, `${label} offers a way to measure the session`);
   for (const objective of plan.objectives) {
@@ -62,7 +62,7 @@ function checkPlan(plan, age, minutes, label) {
   let elapsed = 0;
   for (const block of plan.blocks) {
     const blockLabel = `${label} ${block.title}`;
-    checkTextFields(block, ["id", "role", "title", "why"], blockLabel);
+    checkTextFields(block, ["id", "blockKey", "role", "title", "why"], blockLabel);
     assert.ok(!ids.has(block.id), `${blockLabel} has a unique block ID`);
     ids.add(block.id);
     assert.ok(Number.isInteger(block.minutes) && block.minutes >= 1, `${blockLabel} is a valid timer block`);
@@ -77,6 +77,8 @@ function checkPlan(plan, age, minutes, label) {
     checkTextList(block.drill.steps, 2, `${blockLabel} execution steps`);
     checkTextList(block.drill.cues, 1, `${blockLabel} coach cues`);
     checkTextList(block.drill.equipment, 0, `${blockLabel} equipment`);
+    assert.ok(Array.isArray(block.drill.coaching) && block.drill.coaching.length, `${blockLabel} detailed guide`);
+    block.drill.coaching.forEach((note) => checkTextFields(note, ["label", "text"], `${blockLabel} note`));
   }
   assert.equal(elapsed, minutes, `${label} has no gaps or minutes outside the budget`);
 }
@@ -92,7 +94,7 @@ const storage = {
 };
 
 const { clubPractice, state } = loadApp(storage);
-const { ageGroups, minMinutes, maxMinutes, variantCount, generate } = clubPractice;
+const { ageGroups, minMinutes, maxMinutes, variantCount, generate, localize } = clubPractice;
 assert.deepEqual(plain(ageGroups), ["13U", "14U", "15U", "16U"]);
 assert.equal(minMinutes, 30);
 assert.equal(maxMinutes, 180);
@@ -106,6 +108,25 @@ for (const age of ageGroups) {
     for (let variant = 0; variant < variantCount; variant++) {
       const plan = generate(age, minutes, variant);
       checkPlan(plan, age, minutes, `${age} / ${minutes} min / theme ${variant + 1}`);
+      const romanian = generate(age, minutes, variant, "ro");
+      checkPlan(romanian, age, minutes, `${age} / ${minutes} min / theme ${variant + 1} / RO`);
+      assert.equal(plan.language, "en");
+      assert.equal(romanian.language, "ro");
+      assert.equal(romanian.id, plan.id, "language switches preserve the saved plan ID");
+      assert.notEqual(romanian.title, plan.title);
+      assert.notEqual(romanian.setup, plan.setup);
+      assert.deepEqual(plain(romanian.objectives.map((item) => item.target.split(" · ")[0])),
+        plain(plan.objectives.map((item) => item.target.split(" · ")[0])), "scoring targets match across languages");
+      for (const [index, block] of plan.blocks.entries()) {
+        const translation = romanian.blocks[index];
+        assert.equal(translation.blockKey, block.blockKey);
+        assert.equal(translation.minutes, block.minutes);
+        assert.notEqual(translation.drill.setup, block.drill.setup);
+        assert.equal(translation.drill.steps.length, block.drill.steps.length);
+        assert.ok(translation.drill.steps.every((step, stepIndex) => step !== block.drill.steps[stepIndex]));
+        assert.equal(translation.drill.coaching.length, block.drill.coaching.length);
+        assert.ok(translation.drill.coaching.every((note, noteIndex) => note.text !== block.drill.coaching[noteIndex].text));
+      }
       assert.ok(!planIds.has(plan.id), `distinct shelf key for ${age} / ${minutes} min / theme ${variant + 1}`);
       planIds.add(plan.id);
       themes.add(plan.skillFocus);
@@ -133,18 +154,23 @@ for (const [focus, designs] of designsByTheme) {
 
 const first = generate("13U", 67, 0);
 const second = generate("16U", 120, 2);
-assert.match(first.skillFocus, /first contact/i, "13U begins with a first-contact foundation");
-assert.match(generate("14U", 90, 0).skillFocus, /serve|side.out/i, "14U begins with serve-to-side-out work");
-assert.match(generate("15U", 90, 0).skillFocus, /attack/i, "15U begins with attacking decisions");
-assert.match(generate("16U", 90, 0).skillFocus, /transition/i, "16U begins with defensive transition");
+assert.deepEqual(ageGroups.map((age) => generate(age, 90, 0).themeKey).join(","),
+  "first-contact,side-out,attack-choice,transition", "each age keeps its starter focus");
 assert.deepEqual(plain(first), plain(generate("13U", 67, 0)), "the same inputs reproduce the plan and shelf key");
+const oldSnapshot = plain(first);
+delete oldSnapshot.language;
+delete oldSnapshot.themeKey;
+oldSnapshot.title = "Win the First Contact";
+assert.deepEqual(plain(localize(oldSnapshot, "ro")), plain(generate("13U", 67, 0, "ro")),
+  "plans saved before the rewrite get the translated instructions and diagrams");
+assert.deepEqual(plain(localize(localize(first, "ro"), "en")), plain(first), "language toggles in both directions");
 for (const badAge of ["12U", "17U", "", null]) {
   assert.equal(generate(badAge, 60, 0), null, `unsupported age ${badAge} is rejected`);
 }
 for (const badMinutes of [0, minMinutes - 1, maxMinutes + 1, 60.5, NaN, Infinity, null]) {
   assert.equal(generate("13U", badMinutes, 0), null, `invalid duration ${badMinutes} is rejected`);
 }
-console.log(`Club Practice generation passed for all ${planIds.size} age, time and theme combinations.`);
+console.log(`Club Practice generation passed for ${planIds.size} age, time and theme combinations in both languages.`);
 
 assert.deepEqual(plain(state.getClubPractices()), [], "a new coach has an empty shelf");
 assert.equal(state.saveClubPractice(first), true, "saving works without team setup");
