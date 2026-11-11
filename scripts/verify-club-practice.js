@@ -164,6 +164,23 @@ oldSnapshot.title = "Win the First Contact";
 assert.deepEqual(plain(localize(oldSnapshot, "ro")), plain(generate("13U", 67, 0, "ro")),
   "plans saved before the rewrite get the translated instructions and diagrams");
 assert.deepEqual(plain(localize(localize(first, "ro"), "en")), plain(first), "language toggles in both directions");
+
+for (const [minutes, phases] of [[30, [3, 3, 1]], [60, [4, 3, 1]], [90, [5, 4, 1]], [150, [6, 5, 1]]]) {
+  for (const language of ["en", "ro"]) {
+    const warmup = generate("13U", minutes, 0, language).blocks[0];
+    const phaseMinutes = warmup.drill.steps.map((step) => /^(\d+) min ·/.exec(step))
+      .filter(Boolean).map((match) => Number(match[1]));
+    assert.deepEqual(Array.from(phaseMinutes), phases, `${language} warm-up divides ${warmup.minutes} minutes into footwork, passing and demo`);
+    assert.equal(phaseMinutes.reduce((sum, count) => sum + count, 0), warmup.minutes);
+  }
+}
+
+const previousWarmup = plain(first);
+delete previousWarmup.contentVersion;
+previousWarmup.blocks[0].drill.setup = "Use clear lanes.";
+const revised = localize(previousWarmup, "en");
+assert.equal(revised.id, previousWarmup.id, "saved drills retain their original practice ID after a copy update");
+assert.match(revised.blocks[0].drill.setup, /stay on their own side/i, "reopening a previously saved practice refreshes the warm-up setup");
 for (const badAge of ["12U", "17U", "", null]) {
   assert.equal(generate(badAge, 60, 0), null, `unsupported age ${badAge} is rejected`);
 }

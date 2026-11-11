@@ -7,8 +7,10 @@ RR.clubPracticeCourt = (function () {
   var SVG = "http://www.w3.org/2000/svg";
   var serial = 0;
   var roles = {
-    partner: { en: ["A", "Partner A"], ro: ["A", "Jucător A"] },
-    partnerB: { en: ["B", "Partner B"], ro: ["B", "Jucător B"] },
+    partner: { en: ["A", "A starts here"], ro: ["A", "A pornește aici"] },
+    partnerB: { en: ["B", "B starts here"], ro: ["B", "B pornește aici"] },
+    partnerToss: { en: ["A", "Toss and catch"], ro: ["A", "Aruncă și prinde"] },
+    partnerPass: { en: ["B", "Stop and pass"], ro: ["B", "Oprește-te și preia"] },
     feed: { en: ["F", "Feeder"], ro: ["L", "Lansează mingea"] },
     feedDefense: { en: ["F", "Feeder / defender"], ro: ["L", "Lansează / apără"] },
     server: { en: ["SE", "Server"], ro: ["S", "La serviciu"] },
@@ -33,7 +35,6 @@ RR.clubPracticeCourt = (function () {
     free: { en: "Free ball", ro: "Minge ușoară" }
   };
   var captions = {
-    pair: { en: "One pair shown.", ro: "Exemplu cu o pereche." },
     lane: { en: "One group shown.", ro: "Exemplu cu o grupă." },
     rally: { en: "First ball shown.", ro: "Traseul primei mingi." },
     short: { en: "The short ball is shown.", ro: "Traseul mingii scurte." },
@@ -51,12 +52,39 @@ RR.clubPracticeCourt = (function () {
     return player(kind === "serve" ? "server" : kind === "attack" ? "hitter" : "feed", 188, y, "far");
   }
 
-  function warmUp() {
-    return {
-      caption: "pair",
-      players: [player("partner", 94, 58, "far"), player("partnerB", 210, 151, "near")],
-      paths: [[0, 1, "toss", -0.18], [1, 0, "pass", -0.18]]
+  function warmUp(block, lang) {
+    var footworkMinutes = Math.floor(block.minutes / 2);
+    var center = 155;
+    var left = 106;
+    var right = 204;
+    var farLine = 79;
+    var nearLine = 131;
+    var footwork = {
+      phase: "footwork", minutes: footworkMinutes,
+      title: { en: "1. Side shuffle (no ball)", ro: "1. Pași laterali fără minge" },
+      note: { en: "Face the net. Stop at each mark, then return to the middle.", ro: "Stai cu fața la fileu. Oprește-te la fiecare marcaj, apoi revino la mijloc." },
+      players: [player("partner", center, farLine, "far"), player("partnerB", center, nearLine, "near")],
+      marks: [[left, farLine], [right, farLine], [left, nearLine], [right, nearLine]],
+      paths: []
     };
+    var ball = {
+      phase: "ball", minutes: block.minutes - footworkMinutes - 1,
+      title: { en: "2. Toss and pass", ro: "2. Aruncare și preluare" },
+      note: { en: "A tosses one step beside B. B shuffles, stops and passes back.", ro: "A aruncă la un pas în lateral de B. B se deplasează, se oprește și preia spre A." },
+      players: [player("partnerToss", center, farLine, "far"), player("partnerB", center, nearLine, "ghost"),
+        player("partnerPass", right, nearLine, "near")],
+      movements: [[1, 2]],
+      paths: [[0, 2, "toss", -0.43], [2, 0, "pass", -0.43]]
+    };
+    var root = htmlNode("div", "cp-warm-up-maps");
+    root.setAttribute("data-no-i18n", "");
+    root.setAttribute("lang", lang);
+    root.appendChild(htmlNode("p", "cp-warm-up-maps__note", lang === "ro"
+      ? "Rămâneți de partea voastră. Doar mingea trece peste fileu."
+      : "Stay on your own side. Only the ball crosses the net."));
+    root.appendChild(makeFigure(footwork, lang));
+    root.appendChild(makeFigure(ball, lang));
+    return root;
   }
 
   function passToTarget(kind, ageGroup) {
@@ -111,7 +139,6 @@ RR.clubPracticeCourt = (function () {
     var key = block.blockKey;
     var theme = plan.themeKey;
     var group = plan.ageGroup;
-    if (key === "warm-up") return warmUp();
     if (key === "serve-prep") return passToTarget("serve", group);
     if (key === "match-finish") return buildRally("serve", group, "attack");
     if (["build", "link", "pressure", "game"].indexOf(key) === -1) return null;
@@ -155,39 +182,52 @@ RR.clubPracticeCourt = (function () {
     return svgNode("text", { x: x, y: y, class: className, "text-anchor": "middle", "dominant-baseline": "central" }, value);
   }
 
-  function addCourt(board, net) {
+  function addCourt(board, lang, lane) {
     board.appendChild(svgNode("rect", { x: 23, y: 28, width: 257, height: 154, rx: 5, class: "cp-map-floor" }));
     board.appendChild(svgNode("path", { d: "M23 105H280V177Q280 182 275 182H28Q23 182 23 177Z", class: "cp-map-half" }));
+    if (lane) {
+      board.appendChild(svgNode("rect", { x: 82, y: 50, width: 146, height: 102, rx: 4, class: "cp-map-lane" }));
+      board.appendChild(svgLabel(lang === "ro" ? "Culoar de 3 m" : "3 m lane", 155, 56, "cp-map-lane-label"));
+    }
     board.appendChild(line(23, 79, 280, 79, "cp-map-attack-line"));
     board.appendChild(line(23, 131, 280, 131, "cp-map-attack-line"));
+    if (lane) {
+      [79, 131].forEach(function (y) {
+        board.appendChild(svgNode("rect", { x: 23, y: y - 7, width: 56, height: 14, rx: 2, class: "cp-map-line-tag" }));
+        board.appendChild(svgLabel(lang === "ro" ? "Linia de atac" : "Attack line", 51, y, "cp-map-line-label"));
+      });
+    }
     board.appendChild(line(18, 105, 286, 105, "cp-map-net"));
     [18, 286].forEach(function (x) {
       board.appendChild(svgNode("circle", { cx: x, cy: 105, r: 2.8, class: "cp-map-net-post" }));
     });
     board.appendChild(svgNode("rect", { x: 267, y: 96, width: 41, height: 18, rx: 4, class: "cp-map-net-tag" }));
-    board.appendChild(svgLabel(net, 287, 104.5, "cp-map-net-label"));
+    board.appendChild(svgLabel(lang === "ro" ? "Fileu" : "Net", 287, 104.5, "cp-map-net-label"));
   }
 
-  function addArrow(board, from, to, bend, marker, className) {
+  function addArrow(board, from, to, bend, marker, className, doubleEnded) {
     var dx = to.x - from.x;
     var dy = to.y - from.y;
     var length = Math.hypot(dx, dy);
-    var sx = from.x + dx * 15 / length;
-    var sy = from.y + dy * 15 / length;
+    var startGap = doubleEnded ? 8 : 15;
+    var sx = from.x + dx * startGap / length;
+    var sy = from.y + dy * startGap / length;
     var ex = to.x - dx * 16 / length;
     var ey = to.y - dy * 16 / length;
     var mx = (sx + ex) / 2 + (bend || 0) * dy;
     var my = (sy + ey) / 2 - (bend || 0) * dx;
-    board.appendChild(svgNode("path", {
+    var arrow = svgNode("path", {
       d: "M" + sx + " " + sy + "Q" + mx + " " + my + " " + ex + " " + ey,
       class: className, "marker-end": "url(#" + marker + ")"
-    }));
+    });
+    if (doubleEnded) arrow.setAttribute("marker-start", "url(#" + marker + ")");
+    board.appendChild(arrow);
     return [(sx + ex + 2 * mx) / 4, (sy + ey + 2 * my) / 4];
   }
 
   function renderBoard(spec, lang, id, accessibleTitle) {
     var board = svgNode("svg", {
-      class: "cp-court-map__board", viewBox: "0 0 312 194", role: "img",
+      class: "cp-court-map__board", viewBox: spec.phase ? "0 44 312 115" : "0 0 312 194", role: "img",
       "aria-labelledby": id + "-title " + id + "-desc", focusable: "false"
     });
     var arrows = id + "-arrow";
@@ -197,18 +237,26 @@ RR.clubPracticeCourt = (function () {
       return (index + 1) + ". " + actions[path[2]][lang] + " (" + from + " → " + to + ").";
     });
     board.appendChild(svgNode("title", { id: id + "-title" }, accessibleTitle));
-    board.appendChild(svgNode("desc", { id: id + "-desc" }, descriptions.join(" ")));
+    board.appendChild(svgNode("desc", { id: id + "-desc" }, [spec.note && spec.note[lang]].concat(descriptions).filter(Boolean).join(" ")));
 
     var defs = svgNode("defs", {});
-    function addMarker(markerId, className) {
-      var marker = svgNode("marker", { id: markerId, viewBox: "0 0 9 8", refX: 8, refY: 4, markerWidth: 5, markerHeight: 5, orient: "auto" });
+    function addMarker(markerId, className, orient) {
+      var marker = svgNode("marker", { id: markerId, viewBox: "0 0 9 8", refX: 8, refY: 4, markerWidth: 5, markerHeight: 5, orient: orient });
       marker.appendChild(svgNode("path", { d: "M0 0L9 4L0 8Z", class: className }));
       defs.appendChild(marker);
     }
-    addMarker(arrows, "cp-map-arrow");
-    if (spec.movements) addMarker(arrows + "-move", "cp-map-move-arrow");
+    if (spec.paths.length) addMarker(arrows, "cp-map-arrow", "auto");
+    if (spec.movements || spec.marks) addMarker(arrows + "-move", "cp-map-move-arrow", "auto-start-reverse");
     board.appendChild(defs);
-    addCourt(board, lang === "ro" ? "Fileu" : "Net");
+    addCourt(board, lang, !!spec.phase);
+
+    (spec.marks || []).forEach(function (mark) {
+      var x = mark[0];
+      var y = mark[1];
+      var partner = spec.players.find(function (spot) { return spot.y === y; });
+      addArrow(board, { x: x, y: y }, partner, 0, arrows + "-move", "cp-map-move", true);
+      board.appendChild(svgNode("rect", { x: x - 4, y: y - 4, width: 8, height: 8, rx: 2, class: "cp-map-flat-mark" }));
+    });
 
     (spec.movements || []).forEach(function (path) {
       addArrow(board, spec.players[path[0]], spec.players[path[1]], 0, arrows + "-move", "cp-map-move");
@@ -235,21 +283,23 @@ RR.clubPracticeCourt = (function () {
     return node;
   }
 
-  function figure(plan, block, language) {
-    if (!plan || !block) return null;
-    var spec = courtSpec(plan, block);
-    if (!spec) return null;
-    var lang = language === "ro" ? "ro" : "en";
+  function makeFigure(spec, lang) {
     var id = "cp-map-" + (++serial);
-    var label = lang === "ro" ? "Schița terenului" : "Court map";
+    var label = spec.title ? spec.title[lang] : lang === "ro" ? "Schița terenului" : "Court map";
+    var note = (spec.note || captions[spec.caption])[lang];
     var root = htmlNode("figure", "cp-court-map");
+    if (spec.phase) {
+      root.classList.add("cp-court-map--warm");
+      root.setAttribute("data-warm-up-phase", spec.phase);
+    }
     root.setAttribute("data-no-i18n", "");
     root.setAttribute("lang", lang);
     var caption = htmlNode("figcaption", "cp-court-map__caption");
     caption.appendChild(htmlNode("strong", "cp-court-map__title", label));
-    caption.appendChild(htmlNode("span", "cp-court-map__note", captions[spec.caption][lang]));
+    if (spec.phase) caption.appendChild(htmlNode("span", "cp-court-map__minutes", spec.minutes + " min"));
+    caption.appendChild(htmlNode("span", "cp-court-map__note", note));
     root.appendChild(caption);
-    root.appendChild(renderBoard(spec, lang, id, label + ". " + captions[spec.caption][lang]));
+    root.appendChild(renderBoard(spec, lang, id, spec.phase ? label : label + ". " + note));
 
     var legend = htmlNode("ul", "cp-court-map__legend");
     var listedRoles = new Set();
@@ -264,8 +314,19 @@ RR.clubPracticeCourt = (function () {
       item.appendChild(htmlNode("span", "cp-map-role-label", role[1]));
       legend.appendChild(item);
     });
+    function addKey(key, text) {
+      var item = htmlNode("li", "cp-court-map__role");
+      var symbol = htmlNode("span", "cp-map-key cp-map-key--" + key);
+      symbol.setAttribute("aria-hidden", "true");
+      item.appendChild(symbol);
+      item.appendChild(htmlNode("span", "cp-map-role-label", text));
+      legend.appendChild(item);
+    }
+    if (spec.phase) addKey("move", lang === "ro" ? "Pași laterali" : "Shuffle steps");
+    if (spec.marks) addKey("mark", lang === "ro" ? "Marcaj plat" : "Flat mark");
     root.appendChild(legend);
 
+    if (!spec.paths.length) return root;
     var sequence = htmlNode("ol", "cp-court-map__sequence");
     sequence.setAttribute("aria-label", lang === "ro" ? "Traseul mingii" : "Ball path");
     spec.paths.forEach(function (path, index) {
@@ -278,6 +339,14 @@ RR.clubPracticeCourt = (function () {
     });
     root.appendChild(sequence);
     return root;
+  }
+
+  function figure(plan, block, language) {
+    if (!plan || !block) return null;
+    var lang = language === "ro" ? "ro" : "en";
+    if (block.blockKey === "warm-up") return warmUp(block, lang);
+    var spec = courtSpec(plan, block);
+    return spec ? makeFigure(spec, lang) : null;
   }
 
   return { figure: figure };

@@ -2,7 +2,7 @@
 // Install one coherent release of the app before claiming any page. Keep its
 // HTML and scripts together until the next worker activates and reloads the page.
 // On release, advance this version, the HTML marker, and the URLs of changed shell files.
-const CACHE_VERSION = "rallyready-v93";
+const CACHE_VERSION = "rallyready-v94";
 const RELEASE = CACHE_VERSION.split("-v")[1];
 // Large demos are warmed after activation and reused by later shell releases.
 // Change this cache name if bundled media changes at an existing URL.
@@ -12,7 +12,7 @@ const LEGACY_MEDIA_RELEASES = [90, 91];
 // Core app files are installed together. Demonstration assets listed here are
 // cached on demand and warmed separately, so they never delay a shell update.
 const APP_SHELL = [
-  "./index.html?v=93",
+  "./index.html?v=94",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -73,7 +73,7 @@ const APP_SHELL = [
   "./css/coachcam-3d.css",
   "./css/feed.css?v=93",
   "./css/club-practice.css?v=93",
-  "./css/club-practice-court.css?v=93",
+  "./css/club-practice-court.css?v=94",
   "./css/print.css?v=93",
   "./js/state.js?v=93",
   "./js/i18n.js?v=93",
@@ -153,8 +153,8 @@ const APP_SHELL = [
   "./js/feed-deck.js?v=93",
   "./js/club-practice-themes-1.js?v=93",
   "./js/club-practice-themes-2.js?v=93",
-  "./js/club-practice.js?v=93",
-  "./js/club-practice-court.js?v=93",
+  "./js/club-practice.js?v=94",
+  "./js/club-practice-court.js?v=94",
   "./js/club-practice-ui.js?v=93",
   "./js/app.js?v=93"
 ];

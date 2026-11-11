@@ -7,6 +7,7 @@ RR.clubPractice = (function () {
   var ageGroups = ["13U", "14U", "15U", "16U"];
   var minMinutes = 30;
   var maxMinutes = 180;
+  var contentVersion = 2;
   var durationOptions = [45, 60, 75, 90, 105, 120];
   var themes = RR.clubPracticeThemes || [];
   var starterThemeCount = 4;
@@ -87,22 +88,29 @@ RR.clubPractice = (function () {
 
   function warmUp(minutes, t) {
     var movement = Math.floor(minutes / 2);
+    var passing = minutes - movement - 1;
     return {
       title: t("Move, stop, pass", "Deplasare, oprire, preluare"),
-      why: t("Warm up the feet and shoulders before serving or jumping.", "Încălzește picioarele și umerii înainte de servicii sau sărituri."),
-      setup: t("Use clear lanes. Then put one pair and one ball in each lane across the net.", "Eliberează culoarele. Apoi pune câte o pereche și o minge în fiecare culoar, cu jucătorii de o parte și de alta a fileului."),
+      why: t("Stop in balance before you pass.", "Oprește-te echilibrat înainte de preluare."),
+      setup: t(
+        "Give each active pair a lane about 10 ft (3 m) wide. On each side, put two flat marks 6 ft (about 2 m) apart along the attack line. A and B start midway between their marks, facing each other across the net. Both stay on their own side.",
+        "Fiecare pereche activă are un culoar de aproximativ 3 m lățime. Pe fiecare parte a fileului, pune două marcaje plate la 2 m distanță pe linia de atac. A și B pornesc la mijloc între marcaje, față în față. Fiecare rămâne pe partea lui."
+      ),
       steps: [
-        t(movement + " min: jog, shuffle sideways and stop in balance.", movement + " min: aleargă ușor, fă pași laterali și oprește-te echilibrat."),
-        t("Across the net: toss → forearm pass → catch.", "Peste fileu: aruncare → preluare cu antebrațele → prindere."),
-        t("Swap jobs after 3 balls. Use the last minute to demo the next drill.", "Schimbă rolurile după 3 mingi. În ultimul minut, arată exercițiul următor.")
+        t(movement + " min · No ball. Start with 1 minute of marching in place and arm circles.", movement + " min · Fără minge. În primul minut, mergi pe loc și fă rotiri cu brațele."),
+        t("Face the net. Shuffle from the middle to one mark, then the other, then back to the middle. Stop at each mark and repeat.", "Privește spre fileu. Fă pași laterali de la mijloc la un marcaj, apoi la celălalt și înapoi la mijloc. Oprește-te la fiecare marcaj și repetă."),
+        t(passing + " min · With a ball. A tosses gently over the net, one step to B's left or right. B shuffles, stops, and forearm-passes back. A catches.", passing + " min · Cu minge. A aruncă ușor peste fileu, la un pas în stânga sau în dreapta lui B. B se deplasează lateral, se oprește și trimite cu antebrațele înapoi. A prinde mingea."),
+        t("B returns to the middle after each pass. After 3 tosses, swap who tosses and who passes. Stay on the same sides.", "După fiecare preluare, B revine la mijloc. După 3 mingi, schimbați cine aruncă și cine preia. Rămâneți pe aceleași părți ale fileului."),
+        t("1 min · Put the balls away. Show the next drill.", "1 min · Strânge mingile. Arată exercițiul următor.")
       ],
-      cues: [t("Small steps. Soft landing.", "Pași mici. Aterizează ușor.")],
-      scoring: t("Goal: 3 exchanges each pair can complete without chasing the ball.", "Țintă: 3 schimburi în fiecare pereche, fără să alerge după minge."),
-      easier: t("Move closer to the net. Let players catch and toss it back.", "Apropie jucătorii de fileu. Lasă-i să prindă mingea și să o arunce înapoi."),
-      harder: t("Alternate short and deep tosses. Keep every landing balanced.", "Alternează mingi scurte și lungi. Aterizează echilibrat de fiecare dată."),
+      cues: [t("Face the net. Small steps. Stop, then pass.", "Cu fața la fileu. Pași mici. Oprește-te, apoi preia.")],
+      scoring: t("Aim for 3 clean reps per pair. Count one when the passer stops first and the tosser catches the return inside their lane.", "Ținta e de 3 repetări bune pe pereche. Numără o reușită când jucătorul se oprește înainte de preluare, iar partenerul prinde mingea în culoar."),
+      easier: t("Toss to the middle first. If the ball can't reach over the net easily, start both players closer on their own sides.", "La început, aruncă spre mijloc. Dacă mingea trece greu peste fileu, apropie ambii jucători, fiecare pe partea lui."),
+      harder: t("Choose left or right without calling it. Keep the toss within the two marks.", "Alege stânga sau dreapta fără să anunți. Trimite mingea între cele două marcaje."),
       coaching: [
-        note(t("Movement order", "Ordinea mișcărilor"), t("Start with an easy jog. Add side steps, arm circles and controlled stops. Add a few low jumps only after players are moving comfortably.", "Începe cu alergare ușoară. Adaugă pași laterali, rotiri ale brațelor și opriri controlate. Introdu câteva sărituri mici când jucătorii se mișcă deja în voie.")),
-        note(t("What to correct", "Ce corectezi"), t("If a player passes while still running, slow the toss. Ask them to reach the ball, stop, then pass high enough for their partner to catch.", "Dacă un jucător preia din alergare, aruncă mai lent. Cere-i să ajungă la minge, să se oprească și să trimită o minge înaltă, ușor de prins."))
+        note(t("How to shuffle", "Cum faci pașii laterali"), t("Keep hips low, chest toward the net, and feet apart. Lead with the foot in the direction you're going. Stop with both feet under you before changing direction.", "Ține genunchii ușor îndoiți, pieptul spre fileu și tălpile depărtate. Pornește cu piciorul din direcția deplasării. Oprește-te echilibrat pe ambele picioare înainte să schimbi direcția.")),
+        note(t("Groups of 8–12", "Grupe de 8–12 jucători"), t("Use up to three lanes on one court. Extra pairs wait clear of the end lines. Switch pairs every 30 seconds during footwork and after both partners have tossed 3 balls in the passing phase.", "Folosește până la trei culoare pe un teren. Perechile în așteptare stau la distanță în spatele liniilor de fund. Schimbă perechile la 30 de secunde la deplasare. La preluare, schimbă perechile după ce fiecare partener a aruncat 3 mingi.")),
+        note(t("If the passer is still moving", "Dacă jucătorul preia din mers"), t("Toss closer to the middle and higher. Ask the passer to move early, stop, and angle their forearms so the ball floats back to their partner.", "Aruncă mai înalt și mai aproape de mijloc. Cere-i jucătorului să plece din timp, să se oprească și să orienteze antebrațele ca mingea să se întoarcă înalt la partener."))
       ]
     };
   }
@@ -358,6 +366,7 @@ RR.clubPractice = (function () {
     return {
       id: id,
       kind: "club-practice",
+      contentVersion: contentVersion,
       language: lang,
       themeKey: theme.key,
       variation: offset,
@@ -390,7 +399,7 @@ RR.clubPractice = (function () {
   function localize(plan, language) {
     if (!plan || plan.kind !== "club-practice") return plan;
     var lang = language === "ro" ? "ro" : "en";
-    if (plan.language === lang && plan.themeKey) return plan;
+    if (plan.contentVersion === contentVersion && plan.language === lang && plan.themeKey) return plan;
     var revised = generate(plan.ageGroup, plan.totalMinutes, plan.variation, lang);
     return revised && revised.id === plan.id ? revised : plan;
   }
