@@ -61,6 +61,8 @@ RR.i18n.add = function (map, lang) {
 
 const DICT_FILES = ["js/i18n-ui.js", "js/i18n-content.js", "js/i18n-content2.js", "js/i18n-positions.js"];
 DICT_FILES.forEach(load);
+load("js/ui.js");
+load("js/club-practice-ui.js");
 
 // CoachCam exposes its immutable phase copy without touching the DOM. Loading
 // it here lets the i18n gate track the production timeline instead of a second,

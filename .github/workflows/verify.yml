@@ -19,6 +19,8 @@ jobs:
           node-version: 20
       - name: Planning engine (seasons + camps)
         run: node scripts/verify.js
+      - name: Standalone club practice generation and storage
+        run: node scripts/verify-club-practice.js
       - name: Ideas feed data integrity
         run: node scripts/verify-feed.js
       - name: Drill animation data integrity

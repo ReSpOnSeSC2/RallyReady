@@ -97,8 +97,10 @@ reference, for a coach who learned the game in Romania and is now coaching here.
 
 ## Using it day to day
 
-1. **Open the app.** The bottom of the screen has five tabs: **Today, Season,
-   Drills, Tips, Team.**
+**To build a standalone club practice**, open **Practice**, choose 13U, 14U, 15U, or 16U, and enter 30–180 minutes. The plan includes a timed drill sequence, setup, scoring, coaching cues, and adjustments for player numbers and gym space. Run it with the timer, share or print it, or save it under **Saved practices** for another day. This works without a team profile and is available offline after the app loads and caches its files.
+
+1. **Open the app.** The bottom tabs are **Ideas, Practice, Season, Drills,
+   Players, Tips, and Teams**. Use **Open the full planner & timer** in Ideas to reach Today.
 2. **Set up your Team** (you only do this once). Tap the **Team** tab and fill in:
    - Your team **name** and **age group** (this sets the drills, net height, and ball).
    - **Program type** — pick **Season** or **Summer camp**:

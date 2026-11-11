@@ -70,6 +70,30 @@ RR.share = (function () {
       .slice(0, 60) || "rallyready";
   }
 
+  function clubOverview(session) {
+    return [
+      ["Before players arrive", session.setup ? [session.setup] : []],
+      ["Practice targets", (session.objectives || []).map(function (target) {
+        return target.label + " — " + target.target;
+      })],
+      ["Equipment", session.equipment || []],
+      ["Adjust for your gym", (session.adaptations || []).map(function (adaptation) {
+        return adaptation.label + " — " + adaptation.description;
+      })]
+    ].filter(function (section) { return section[1].length; });
+  }
+
+  function clubDrillDetails(drill) {
+    return [["Scoring & tracking", drill.scoring], ["Make it easier", drill.easier], ["Make it harder", drill.harder]]
+      .filter(function (section) { return section[1]; });
+  }
+
+  function blockMinutes(block, club) {
+    if (block.minutes == null) return "";
+    var range = club ? block.startMinute + "–" + block.endMinute + " min · " : "";
+    return " (" + range + block.minutes + " min)";
+  }
+
   // ======================================================================= //
   //  TEXT BUILDERS — readable in a phone messages app                      //
   // ======================================================================= //
@@ -78,13 +102,14 @@ RR.share = (function () {
   function sessionText(session, team) {
     session = session || {};
     team = team || {};
+    var club = session.kind === "club-practice";
     var ref = referenceFor(team);
     var L = [];   // lines
 
     // Header.
-    var title = (team.name || "Practice plan");
+    var title = club ? session.title : (team.name || "Practice plan");
     L.push("# " + title);
-    if (team.ageGroup) L.push(team.ageGroup);
+    if (club || team.ageGroup) L.push(club ? session.ageGroup : team.ageGroup);
     if (session.date) L.push(fmtFull(session.date));
 
     // Phase · day type line.
@@ -100,7 +125,7 @@ RR.share = (function () {
     if (session.intensity != null) meta.push("Intensity " + session.intensity + "/10");
     if (meta.length) L.push(meta.join(" · "));
 
-    L.push("Net: " + ref.net + " · Ball: " + ref.ball);
+    if (!club) L.push("Net: " + ref.net + " · Ball: " + ref.ball);
 
     // Coach note + focus reminder.
     if (session.coachNote) { L.push(""); L.push("Note: " + session.coachNote); }
@@ -108,6 +133,10 @@ RR.share = (function () {
       if (!session.coachNote) L.push("");
       L.push("Focus: " + session.focusReminder);
     }
+    if (club) clubOverview(session).forEach(function (section) {
+      L.push("", "## " + section[0]);
+      section[1].forEach(function (line) { L.push("• " + line); });
+    });
 
     // Blocks.
     var blocks = session.blocks || [];
@@ -117,7 +146,7 @@ RR.share = (function () {
       L.push("");
       L.push("---");
       var roleBit = b.role ? "[" + b.role + "] " : "";
-      var minBit = (b.minutes != null) ? " (" + b.minutes + " min)" : "";
+      var minBit = blockMinutes(b, club);
       L.push((i + 1) + ". " + roleBit + (b.title || drill.name || "Block") + minBit);
       if (b.why) L.push(b.why);
 
@@ -136,6 +165,10 @@ RR.share = (function () {
         L.push("Say this:");
         cues.forEach(function (c) { L.push("  • " + c); });
       }
+
+      if (club) clubDrillDetails(drill).forEach(function (section) {
+        L.push(section[0] + ": " + section[1]);
+      });
 
       var gear = drill.equipment || [];
       if (gear.length) {
@@ -287,6 +320,7 @@ RR.share = (function () {
     try {
       document.removeEventListener("keydown", openSheet._onKey, true);
       if (openSheet.parentNode) openSheet.parentNode.removeChild(openSheet);
+      if (openSheet._opener && openSheet._opener.isConnected) openSheet._opener.focus({ preventScroll: true });
     } catch (e) { /* ignore */ }
     openSheet = null;
   }
@@ -349,12 +383,22 @@ RR.share = (function () {
     sheet.style.cssText = "position:fixed;inset:0;z-index:9999;";
     styleSheetNode(scrim, panel);
 
-    // Close on Escape (captured so it wins over other handlers).
-    sheet._onKey = function (e) { if (e.key === "Escape") closeSheet(); };
+    sheet._opener = document.activeElement;
+    sheet._onKey = function (e) {
+      if (e.key === "Escape") closeSheet();
+      if (e.key === "Tab" && e.shiftKey && document.activeElement === copyBtn) {
+        e.preventDefault();
+        cancelBtn.focus();
+      } else if (e.key === "Tab" && !e.shiftKey && document.activeElement === cancelBtn) {
+        e.preventDefault();
+        copyBtn.focus();
+      }
+    };
     document.addEventListener("keydown", sheet._onKey, true);
 
     document.body.appendChild(sheet);
     openSheet = sheet;
+    copyBtn.focus();
     // Animate in on the next frame (toggle the inline opacity/transform).
     requestAnimationFrame(function () {
       scrim.style.opacity = "1";
@@ -369,13 +413,13 @@ RR.share = (function () {
 
   // Try native share first (inside the click gesture). Returns true if we kicked
   // off a native share; false if it's unavailable so the caller shows the sheet.
-  function tryNativeShare(title, text) {
+  function tryNativeShare(title, text, fallback) {
     try {
       if (navigator.share) {
         navigator.share({ title: title, text: text }).then(function () {
           toast("Shared");
-        }, function () {
-          // Rejected or cancelled by the user — do nothing.
+        }, function (error) {
+          if (fallback && (!error || error.name !== "AbortError")) fallback();
         });
         return true;
       }
@@ -387,12 +431,14 @@ RR.share = (function () {
   function shareSession(session, team) {
     try {
       var text = sessionText(session, team);
-      var title = (team && team.name ? team.name + " — " : "") +
+      var club = session && session.kind === "club-practice";
+      var title = club ? session.title : (team && team.name ? team.name + " — " : "") +
         "Practice" + (session && session.date ? " " + fmtShort(session.date) : "");
-      if (tryNativeShare(title, text)) return;
-      var fname = "rallyready-" + slug(team && team.name) +
+      var fname = club ? "rallyready-" + slug(session.ageGroup + "-" + session.title) + ".txt" :
+        "rallyready-" + slug(team && team.name) +
         "-" + slug((session && session.date) || "practice") + ".txt";
-      showSheet(text, fname, "practice");
+      var fallback = function () { showSheet(text, fname, "practice"); };
+      if (!tryNativeShare(title, text, club ? fallback : null)) fallback();
     } catch (e) {
       toast("Couldn't prepare the share");
     }
@@ -421,15 +467,16 @@ RR.share = (function () {
   function buildPrintArea(session, team) {
     session = session || {};
     team = team || {};
+    var club = session.kind === "club-practice";
     var ref = referenceFor(team);
 
     var kids = [];
 
     // Header.
-    kids.push(h("h1", { class: "rr-print-title", text: (team.name || "Practice plan") }));
+    kids.push(h("h1", { class: "rr-print-title", text: club ? session.title : (team.name || "Practice plan") }));
 
     var headBits = [];
-    if (team.ageGroup) headBits.push(team.ageGroup);
+    if (club || team.ageGroup) headBits.push(club ? session.ageGroup : team.ageGroup);
     if (session.date) headBits.push(fmtFull(session.date));
     var sub = [];
     if (session.phaseLabel) sub.push(session.phaseLabel);
@@ -441,8 +488,10 @@ RR.share = (function () {
     if (session.skillFocus) meta.push("Skill: " + session.skillFocus);
     if (session.totalMinutes != null) meta.push(session.totalMinutes + " min total");
     if (session.intensity != null) meta.push("Intensity " + session.intensity + "/10");
-    meta.push("Net: " + ref.net);
-    meta.push("Ball: " + ref.ball);
+    if (!club) {
+      meta.push("Net: " + ref.net);
+      meta.push("Ball: " + ref.ball);
+    }
     kids.push(h("p", { class: "rr-print-meta", text: meta.join("  ·  ") }));
 
     if (session.coachNote) {
@@ -455,6 +504,14 @@ RR.share = (function () {
         h("strong", { text: "Focus: " }), session.focusReminder
       ]));
     }
+    if (club) clubOverview(session).forEach(function (section) {
+      kids.push(h("div", { class: "rr-print-overview" }, [
+        h("h2", { class: "rr-print-label", text: section[0] }),
+        h("ul", { class: "rr-print-cues" }, section[1].map(function (line) {
+          return h("li", { text: line });
+        }))
+      ]));
+    });
 
     // Blocks.
     var blocks = session.blocks || [];
@@ -464,7 +521,7 @@ RR.share = (function () {
       var bodyKids = [];
 
       var roleBit = b.role ? "[" + b.role + "] " : "";
-      var minBit = (b.minutes != null) ? "  (" + b.minutes + " min)" : "";
+      var minBit = blockMinutes(b, club);
       bodyKids.push(h("h2", { class: "rr-print-block__title",
         text: (i + 1) + ". " + roleBit + (b.title || drill.name || "Block") + minBit }));
 
@@ -490,6 +547,12 @@ RR.share = (function () {
           cues.map(function (c) { return h("li", { text: c }); })));
       }
 
+      if (club) clubDrillDetails(drill).forEach(function (section) {
+        bodyKids.push(h("p", { class: "rr-print-note" }, [
+          h("strong", { text: section[0] + ": " }), section[1]
+        ]));
+      });
+
       var gear = drill.equipment || [];
       if (gear.length) {
         bodyKids.push(h("p", { class: "rr-print-gear" }, [
@@ -507,7 +570,7 @@ RR.share = (function () {
 
     kids.push(h("p", { class: "rr-print-foot", text: "Made with RallyReady" }));
 
-    return h("div", { id: "rr-print-area" }, kids);
+    return h("div", { id: "rr-print-area", class: club ? "rr-print-club" : null }, kids);
   }
 
   // PUBLIC: register (or clear) the practice that printing should produce.

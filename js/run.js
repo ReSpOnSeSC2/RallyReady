@@ -32,7 +32,7 @@ RR.run = (function () {
   function roleColor(role) {
     var r = String(role || "").toLowerCase();
     if (/warm|activ|prep/.test(r)) return "easy";
-    if (/cool|stretch|taper|recover/.test(r)) return "taper";
+    if (/cool|stretch|taper|recover|water|break/.test(r)) return "taper";
     if (/game|play|scrim|compet/.test(r)) return "mid";
     return "hard"; // skill / technical work
   }
@@ -104,10 +104,12 @@ RR.run = (function () {
       team: team || {},
       blocks: blocks,
       index: 0,
+      renderedIndex: -1,
       remaining: blocks[0].minutes * 60, // seconds left on the current block
       endAt: 0,    // wall-clock ms when the running block hits 0 (0 = not running)
       paused: false,
       finished: false,
+      opener: document.activeElement,
       timer: null,
       root: null,
       els: {}
@@ -123,6 +125,10 @@ RR.run = (function () {
     // wall clock whenever we return to the foreground (see syncFromClock).
     document.addEventListener("visibilitychange", onVisibility);
     renderBlock();
+    if (session.kind === "club-practice") {
+      window.addEventListener("hashchange", close);
+      S.root.querySelector(".rr-run__close").focus();
+    }
     startTicking();
   }
 
@@ -164,6 +170,7 @@ RR.run = (function () {
   }
 
   function headerDateText(session) {
+    if (session.kind === "club-practice") return session.ageGroup + " · " + session.title;
     var d = "";
     try { if (RR.ui.fmtFull) d = RR.ui.fmtFull(session.date); } catch (e) {}
     return d || "Practice";
@@ -181,10 +188,15 @@ RR.run = (function () {
   function renderBlock() {
     if (!S) return;
     var body = S.els.body;
+    var club = S.session.kind === "club-practice";
+    var activeIndex = club ? Array.from(body.querySelectorAll("button")).indexOf(document.activeElement) : -1;
+    if (club && (S.finished || S.renderedIndex !== S.index)) body.scrollTop = 0;
+    S.renderedIndex = S.index;
     body.textContent = "";
 
     if (S.finished) {
       body.appendChild(renderComplete());
+      if (activeIndex !== -1) body.querySelector("button").focus();
       return;
     }
 
@@ -213,6 +225,7 @@ RR.run = (function () {
     S.els.fill = fill;
     var prog = h("div", {
       class: "rr-run__prog", role: "progressbar",
+      "aria-label": "Block time elapsed",
       "aria-valuemin": "0", "aria-valuemax": "100"
     }, [fill]);
     S.els.prog = prog;
@@ -237,17 +250,22 @@ RR.run = (function () {
     // --- Animated example / setup / organization / steps / cues ------------
     // The live example leads the coaching detail here too, keeping the run
     // screen consistent with every other place a drill can be opened.
-    var orgList = RR.ui.organizeList ? RR.ui.organizeList(drill) : null;
-    var motion = RR.drillAnimation && RR.drillAnimation.figure
+    var orgList = !club && RR.ui.organizeList ? RR.ui.organizeList(drill) : null;
+    var motion = !club && RR.drillAnimation && RR.drillAnimation.figure
       ? RR.drillAnimation.figure(drill) : null;
     var detail = h("div", { class: "rr-run__detail" }, [
       motion,
+      club ? textSection("Objective", b.why) : null,
       section("Setup", h("p", { class: "rr-run__text", text: drill.setup || "—" })),
+      club && drill.equipment && drill.equipment.length ? textSection("Equipment", drill.equipment.map(RR.ui.equipLabel).join(", ")) : null,
       orgList ? section("How it's organized", orgList) : null,
       section("Run it", h("ol", { class: "rr-run__steps" },
         (drill.steps || []).map(function (s) { return h("li", { text: s }); }))),
+      club ? textSection("Scoring & tracking", drill.scoring) : null,
       section("Say this", h("ul", { class: "rr-run__cues" },
-        (drill.cues || []).map(function (c) { return h("li", { text: c }); })))
+        (drill.cues || []).map(function (c) { return h("li", { text: c }); }))),
+      club ? textSection("Make it easier", drill.easier) : null,
+      club ? textSection("Make it harder", drill.harder) : null
     ]);
 
     // --- Transport controls -------------------------------------------------
@@ -294,6 +312,10 @@ RR.run = (function () {
     body.appendChild(clockBox);
     body.appendChild(controls);
     body.appendChild(detail);
+    if (activeIndex !== -1) {
+      var sameControl = body.querySelectorAll("button")[activeIndex];
+      (sameControl && !sameControl.disabled ? sameControl : nextBtn).focus({ preventScroll: true });
+    }
 
     // Sync the visual progress + paused styling for the freshly built nodes.
     updateClockUI();
@@ -307,13 +329,18 @@ RR.run = (function () {
     ]);
   }
 
+  function textSection(label, text) {
+    return text ? section(label, h("p", { class: "rr-run__text", text: text })) : null;
+  }
+
   // The celebratory final state.
   function renderComplete() {
     return h("div", { class: "rr-run__done", "aria-live": "polite" }, [
       h("div", { class: "rr-run__done-emoji", "aria-hidden": "true", text: "🏐" }),
       h("h2", { class: "rr-run__done-title", text: "Practice complete 🏐" }),
       h("p", { class: "rr-run__done-sub",
-        text: "Nice work — that's the whole plan. Cool down and check in with the team." }),
+        text: S.session.kind === "club-practice" ? "All practice blocks are complete." :
+          "Nice work — that's the whole plan. Cool down and check in with the team." }),
       h("button", {
         type: "button", class: "btn btn-primary rr-run__done-btn",
         "aria-label": "Close Run mode", text: "Done", onclick: close
@@ -485,17 +512,27 @@ RR.run = (function () {
       e.preventDefault();
       close();
     }
+    if (e.key === "Tab" && S.session.kind === "club-practice") {
+      var buttons = S.root.querySelectorAll("button:not([disabled])");
+      var first = buttons[0];
+      var last = buttons[buttons.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
   }
 
   function close() {
+    var opener = S && S.session.kind === "club-practice" && S.opener;
     stopTicking();
     document.removeEventListener("keydown", onKey, true);
     document.removeEventListener("visibilitychange", onVisibility);
+    window.removeEventListener("hashchange", close);
     document.body.classList.remove("rr-run-open");
     if (S && S.root && S.root.parentNode) {
       S.root.parentNode.removeChild(S.root);
     }
     S = null;
+    if (opener && opener.isConnected) opener.focus({ preventScroll: true });
   }
 
   return { start: start };

@@ -9,6 +9,7 @@
 //   • team           — a DERIVED mirror of the active team, kept so the large body
 //                      of existing code that reads `getState().team` keeps working.
 //   • savedSessions  — completed practices (History) + the recent-repeat lookup.
+//   • clubPractices  — saved standalone practices, newest first.
 //   • customDrills[] — coach-authored drills, merged into RR.drills at boot.
 //   • favorites[]    — starred drill ids (coach-wide, not per team).
 //
@@ -34,6 +35,7 @@ RR.state = (function () {
     team: null,             // DERIVED mirror of the active team (back-compat)
     savedSessions: [],      // completed practices (History) — also feeds the
                             // generator's recent-repeat avoidance + attendance/notes
+    clubPractices: [],      // standalone club plans, independent of teams
     regen: {},              // per-(team|date|slot) "Regenerate" counters
     plannedSessions: {},    // per-(team|date|slot) hand-edited plan snapshots (Today)
     focusOverrides: {},     // per-(team|date|slot) coach-chosen skill focus
@@ -91,6 +93,35 @@ RR.state = (function () {
       : [];
   }
 
+  function isClubPractice(plan) {
+    if (!(isRecord(plan) && plan.kind === "club-practice" &&
+      typeof plan.id === "string" && !!plan.id && typeof plan.title === "string" &&
+      ["13U", "14U", "15U", "16U"].indexOf(plan.ageGroup) !== -1 &&
+      Number.isInteger(plan.totalMinutes) && plan.totalMinutes > 0 &&
+      Array.isArray(plan.objectives) && plan.objectives.every(function (target) {
+        return isRecord(target) && typeof target.label === "string" && typeof target.target === "string";
+      }) &&
+      Array.isArray(plan.adaptations) && plan.adaptations.every(function (adaptation) {
+        return isRecord(adaptation) && typeof adaptation.label === "string" && typeof adaptation.description === "string";
+      }) &&
+      isTextList(plan.equipment) && Array.isArray(plan.blocks) && plan.blocks.length)) return false;
+
+    var elapsed = 0;
+    var validBlocks = plan.blocks.every(function (block) {
+      if (!isRecord(block) || !isRecord(block.drill) || typeof block.title !== "string" ||
+          typeof block.role !== "string" || !Number.isInteger(block.minutes) || block.minutes <= 0 ||
+          block.startMinute !== elapsed || !isTextList(block.drill.steps) || !isTextList(block.drill.cues) ||
+          !isTextList(block.drill.equipment)) return false;
+      elapsed += block.minutes;
+      return block.endMinute === elapsed;
+    });
+    return validBlocks && elapsed === plan.totalMinutes;
+  }
+
+  function isTextList(list) {
+    return Array.isArray(list) && list.every(function (item) { return typeof item === "string"; });
+  }
+
   // Migrate any older shape forward onto a fresh DEFAULTS copy, scrubbing field
   // types as it goes. load() and importData() both funnel through here, so junk
   // can't reach live state from disk OR from a restored backup file.
@@ -105,6 +136,12 @@ RR.state = (function () {
       state.activeTeamId = t.id;
     }
     state.savedSessions = onlyRecords(state.savedSessions);
+    var clubPracticeIds = new Set();
+    state.clubPractices = onlyRecords(state.clubPractices).filter(function (plan) {
+      if (!isClubPractice(plan) || clubPracticeIds.has(plan.id)) return false;
+      clubPracticeIds.add(plan.id);
+      return true;
+    });
     // Custom drills must at least be renderable (a record with a name), and
     // `custom: true` is re-stamped so syncCustomDrills() can always tell them
     // apart from the bundled library.
@@ -177,6 +214,7 @@ RR.state = (function () {
   }
 
   function getState() { return clone(current); }
+  function getLanguage() { return current.lang; }
 
   // Shallow-merge `patch` into state at the top level, persist, notify.
   // Writing `team` is special-cased: it upserts into `teams` and marks that team
@@ -303,6 +341,32 @@ RR.state = (function () {
     return i === -1;   // true when it is now saved
   }
 
+  function getClubPractices() { return clone(current.clubPractices); }
+
+  function isClubPracticeSaved(id) {
+    return current.clubPractices.some(function (plan) { return plan.id === id; });
+  }
+
+  function writeClubPractices(plans) {
+    var previous = current.clubPractices;
+    current.clubPractices = plans;
+    save();
+    if (saveFailed) current.clubPractices = previous;
+    notify();
+    return !saveFailed;
+  }
+
+  function saveClubPractice(plan) {
+    if (!isClubPractice(plan)) return false;
+    if (isClubPracticeSaved(plan.id)) return true;
+    return writeClubPractices([clone(plan)].concat(current.clubPractices));
+  }
+
+  function removeClubPractice(id) {
+    if (!isClubPracticeSaved(id)) return true;
+    return writeClubPractices(current.clubPractices.filter(function (plan) { return plan.id !== id; }));
+  }
+
   // ---- Backup / restore (no backend — a plain JSON file) --------------------
   // Player photos live in their own localStorage store (RR.photos), so the backup
   // bundles them alongside the main data; restore puts them back too. Older
@@ -324,7 +388,7 @@ RR.state = (function () {
   // them and is refused rather than silently replacing everything with blanks.
   function looksLikeBackup(data) {
     if (!isRecord(data)) return false;
-    var KEYS = ["schemaVersion", "teams", "team", "savedSessions", "customDrills", "favorites"];
+    var KEYS = ["schemaVersion", "teams", "team", "savedSessions", "clubPractices", "customDrills", "favorites"];
     return KEYS.some(function (k) { return Object.prototype.hasOwnProperty.call(data, k); });
   }
 
@@ -383,6 +447,7 @@ RR.state = (function () {
     STORAGE_KEY: STORAGE_KEY,
     DEFAULTS: DEFAULTS,
     getState: getState,
+    getLanguage: getLanguage,
     update: update,
     subscribe: subscribe,
     genId: genId,
@@ -402,6 +467,10 @@ RR.state = (function () {
     toggleFavorite: toggleFavorite,
     isSavedIdea: isSavedIdea,
     toggleSavedIdea: toggleSavedIdea,
+    getClubPractices: getClubPractices,
+    isClubPracticeSaved: isClubPracticeSaved,
+    saveClubPractice: saveClubPractice,
+    removeClubPractice: removeClubPractice,
     // backup
     exportData: exportData,
     importData: importData

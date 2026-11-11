@@ -58,8 +58,7 @@ RR.i18n = (function () {
     return "en";
   }
   function getLang() {
-    var s = (RR.state && RR.state.getState) ? RR.state.getState() : {};
-    var l = s.lang;
+    var l = RR.state && RR.state.getLanguage ? RR.state.getLanguage() : null;
     if (LANGS.indexOf(l) === -1) l = deviceDefault();
     return l;
   }

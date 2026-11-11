@@ -22,6 +22,7 @@
   .appbar,
   .tabbar,
   #screen,
+  .rr-run,
   .rr-toast,
   .share-sheet {
     display: none !important;
@@ -132,4 +133,13 @@
     font-size: 9pt;
     color: #333;
   }
+
+  #rr-print-area.rr-print-club {
+    font-family: system-ui, sans-serif;
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+  .rr-print-club .rr-print-block__title { font-size: 12pt; }
+  .rr-print-club .rr-print-note { font-size: inherit; }
+  .rr-print-overview { break-inside: avoid; }
 }
